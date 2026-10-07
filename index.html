@@ -354,6 +354,12 @@ function init(){
   // (используется кнопкой из Telegram-бота при неверном ответе на задание №4)
   if(location.hash==='#stress'){openSpecial('stress');}
   else if(location.hash==='#paronyms'){openTopic(5);}
+  else{
+    // Ссылка вида index.html#game=17 — открыть задание сразу на вкладке «Игра»
+    // (кнопка «Игра по этой теме» в Telegram-боте после неверного ответа)
+    const m=/^#game=(\d+)$/.exec(location.hash);
+    if(m){const n=+m[1];if(TOPICS.some(t=>t.num===n)){openTopic(n);sTab(2);}}
+  }
 }
 
 /* =================== HOME =================== */
