@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Математика: разбор по этапам</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+:root{--bg:#0a0a14;--card:#13132a;--card2:#1a1a35;--acc:#e94560;--g:#4ecca3;--y:#ffd700;--b:#74c0fc;--txt:#eaeaea;--m:#8a90a0;--r:14px}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);color:var(--txt);font-family:Segoe UI,system-ui,sans-serif;min-height:100vh}
+nav{display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--card);border-bottom:1px solid #2a2a4e;position:sticky;top:0;z-index:10}
+nav b{flex:1;text-align:center;color:var(--acc);font-size:16px}
+.nb{background:none;border:1px solid #3a3a5e;color:var(--txt);padding:5px 12px;border-radius:8px;cursor:pointer;font-size:13px}
+main{max-width:720px;margin:0 auto;padding:14px}
+h1{font-size:22px;margin:14px 0 4px;background:linear-gradient(135deg,var(--acc),var(--g));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.sub{color:var(--m);font-size:14px;margin-bottom:12px;line-height:1.5}
+.card{background:var(--card);border-radius:var(--r);padding:16px;margin:10px 0}
+.btn{display:block;width:100%;padding:13px;border:none;border-radius:11px;font-size:15px;font-weight:700;cursor:pointer;margin-top:10px;background:var(--acc);color:#fff;text-align:center}
+.btn.sec{background:none;border:1px solid #3a3a5e;color:var(--txt)}
+.btn.ok{background:var(--g);color:#0a0a14}
+.btn:disabled{opacity:.5;cursor:default}
+.sk{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #22223c;cursor:pointer}
+.sk:last-child{border:none}
+.sk .nm{flex:1;font-size:14px;line-height:1.35}
+.sk .nm small{color:var(--m)}
+.bar{width:90px;height:8px;background:#22223c;border-radius:4px;overflow:hidden;flex:none}
+.bar i{display:block;height:100%;background:var(--g)}
+.pc{width:42px;text-align:right;font-size:13px;color:var(--m);flex:none}
+.task{font-size:16px;line-height:1.55;white-space:pre-line}
+.dots{display:flex;gap:6px;margin:0 0 10px}
+.dot{width:26px;height:6px;border-radius:3px;background:#2a2a4e}
+.dot.cur{background:var(--b)}.dot.ok{background:var(--g)}.dot.bad{background:var(--acc)}
+.tag{font-size:12px;color:var(--b);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px}
+.q{font-size:17px;font-weight:700;margin:12px 0;line-height:1.45}
+.opt{display:block;width:100%;padding:13px;margin-top:9px;border:2px solid #3a3a5e;border-radius:11px;background:none;color:var(--txt);font-size:15px;font-weight:600;cursor:pointer;text-align:left}
+.opt:hover{border-color:var(--b)}
+.opt:disabled{opacity:.6;cursor:default}
+.inp{width:100%;padding:13px;border-radius:11px;border:2px solid #3a3a5e;background:var(--card2);color:var(--txt);font-size:18px;margin-top:6px}
+.fb{border-radius:11px;padding:12px 14px;margin:10px 0;font-size:14px;line-height:1.5}
+.fb.good{background:#10281f;border:1px solid #1f5a43;color:#9be9c9}
+.fb.bad{background:#2a1218;border:1px solid #5b2331;color:#ffb3c0}
+.res li{list-style:none;margin:6px 0;font-size:14px;line-height:1.45}
+.hidden{display:none}
+</style>
+</head>
+<body>
+<nav><button class="nb" id="back">←</button><b id="title">Математика</b><span style="width:34px"></span></nav>
+<main id="app"></main>
+
+<script>
+// ── Константы знания: те же, что в боте (bkt.py) ──
+const P_L0=0.30,P_T=0.09,P_S=0.10,P_G=0.20,MAX_TRIES=2;
+const NUM_NAMES={4:'Вероятность: простые события',5:'Вероятность: цепочки и комбинаторика'};
+let DATA=null, prog={}, session=[], cur=null, view='home', viewArg=null;
+const TG=window.Telegram&&window.Telegram.WebApp&&window.Telegram.WebApp.initData?window.Telegram.WebApp:null;
+if(TG){try{TG.ready();TG.expand();}catch(e){}}
+
+function loadProg(){try{prog=JSON.parse(localStorage.getItem('math_prog')||'{}')}catch(e){prog={}}}
+function saveProg(){try{localStorage.setItem('math_prog',JSON.stringify(prog))}catch(e){}}
+function pOf(s){return prog[s]?prog[s].p:P_L0}
+function record(skill,ok){
+  const p=pOf(skill);
+  const obs=ok?(p*(1-P_S))/(p*(1-P_S)+(1-p)*P_G):(p*P_S)/(p*P_S+(1-p)*(1-P_G));
+  const np=obs+(1-obs)*P_T;
+  const o=prog[skill]||{a:0,c:0};
+  prog[skill]={p:np,a:o.a+1,c:o.c+(ok?1:0)};
+  saveProg();
+  session.push([skill,ok?1:0]);
+}
+
+// ── Числа: дроби и десятичные без погрешностей ──
+function parseNum(s){
+  s=String(s).trim().replace(/\s+/g,'').replace(',','.').replace('−','-');
+  if(!s)return null;
+  let m;
+  if((m=s.match(/^(-?\d+(?:\.\d+)?)\/(\d+(?:\.\d+)?)$/))){const a=dec(m[1]),b=dec(m[2]);if(!a||!b||b[0]===0)return null;return norm([a[0]*b[1],a[1]*b[0]])}
+  if(/^-?\d+(\.\d+)?$/.test(s)){const a=dec(s);return a}
+  return null;
+}
+function dec(s){const neg=s[0]==='-';if(neg)s=s.slice(1);const p=s.split('.');const d=p[1]||'';const den=Math.pow(10,d.length);const num=parseInt(p[0]+d,10);return norm([neg?-num:num,den])}
+function gcd(a,b){a=Math.abs(a);b=Math.abs(b);while(b){[a,b]=[b,a%b]}return a||1}
+function norm(f){const g=gcd(f[0],f[1]);let [n,d]=[f[0]/g,f[1]/g];if(d<0){n=-n;d=-d}return [n,d]}
+function rnd(x,d){const k=Math.pow(10,d);return Math.round(x*k+1e-9)/k}
+function checkNum(user,st){
+  const u=parseNum(user);if(!u)return null; // null = не число
+  const v=st.v;
+  if(u[0]*v[1]===v[0]*u[1])return true;
+  if(st.d!=null){return rnd(u[0]/u[1],st.d)===rnd(v[0]/v[1],st.d)}
+  return false;
+}
+
+// ── Выбор задачи ──
+function weightedSkill(n){
+  const sk=Object.keys(DATA.skills).filter(s=>DATA.skills[s].n===n);
+  const w=sk.map(s=>Math.pow(1-pOf(s),2)+0.05);
+  let r=Math.random()*w.reduce((a,b)=>a+b,0);
+  for(let i=0;i<sk.length;i++){r-=w[i];if(r<=0)return sk[i]}
+  return sk[sk.length-1];
+}
+function pickTask(skill){
+  const pool=DATA.tasks.filter(t=>t.sk===skill);
+  return pool[Math.floor(Math.random()*pool.length)];
+}
+function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+
+// ── Экраны ──
+const $=s=>document.querySelector(s);
+const app=$('#app');
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+function setView(v,arg){view=v;viewArg=arg;render()}
+
+function render(){
+  if(view==='home')return home();
+  if(view==='task')return taskView();
+  if(view==='done')return doneView();
+}
+$('#back').onclick=()=>{if(view==='home'){if(TG){TG.close()}}else setView('home')};
+
+function home(){
+  $('#title').textContent='Математика';
+  let h='<h1>Разбор по этапам</h1><p class="sub">Задание разбито на этапы: на каждом выбираешь, что делать, и вводишь промежуточный результат. Если ошибся — видно, на каком этапе, перерешивать с начала не нужно.</p>';
+  [4,5].forEach(n=>{
+    h+='<div class="card"><div class="tag">Задание №'+n+'</div><b>'+NUM_NAMES[n]+'</b>';
+    Object.keys(DATA.skills).filter(s=>DATA.skills[s].n===n).forEach(s=>{
+      const p=pOf(s),a=prog[s]?prog[s].a:0;
+      h+='<div class="sk" data-s="'+s+'"><div class="nm">'+esc(DATA.skills[s].name)+'<br><small>'+a+' этапов решено</small></div><div class="bar"><i style="width:'+Math.round(p*100)+'%"></i></div><div class="pc">'+Math.round(p*100)+'%</div></div>';
+    });
+    h+='<button class="btn" data-n="'+n+'">🧩 Решить по этапам (подберу слабый навык)</button></div>';
+  });
+  h+='<p class="sub" style="text-align:center">Нажми на навык, чтобы потренировать именно его.'+(TG?'':'<br>Прогресс хранится на этом устройстве.')+'</p>';
+  if(session.length&&TG)h+='<button class="btn ok" id="send">📤 Отправить результат боту ('+session.length+' этапов)</button>';
+  app.innerHTML=h;
+  app.querySelectorAll('[data-n]').forEach(b=>b.onclick=()=>start(weightedSkill(+b.dataset.n)));
+  app.querySelectorAll('.sk').forEach(b=>b.onclick=()=>start(b.dataset.s));
+  const sb=$('#send');if(sb)sb.onclick=sendToBot;
+}
+
+function start(skill){
+  const t=pickTask(skill);
+  cur={t,i:0,tries:0,res:[],fb:null,order:null,done:false};
+  prepare();
+  setView('task');
+}
+function prepare(){
+  const st=cur.t.st[cur.i];cur.tries=0;cur.fb=null;
+  cur.order=st.k==='choice'?shuffle(st.opts):null;
+}
+
+function taskView(){
+  const t=cur.t,st=t.st[cur.i];
+  $('#title').textContent='Задание №'+t.n;
+  let h='<div class="card task">'+esc(t.t)+'</div><div class="dots">';
+  t.st.forEach((_,k)=>{h+='<span class="dot '+(k<cur.res.length?(cur.res[k]?'ok':'bad'):(k===cur.i?'cur':''))+'"></span>'});
+  h+='</div><div class="tag">Этап '+(cur.i+1)+' из '+t.st.length+' · '+esc(DATA.skills[st.s].name)+'</div><div class="q">'+esc(st.q)+'</div>';
+  if(cur.fb)h+='<div class="fb '+cur.fb.cls+'">'+esc(cur.fb.text).replace(/\n/g,'<br>')+'</div>';
+  if(st.k==='choice'){
+    cur.order.forEach((o,k)=>{h+='<button class="opt" data-k="'+k+'">'+esc(o)+'</button>'});
+  }else{
+    h+='<input class="inp" id="inp" inputmode="decimal" placeholder="ответ числом, например 0,35 или 3/7" autocomplete="off"><button class="btn" id="chk">Проверить</button>';
+  }
+  app.innerHTML=h;
+  if(st.k==='choice')app.querySelectorAll('.opt').forEach(b=>b.onclick=()=>answer(cur.order[+b.dataset.k]===st.opts[0]));
+  else{
+    const inp=$('#inp');const go=()=>{const r=checkNum(inp.value,st);if(r===null){cur.fb={cls:'bad',text:'Напиши ответ числом (например 0,35 или 3/7).'};taskView();return}answer(r)};
+    $('#chk').onclick=go;inp.onkeydown=e=>{if(e.key==='Enter')go()};inp.focus();
+  }
+}
+
+function answer(ok){
+  const st=cur.t.st[cur.i];
+  const correctText=st.k==='choice'?st.opts[0]:st.a;
+  if(ok){
+    cur.res.push(cur.tries===0);
+    next(cur.tries===0?'✅ Верно!':'✅ Верно (со второй попытки).');
+    return;
+  }
+  cur.tries++;
+  if(cur.tries>=MAX_TRIES){
+    cur.res.push(false);
+    next('❌ Правильный ответ этапа: '+correctText+'\nПравило: '+st.r+'\nИдём дальше.');
+    return;
+  }
+  cur.fb={cls:'bad',text:'❌ Здесь ошибка.\nПодсказка-правило: '+st.r+'\nПопробуй ещё раз.'};
+  taskView();
+}
+function next(msg){
+  cur.i++;
+  if(cur.i>=cur.t.st.length){
+    cur.t.st.forEach((st,k)=>record(st.s,cur.res[k]));
+    cur.msg=msg;
+    return setView('done');
+  }
+  prepare();cur.fb={cls:msg.startsWith('✅')?'good':'bad',text:msg};
+  taskView();
+}
+
+function doneView(){
+  const t=cur.t;
+  $('#title').textContent='Итог';
+  const failed=[];
+  let h='<div class="card"><div class="tag">Задание решено по этапам</div><div class="task">'+esc(t.t)+'</div></div><ul class="res card">';
+  t.st.forEach((st,k)=>{h+='<li>'+(cur.res[k]?'✅':'❌')+' Этап '+(k+1)+': '+esc(DATA.skills[st.s].name)+'</li>';if(!cur.res[k])failed.push(st)});
+  h+='</ul><div class="fb good">Ответ: '+esc(t.f)+(t.st[t.st.length-1].d===2?' (до сотых)':'')+'</div>';
+  if(failed.length){
+    h+='<div class="fb bad"><b>Где споткнулся:</b><br>'+failed.map(s=>'• '+esc(DATA.skills[s.s].name)+' — '+esc(s.r)).join('<br>')+'</div>';
+  }else h+='<div class="fb good">Все этапы без ошибок 👏</div>';
+  const sk=failed.length?failed[0].s:t.sk;
+  h+='<button class="btn" id="again">'+(failed.length?'🎯 Тренировать этот навык':'🔁 Ещё такое')+'</button>';
+  h+='<button class="btn sec" id="other">🧩 Другое по этапам (слабый навык)</button>';
+  if(TG)h+='<button class="btn ok" id="send">📤 Закончить и отправить результат боту</button>';
+  h+='<button class="btn sec" id="menu">⬅️ К навыкам</button>';
+  app.innerHTML=h;
+  $('#again').onclick=()=>start(sk);
+  $('#other').onclick=()=>start(weightedSkill(t.n));
+  $('#menu').onclick=()=>setView('home');
+  const sb=$('#send');if(sb)sb.onclick=sendToBot;
+}
+
+function sendToBot(){
+  if(!TG||!session.length)return;
+  const r=session.slice(-150);
+  TG.sendData(JSON.stringify({v:1,t:'math_stages',r}));
+}
+
+fetch('math_stages.json').then(r=>r.json()).then(d=>{
+  DATA=d;loadProg();
+  const h=location.hash;let m;
+  if((m=h.match(/^#skill=(\w+)$/))&&DATA.skills[m[1]])return start(m[1]);
+  if((m=h.match(/^#n=(\d+)$/))&&NUM_NAMES[+m[1]])return start(weightedSkill(+m[1]));
+  setView('home');
+}).catch(()=>{app.innerHTML='<p class="sub">Не удалось загрузить задания. Проверь интернет и открой снова.</p>'});
+</script>
+</body>
+</html>
