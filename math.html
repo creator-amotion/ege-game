@@ -54,7 +54,7 @@ h1{font-size:22px;margin:14px 0 4px;background:linear-gradient(135deg,var(--acc)
 // ── Те же параметры знания, что в боте (bkt.py) ──
 const P_L0=0.30,P_T=0.09,P_S=0.10,P_G=0.20,MAX_TRIES=2;
 const NUM_NAMES={4:'Вероятность: простые случаи',5:'Вероятность: несколько шагов'};
-let DATA=null, prog={}, xp=0, session=[], cur=null, view='home', openHelp=null;
+let DATA=null, GAMES=null, prog={}, xp=0, session=[], cur=null, gm=null, view='home', openHelp=null;
 const TG=window.Telegram&&window.Telegram.WebApp&&window.Telegram.WebApp.initData?window.Telegram.WebApp:null;
 if(TG){try{TG.ready();TG.expand();}catch(e){}}
 
@@ -113,12 +113,17 @@ const $=s=>document.querySelector(s);
 const app=$('#app');
 function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
 function setView(v){view=v;render()}
-function render(){showXp();if(view==='home')return home();if(view==='task')return taskView();if(view==='done')return doneView()}
+function render(){showXp();if(view==='home')return home();if(view==='task')return taskView();if(view==='done')return doneView();if(view==='game')return gameView();if(view==='gdone')return gameDone()}
 $('#back').onclick=()=>{if(view==='home')location.href='./';else setView('home')};
 
 function home(){
   $('#title').textContent='Математика (ЕГЭ)';
   let h='<h1>Разбор по шагам</h1><p class="sub">Задачу решаем не целиком, а по шагам: на каждом шаге выбираешь, что делать, или считаешь маленький кусочек. Ошибся — сразу видно, на каком шаге, и начинать сначала не надо. За правильные шаги — очки XP.</p>';
+  if(GAMES){
+    h+='<div class="card"><div class="tag">Быстрые игры</div><b>Разомни мозг за 2 минуты</b><p class="sub" style="margin:6px 0 0">10 вопросов, очки XP и звёзды. Подходит, чтобы выучить правила перед заданиями.</p>';
+    GAMES.games.forEach(g=>{h+='<button class="btn sec" data-g="'+g.id+'" style="text-align:left"><span style="font-size:20px">'+g.emoji+'</span> <b>'+esc(g.title)+'</b><br><span style="font-weight:400;font-size:13px;color:var(--m)">'+esc(g.desc)+'</span></button>'});
+    h+='</div>';
+  }
   [4,5].forEach(n=>{
     h+='<div class="card"><div class="tag">Задание №'+n+'</div><b>'+NUM_NAMES[n]+'</b>';
     skillsOf(n).forEach(s=>{
@@ -133,6 +138,7 @@ function home(){
   if(session.length&&TG)h+='<button class="btn ok" id="send">📤 Отправить результаты боту ('+session.length+' шагов)</button>';
   h+='<p class="sub" style="text-align:center;margin-top:14px">'+(TG?'Результаты уходят боту по кнопке выше.':'Прогресс хранится на этом устройстве.')+'</p>';
   app.innerHTML=h;
+  app.querySelectorAll('[data-g]').forEach(b=>b.onclick=()=>gameStart(b.dataset.g));
   app.querySelectorAll('[data-n]').forEach(b=>b.onclick=()=>start(weightedSkill(+b.dataset.n)));
   app.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>start(b.dataset.t));
   app.querySelectorAll('[data-h]').forEach(b=>b.onclick=()=>{openHelp=openHelp===b.dataset.h?null:b.dataset.h;home()});
@@ -220,12 +226,66 @@ function doneView(){
   const sb=$('#send');if(sb)sb.onclick=sendToBot;
 }
 
+// ── Быстрые игры ──
+const ROUNDS=10;
+function gameStart(id){
+  const g=GAMES.games.find(x=>x.id===id);
+  const pool=shuffle(g.items).slice(0,ROUNDS);
+  gm={g,rounds:pool,i:0,ok:0,done:false,picked:null,order:null};
+  prepareRound();setView('game');
+}
+function prepareRound(){
+  const it=gm.rounds[gm.i];gm.picked=null;
+  if(it.fix&&it.opts.length===2&&(it.opts[0]==='Верно'||it.opts[0]==='Неверно'))gm.order=['Верно','Неверно'];
+  else if(it.fix&&it.opts.length===3)gm.order=['Строка 1','Строка 2','Строка 3'];
+  else gm.order=shuffle(it.opts);
+}
+function gameView(){
+  const g=gm.g,it=gm.rounds[gm.i];
+  $('#title').textContent=g.emoji+' '+g.title;
+  let h='<div class="dots">';
+  gm.rounds.forEach((_,k)=>{h+='<span class="dot '+(k<gm.i?'ok':(k===gm.i?'cur':''))+'"></span>'});
+  h+='</div><div class="tag">Вопрос '+(gm.i+1)+' из '+gm.rounds.length+' · верно: '+gm.ok+'</div><div class="card task">'+esc(it.q)+'</div>';
+  gm.order.forEach((o,k)=>{
+    let st='';
+    if(gm.picked!==null){
+      if(o===it.opts[0])st=' style="border-color:var(--g);background:#10281f"';
+      else if(k===gm.picked)st=' style="border-color:var(--acc);background:#2a1218"';
+    }
+    h+='<button class="opt" data-k="'+k+'"'+st+(gm.picked!==null?' disabled':'')+'>'+esc(o)+'</button>';
+  });
+  if(gm.picked!==null){
+    const good=gm.order[gm.picked]===it.opts[0];
+    h+='<div class="fb '+(good?'good':'bad')+'">'+(good?'✅ Верно! ':'❌ Не так. ')+esc(it.why)+'</div>';
+    h+='<button class="btn" id="nx">'+(gm.i+1>=gm.rounds.length?'Результат →':'Дальше →')+'</button>';
+  }
+  app.innerHTML=h;
+  if(gm.picked===null)app.querySelectorAll('.opt').forEach(b=>b.onclick=()=>{
+    gm.picked=+b.dataset.k;const good=gm.order[gm.picked]===it.opts[0];
+    if(good)gm.ok++;record(it.sk,good);saveAll();gameView();
+  });
+  else $('#nx').onclick=()=>{gm.i++;if(gm.i>=gm.rounds.length){const gain=gm.ok*5;xp+=gain;gm.gain=gain;saveAll();setView('gdone')}else{prepareRound();gameView()}};
+  window.scrollTo(0,0);
+}
+function gameDone(){
+  const n=gm.rounds.length,stars=gm.ok>=n-1?3:gm.ok>=Math.ceil(n*0.7)?2:1;
+  $('#title').textContent='Результат';
+  let h='<div class="stars">'+'⭐'.repeat(stars)+'<span style="opacity:.25">'+'⭐'.repeat(3-stars)+'</span></div>';
+  h+='<div class="fb good" style="text-align:center;font-size:18px">'+gm.ok+' из '+n+' верно<br>+'+gm.gain+' XP</div>';
+  h+='<button class="btn" id="again">🔁 Ещё раз</button><button class="btn sec" id="menu">🎮 Другие игры</button>';
+  if(TG)h+='<button class="btn ok" id="send">📤 Отправить результаты боту</button>';
+  app.innerHTML=h;
+  $('#again').onclick=()=>gameStart(gm.g.id);
+  $('#menu').onclick=()=>setView('home');
+  const sb=$('#send');if(sb)sb.onclick=sendToBot;
+}
+
 function sendToBot(){
   if(!TG||!session.length)return;
   TG.sendData(JSON.stringify({v:1,t:'math_stages',r:session.slice(-150)}));
 }
 
-fetch('math_stages.json').then(r=>r.json()).then(d=>{
+fetch('math_games.json').then(r=>r.json()).then(g=>{GAMES=g}).catch(()=>{}).then(()=>fetch('math_stages.json')).then(r=>r.json()).then(d=>{
   DATA=d;loadAll();
   const h=location.hash;let m;
   if((m=h.match(/^#skill=(\w+)$/))&&DATA.skills[m[1]])return start(m[1]);
