@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Математика: разбор по шагам</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
 <style>
 :root{--bg:#0a0a14;--card:#13132a;--card2:#1a1a35;--acc:#e94560;--g:#4ecca3;--y:#ffd700;--b:#74c0fc;--txt:#eaeaea;--m:#8a90a0;--r:14px}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -20,30 +23,36 @@ h1{font-size:22px;margin:14px 0 4px;background:linear-gradient(135deg,var(--acc)
 .btn{display:block;width:100%;padding:13px;border:none;border-radius:11px;font-size:15px;font-weight:700;cursor:pointer;margin-top:10px;background:var(--acc);color:#fff;text-align:center}
 .btn.sec{background:none;border:1px solid #3a3a5e;color:var(--txt)}
 .btn.ok{background:var(--g);color:#0a0a14}
-.sk{padding:10px 0;border-bottom:1px solid #22223c}
-.sk:last-of-type{border:none}
-.skrow{display:flex;align-items:center;gap:10px;cursor:pointer}
-.sk .nm{flex:1;font-size:15px;line-height:1.35}
-.sk .nm small{color:var(--m);display:block;margin-top:2px;font-size:12px}
+.pk{display:flex;gap:14px;align-items:center;text-align:left;background:var(--card);border:2px solid #2a2a4e;border-radius:var(--r);padding:16px;width:100%;margin-top:10px;cursor:pointer;color:var(--txt)}
+.pk:hover{border-color:var(--b)}
+.pk .ic{font-size:32px}
+.pk .t{flex:1;font-size:16px;font-weight:700}
+.pk .t small{display:block;font-weight:400;color:var(--m);font-size:13px;margin-top:3px}
 .bar{width:80px;height:8px;background:#22223c;border-radius:4px;overflow:hidden;flex:none}
 .bar i{display:block;height:100%;background:var(--g)}
+.sk{padding:10px 0;border-bottom:1px solid #22223c}
+.sk:last-of-type{border:none}
+.skrow{display:flex;align-items:center;gap:10px}
+.sk .nm{flex:1;font-size:15px;line-height:1.35}
+.sk .nm small{color:var(--m);display:block;margin-top:2px;font-size:12px}
 .lv{font-size:18px;flex:none;width:26px;text-align:center}
-.help{background:var(--card2);border-radius:10px;padding:11px 12px;margin-top:8px;font-size:14px;line-height:1.55;white-space:pre-line}
+.help{background:var(--card2);border-radius:10px;padding:11px 12px;margin-top:8px;font-size:14px;line-height:1.6;white-space:pre-line}
 .help b{color:var(--y)}
-.task{font-size:17px;line-height:1.6;white-space:pre-line}
+.task{font-size:17px;line-height:1.7;white-space:pre-line}
 .dots{display:flex;gap:6px;margin:0 0 10px}
 .dot{flex:1;max-width:40px;height:7px;border-radius:4px;background:#2a2a4e}
 .dot.cur{background:var(--b)}.dot.ok{background:var(--g)}.dot.bad{background:var(--acc)}
 .tag{font-size:12px;color:var(--b);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px}
-.q{font-size:18px;font-weight:700;margin:12px 0;line-height:1.5}
-.opt{display:block;width:100%;padding:14px;margin-top:10px;border:2px solid #3a3a5e;border-radius:12px;background:var(--card);color:var(--txt);font-size:16px;font-weight:600;cursor:pointer;text-align:left;white-space:normal;word-break:break-word;line-height:1.45}
+.q{font-size:18px;font-weight:700;margin:12px 0;line-height:1.55}
+.opt{display:block;width:100%;padding:14px;margin-top:10px;border:2px solid #3a3a5e;border-radius:12px;background:var(--card);color:var(--txt);font-size:16px;font-weight:600;cursor:pointer;text-align:left;white-space:normal;word-break:break-word;line-height:1.5}
 .opt:hover{border-color:var(--b)}
 .inp{width:100%;padding:14px;border-radius:12px;border:2px solid #3a3a5e;background:var(--card2);color:var(--txt);font-size:20px;margin-top:6px}
-.fb{border-radius:11px;padding:12px 14px;margin:10px 0;font-size:15px;line-height:1.55}
+.fb{border-radius:11px;padding:12px 14px;margin:10px 0;font-size:15px;line-height:1.6}
 .fb.good{background:#10281f;border:1px solid #1f5a43;color:#9be9c9}
 .fb.bad{background:#2a1218;border:1px solid #5b2331;color:#ffb3c0}
 .stars{font-size:34px;text-align:center;letter-spacing:6px;margin:6px 0}
-.res li{list-style:none;margin:8px 0;font-size:15px;line-height:1.5}
+.res li{list-style:none;margin:8px 0;font-size:15px;line-height:1.6}
+.katex{font-size:1.05em}
 </style>
 </head>
 <body>
@@ -51,12 +60,13 @@ h1{font-size:22px;margin:14px 0 4px;background:linear-gradient(135deg,var(--acc)
 <main id="app"></main>
 
 <script>
-// ── Те же параметры знания, что в боте (bkt.py) ──
-const P_L0=0.30,P_T=0.09,P_S=0.10,P_G=0.20,MAX_TRIES=2;
-const NUM_NAMES={4:'Вероятность: простые случаи',5:'Вероятность: несколько шагов'};
-let DATA=null, GAMES=null, prog={}, xp=0, session=[], cur=null, gm=null, view='home', openHelp=null;
+// ── Параметры знания — те же, что в боте (bkt.py) ──
+const P_L0=0.30,P_T=0.09,P_S=0.10,P_G=0.20,MAX_TRIES=2,ROUNDS=10;
+let INDEX=null, PACK=null, packCache={}, prog={}, xp=0, session=[], cur=null, gm=null, view='home', openHelp=null;
 const TG=window.Telegram&&window.Telegram.WebApp&&window.Telegram.WebApp.initData?window.Telegram.WebApp:null;
 if(TG){try{TG.ready();TG.expand();}catch(e){}}
+const $=s=>document.querySelector(s);
+const app=$('#app');
 
 function loadAll(){
   try{prog=JSON.parse(localStorage.getItem('math_prog')||'{}')}catch(e){prog={}}
@@ -65,7 +75,7 @@ function loadAll(){
 function saveAll(){try{localStorage.setItem('math_prog',JSON.stringify(prog));localStorage.setItem('math_xp',String(xp))}catch(e){}}
 function pOf(s){return prog[s]?prog[s].p:P_L0}
 function level(){return Math.floor(xp/100)+1}
-function showXp(){document.getElementById('xp').textContent='⭐ ур. '+level()+' · '+xp+' XP'}
+function showXp(){$('#xp').textContent='⭐ ур. '+level()+' · '+xp+' XP'}
 function record(skill,ok){
   const p=pOf(skill);
   const obs=ok?(p*(1-P_S))/(p*(1-P_S)+(1-p)*P_G):(p*P_S)/(p*P_S+(1-p)*(1-P_G));
@@ -75,6 +85,12 @@ function record(skill,ok){
 }
 function badge(p){return p>=0.9?'🏆':p>=0.7?'🌳':p>=0.45?'🌿':'🌱'}
 function badgeText(p){return p>=0.9?'мастер':p>=0.7?'уверенно':p>=0.45?'растёшь':'новичок'}
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+function mathRender(){
+  if(window.renderMathInElement){
+    try{renderMathInElement(app,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false})}catch(e){}
+  }else{setTimeout(()=>{if(window.renderMathInElement)mathRender()},400)}
+}
 
 // ── Числа: дроби и десятичные без погрешностей ──
 function gcd(a,b){a=Math.abs(a);b=Math.abs(b);while(b){[a,b]=[b,a%b]}return a||1}
@@ -96,55 +112,85 @@ function checkNum(user,st){
   if(st.d!=null)return rnd(u[0]/u[1],st.d)===rnd(v[0]/v[1],st.d);
   return false;
 }
-
-// ── Выбор задачи ──
-function skillsOf(n){return Object.keys(DATA.skills).filter(s=>DATA.skills[s].n===n)}
-function weightedSkill(n){
-  const sk=skillsOf(n),w=sk.map(s=>Math.pow(1-pOf(s),2)+0.05);
-  let r=Math.random()*w.reduce((a,b)=>a+b,0);
-  for(let i=0;i<sk.length;i++){r-=w[i];if(r<=0)return sk[i]}
-  return sk[sk.length-1];
-}
-function pickTask(skill){const pool=DATA.tasks.filter(t=>t.sk===skill);return pool[Math.floor(Math.random()*pool.length)]}
 function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
 
+// ── Пакеты ──
+function loadPack(id){
+  if(packCache[id])return Promise.resolve(packCache[id]);
+  const meta=INDEX.packs.find(p=>p.id===id);
+  return fetch(meta.file).then(r=>r.json()).then(p=>{packCache[id]=p;return p});
+}
+function skillsOfPack(p){return Object.keys(p.skills)}
+function skillsOfNumber(n){return skillsOfPack(PACK).filter(s=>PACK.skills[s].n===n)}
+function weightedSkill(skills){
+  const w=skills.map(s=>Math.pow(1-pOf(s),2)+0.05);
+  let r=Math.random()*w.reduce((a,b)=>a+b,0);
+  for(let i=0;i<skills.length;i++){r-=w[i];if(r<=0)return skills[i]}
+  return skills[skills.length-1];
+}
+function packMastery(p){const s=skillsOfPack(p);return s.reduce((a,k)=>a+pOf(k),0)/s.length}
+
 // ── Экраны ──
-const $=s=>document.querySelector(s);
-const app=$('#app');
-function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
 function setView(v){view=v;render()}
-function render(){showXp();if(view==='home')return home();if(view==='task')return taskView();if(view==='done')return doneView();if(view==='game')return gameView();if(view==='gdone')return gameDone()}
-$('#back').onclick=()=>{if(view==='home')location.href='./';else setView('home')};
+function render(){
+  showXp();
+  if(view==='home')home();else if(view==='pack')packView();else if(view==='task')taskView();
+  else if(view==='done')doneView();else if(view==='game')gameView();else if(view==='gdone')gameDone();
+  mathRender();
+}
+$('#back').onclick=()=>{
+  if(view==='home')location.href='./';
+  else if(view==='pack')setView('home');
+  else setView('pack');
+};
 
 function home(){
   $('#title').textContent='Математика (ЕГЭ)';
-  let h='<h1>Разбор по шагам</h1><p class="sub">Задачу решаем не целиком, а по шагам: на каждом шаге выбираешь, что делать, или считаешь маленький кусочек. Ошибся — сразу видно, на каком шаге, и начинать сначала не надо. За правильные шаги — очки XP.</p>';
-  if(GAMES){
-    h+='<div class="card"><div class="tag">Быстрые игры</div><b>Разомни мозг за 2 минуты</b><p class="sub" style="margin:6px 0 0">10 вопросов, очки XP и звёзды. Подходит, чтобы выучить правила перед заданиями.</p>';
-    GAMES.games.forEach(g=>{h+='<button class="btn sec" data-g="'+g.id+'" style="text-align:left"><span style="font-size:20px">'+g.emoji+'</span> <b>'+esc(g.title)+'</b><br><span style="font-weight:400;font-size:13px;color:var(--m)">'+esc(g.desc)+'</span></button>'});
-    h+='</div>';
-  }
-  [4,5].forEach(n=>{
-    h+='<div class="card"><div class="tag">Задание №'+n+'</div><b>'+NUM_NAMES[n]+'</b>';
-    skillsOf(n).forEach(s=>{
-      const p=pOf(s),a=prog[s]?prog[s].a:0,sk=DATA.skills[s];
-      h+='<div class="sk"><div class="skrow" data-s="'+s+'"><span class="lv">'+badge(p)+'</span><div class="nm">'+esc(sk.name)+'<small>'+badgeText(p)+' · шагов решено: '+a+'</small></div><div class="bar"><i style="width:'+Math.round(p*100)+'%"></i></div></div>'
-        +'<div class="skrow" style="margin-top:6px"><button class="nb" data-h="'+s+'">📒 Правило</button><button class="nb" data-t="'+s+'" style="margin-left:auto">▶ Тренировать</button></div>';
-      if(openHelp===s)h+='<div class="help"><b>Правило</b>\n'+esc(sk.rule)+'\n\n<b>Пример</b>\n'+esc(sk.ex)+'</div>';
-      h+='</div>';
-    });
-    h+='<button class="btn" data-n="'+n+'">🧩 Решить задание по шагам</button></div>';
+  let h='<h1>Разбор по шагам</h1><p class="sub">Выбери раздел. В каждом — быстрые игры, правила простыми словами и задания, которые решаются по шагам: видно, на каком шаге ты запнулся, и начинать сначала не надо.</p>';
+  INDEX.packs.forEach(p=>{
+    const m=packCache[p.id]?Math.round(packMastery(packCache[p.id])*100):null;
+    h+='<button class="pk" data-p="'+p.id+'"><span class="ic">'+p.emoji+'</span><span class="t">'+esc(p.title)+'<small>'+esc(p.desc)+'</small></span>'
+      +(m!==null?'<span class="bar"><i style="width:'+m+'%"></i></span>':'')+'</button>';
   });
   if(session.length&&TG)h+='<button class="btn ok" id="send">📤 Отправить результаты боту ('+session.length+' шагов)</button>';
   h+='<p class="sub" style="text-align:center;margin-top:14px">'+(TG?'Результаты уходят боту по кнопке выше.':'Прогресс хранится на этом устройстве.')+'</p>';
   app.innerHTML=h;
+  app.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>openPack(b.dataset.p));
+  const sb=$('#send');if(sb)sb.onclick=sendToBot;
+}
+function openPack(id){loadPack(id).then(p=>{PACK=p;openHelp=null;setView('pack')})}
+
+function packView(){
+  $('#title').textContent=PACK.emoji+' '+PACK.title;
+  let h='';
+  h+='<div class="card"><div class="tag">Быстрые игры</div><b>10 вопросов, очки и звёзды</b>';
+  PACK.games.forEach(g=>{h+='<button class="btn sec" data-g="'+g.id+'" style="text-align:left"><span style="font-size:20px">'+g.emoji+'</span> <b>'+esc(g.title)+'</b><br><span style="font-weight:400;font-size:13px;color:var(--m)">'+esc(g.desc)+'</span></button>'});
+  h+='</div>';
+  h+='<div class="card"><div class="tag">Задания по шагам</div><b>Решаем задачу маленькими шагами</b><button class="btn" id="steps">🧩 Решить задание по шагам</button></div>';
+  h+='<div class="card"><div class="tag">Навыки и правила</div>';
+  skillsOfPack(PACK).forEach(s=>{
+    const p=pOf(s),a=prog[s]?prog[s].a:0,sk=PACK.skills[s];
+    h+='<div class="sk"><div class="skrow"><span class="lv">'+badge(p)+'</span><div class="nm">'+esc(sk.name)+'<small>'+badgeText(p)+' · шагов решено: '+a+'</small></div><div class="bar"><i style="width:'+Math.round(p*100)+'%"></i></div></div>'
+      +'<div class="skrow" style="margin-top:6px"><button class="nb" data-h="'+s+'">📒 Правило</button><button class="nb" data-t="'+s+'" style="margin-left:auto">▶ Тренировать</button></div>';
+    if(openHelp===s)h+='<div class="help"><b>Правило</b>\n'+esc(sk.rule)+'\n\n<b>Пример</b>\n'+esc(sk.ex)+'</div>';
+    h+='</div>';
+  });
+  h+='</div>';
+  if(session.length&&TG)h+='<button class="btn ok" id="send">📤 Отправить результаты боту ('+session.length+' шагов)</button>';
+  app.innerHTML=h;
   app.querySelectorAll('[data-g]').forEach(b=>b.onclick=()=>gameStart(b.dataset.g));
-  app.querySelectorAll('[data-n]').forEach(b=>b.onclick=()=>start(weightedSkill(+b.dataset.n)));
+  $('#steps').onclick=()=>start(weightedSkill(skillsOfPack(PACK)));
   app.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>start(b.dataset.t));
-  app.querySelectorAll('[data-h]').forEach(b=>b.onclick=()=>{openHelp=openHelp===b.dataset.h?null:b.dataset.h;home()});
+  app.querySelectorAll('[data-h]').forEach(b=>b.onclick=()=>{openHelp=openHelp===b.dataset.h?null:b.dataset.h;setView('pack')});
   const sb=$('#send');if(sb)sb.onclick=sendToBot;
 }
 
+// ── Задание по шагам ──
+function pickTask(skill){
+  let pool=PACK.tasks.filter(t=>t.sk===skill);
+  if(!pool.length)pool=PACK.tasks;
+  return pool[Math.floor(Math.random()*pool.length)];
+}
 function start(skill){
   cur={t:pickTask(skill),i:0,tries:0,res:[],fb:null,order:null,gain:0};
   prepare();setView('task');
@@ -153,7 +199,6 @@ function prepare(){
   const st=cur.t.st[cur.i];cur.tries=0;
   cur.order=st.k==='choice'?shuffle(st.opts):null;
 }
-
 function taskView(){
   const t=cur.t,st=t.st[cur.i];
   $('#title').textContent='Задание №'+t.n;
@@ -170,12 +215,11 @@ function taskView(){
   if(st.k==='choice')app.querySelectorAll('.opt').forEach(b=>b.onclick=()=>answer(cur.order[+b.dataset.k]===st.opts[0]));
   else{
     const inp=$('#inp');
-    const go=()=>{const r=checkNum(inp.value,st);if(r===null){cur.fb={cls:'bad',text:'Напиши ответ числом (например 0,35 или 3/7).'};taskView();return}answer(r)};
+    const go=()=>{const r=checkNum(inp.value,st);if(r===null){cur.fb={cls:'bad',text:'Напиши ответ числом (например 0,35 или 3/7).'};render();return}answer(r)};
     $('#chk').onclick=go;inp.onkeydown=e=>{if(e.key==='Enter')go()};inp.focus();
   }
   window.scrollTo(0,0);
 }
-
 function answer(ok){
   const st=cur.t.st[cur.i];
   const right=st.k==='choice'?st.opts[0]:st.a;
@@ -190,7 +234,7 @@ function answer(ok){
     return next('❌ Правильный ответ этого шага: '+right+'\nПравило: '+st.r+'\nИдём дальше.');
   }
   cur.fb={cls:'bad',text:'❌ Здесь ошибка.\nПодсказка: '+st.r+'\nПопробуй ещё раз.'};
-  taskView();
+  render();
 }
 function next(msg){
   cur.i++;
@@ -200,9 +244,8 @@ function next(msg){
     return setView('done');
   }
   prepare();cur.fb={cls:msg.startsWith('✅')?'good':'bad',text:msg};
-  taskView();
+  render();
 }
-
 function doneView(){
   const t=cur.t,failed=[];
   $('#title').textContent='Итог';
@@ -210,28 +253,26 @@ function doneView(){
   const stars=bad===0?3:bad===1?2:1;
   let h='<div class="stars">'+'⭐'.repeat(stars)+'<span style="opacity:.25">'+'⭐'.repeat(3-stars)+'</span></div>';
   h+='<div class="card"><div class="task">'+esc(t.t)+'</div></div><ul class="res card">';
-  t.st.forEach((st,k)=>{h+='<li>'+(cur.res[k]?'✅':'❌')+' Шаг '+(k+1)+': '+esc(DATA.skills[st.s].name)+'</li>';if(!cur.res[k])failed.push(st)});
+  t.st.forEach((st,k)=>{h+='<li>'+(cur.res[k]?'✅':'❌')+' Шаг '+(k+1)+': '+esc(PACK.skills[st.s].name)+'</li>';if(!cur.res[k])failed.push(st)});
   h+='</ul><div class="fb good">Ответ: <b>'+esc(t.f)+'</b>'+(t.st[t.st.length-1].d===2?' (до сотых)':'')+'<br>Получено: +'+cur.gain+' XP</div>';
-  if(failed.length)h+='<div class="fb bad"><b>Где споткнулся:</b><br>'+failed.map(s=>'• '+esc(DATA.skills[s.s].name)+'<br>&nbsp;&nbsp;'+esc(s.r)).join('<br>')+'</div>';
+  if(failed.length)h+='<div class="fb bad"><b>Где споткнулся:</b><br>'+failed.map(s=>'• '+esc(PACK.skills[s.s].name)+'<br>&nbsp;&nbsp;'+esc(s.r)).join('<br>')+'</div>';
   else h+='<div class="fb good">Все шаги с первой попытки! 👏</div>';
   const sk=failed.length?failed[0].s:t.sk;
   h+='<button class="btn" id="again">'+(failed.length?'🎯 Потренировать то, где споткнулся':'🔁 Ещё такую же')+'</button>';
   h+='<button class="btn sec" id="other">🧩 Другое задание</button>';
   if(TG)h+='<button class="btn ok" id="send">📤 Закончить и отправить результаты боту</button>';
-  h+='<button class="btn sec" id="menu">⬅️ К списку навыков</button>';
+  h+='<button class="btn sec" id="menu">⬅️ К разделу</button>';
   app.innerHTML=h;
   $('#again').onclick=()=>start(sk);
-  $('#other').onclick=()=>start(weightedSkill(t.n));
-  $('#menu').onclick=()=>setView('home');
+  $('#other').onclick=()=>start(weightedSkill(skillsOfPack(PACK)));
+  $('#menu').onclick=()=>setView('pack');
   const sb=$('#send');if(sb)sb.onclick=sendToBot;
 }
 
 // ── Быстрые игры ──
-const ROUNDS=10;
 function gameStart(id){
-  const g=GAMES.games.find(x=>x.id===id);
-  const pool=shuffle(g.items).slice(0,ROUNDS);
-  gm={g,rounds:pool,i:0,ok:0,done:false,picked:null,order:null};
+  const g=PACK.games.find(x=>x.id===id);
+  gm={g,rounds:shuffle(g.items).slice(0,ROUNDS),i:0,ok:0,picked:null,order:null,gain:0};
   prepareRound();setView('game');
 }
 function prepareRound(){
@@ -262,9 +303,13 @@ function gameView(){
   app.innerHTML=h;
   if(gm.picked===null)app.querySelectorAll('.opt').forEach(b=>b.onclick=()=>{
     gm.picked=+b.dataset.k;const good=gm.order[gm.picked]===it.opts[0];
-    if(good)gm.ok++;record(it.sk,good);saveAll();gameView();
+    if(good)gm.ok++;record(it.sk,good);saveAll();render();
   });
-  else $('#nx').onclick=()=>{gm.i++;if(gm.i>=gm.rounds.length){const gain=gm.ok*5;xp+=gain;gm.gain=gain;saveAll();setView('gdone')}else{prepareRound();gameView()}};
+  else $('#nx').onclick=()=>{
+    gm.i++;
+    if(gm.i>=gm.rounds.length){gm.gain=gm.ok*5;xp+=gm.gain;saveAll();setView('gdone')}
+    else{prepareRound();render()}
+  };
   window.scrollTo(0,0);
 }
 function gameDone(){
@@ -276,7 +321,7 @@ function gameDone(){
   if(TG)h+='<button class="btn ok" id="send">📤 Отправить результаты боту</button>';
   app.innerHTML=h;
   $('#again').onclick=()=>gameStart(gm.g.id);
-  $('#menu').onclick=()=>setView('home');
+  $('#menu').onclick=()=>setView('pack');
   const sb=$('#send');if(sb)sb.onclick=sendToBot;
 }
 
@@ -285,11 +330,22 @@ function sendToBot(){
   TG.sendData(JSON.stringify({v:1,t:'math_stages',r:session.slice(-150)}));
 }
 
-fetch('math_games.json').then(r=>r.json()).then(g=>{GAMES=g}).catch(()=>{}).then(()=>fetch('math_stages.json')).then(r=>r.json()).then(d=>{
-  DATA=d;loadAll();
+// ── Запуск ──
+loadAll();
+fetch('math_packs.json').then(r=>r.json()).then(idx=>{
+  INDEX=idx;
   const h=location.hash;let m;
-  if((m=h.match(/^#skill=(\w+)$/))&&DATA.skills[m[1]])return start(m[1]);
-  if((m=h.match(/^#n=(\d+)$/))&&NUM_NAMES[+m[1]])return start(weightedSkill(+m[1]));
+  if((m=h.match(/^#skill=(\w+)$/))){
+    return fetch('math_skills.json').then(r=>r.json()).then(sk=>{
+      const meta=sk[m[1]];
+      if(!meta)return setView('home');
+      return loadPack(meta.pack).then(p=>{PACK=p;start(m[1])});
+    });
+  }
+  if((m=h.match(/^#n=(\d+)$/))){
+    const meta=INDEX.packs.find(p=>p.numbers.indexOf(+m[1])>=0);
+    if(meta)return loadPack(meta.id).then(p=>{PACK=p;const ss=skillsOfNumber(+m[1]);start(weightedSkill(ss.length?ss:skillsOfPack(p)))});
+  }
   setView('home');
 }).catch(()=>{app.innerHTML='<p class="sub">Не удалось загрузить задания. Проверь интернет и открой снова.</p>'});
 </script>
