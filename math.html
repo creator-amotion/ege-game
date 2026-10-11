@@ -47,6 +47,10 @@ h1{font-size:22px;margin:14px 0 4px;background:linear-gradient(135deg,var(--acc)
 .opt{display:block;width:100%;padding:14px;margin-top:10px;border:2px solid #3a3a5e;border-radius:12px;background:var(--card);color:var(--txt);font-size:16px;font-weight:600;cursor:pointer;text-align:left;white-space:normal;word-break:break-word;line-height:1.5}
 .opt:hover{border-color:var(--b)}
 .inp{width:100%;padding:14px;border-radius:12px;border:2px solid #3a3a5e;background:var(--card2);color:var(--txt);font-size:20px;margin-top:6px}
+.keys{display:flex;gap:8px;margin-top:8px}
+.keys button{flex:1;padding:11px 0;border-radius:10px;border:1px solid #3a3a5e;background:var(--card2);color:var(--txt);font-size:20px;font-weight:700;cursor:pointer}
+.keys button:active{border-color:var(--b)}
+.tag.think{color:var(--y)}
 .fb{border-radius:11px;padding:12px 14px;margin:10px 0;font-size:15px;line-height:1.6}
 .fb.good{background:#10281f;border:1px solid #1f5a43;color:#9be9c9}
 .fb.bad{background:#2a1218;border:1px solid #5b2331;color:#ffb3c0}
@@ -204,17 +208,32 @@ function taskView(){
   $('#title').textContent='Задание №'+t.n;
   let h='<div class="card task">'+esc(t.t)+'</div><div class="dots">';
   t.st.forEach((_,k)=>{h+='<span class="dot '+(k<cur.res.length?(cur.res[k]?'ok':'bad'):(k===cur.i?'cur':''))+'"></span>'});
-  h+='</div><div class="tag">Шаг '+(cur.i+1)+' из '+t.st.length+'</div><div class="q">'+esc(st.q)+'</div>';
+  h+='</div><div class="tag'+(st.rc?' think':'')+'">Шаг '+(cur.i+1)+' из '+t.st.length+(st.rc?' · сначала думаем':'')+'</div><div class="q">'+esc(st.q)+'</div>';
   if(cur.fb)h+='<div class="fb '+cur.fb.cls+'">'+esc(cur.fb.text).replace(/\n/g,'<br>')+'</div>';
   if(st.k==='choice'){
     cur.order.forEach((o,k)=>{h+='<button class="opt" data-k="'+k+'">'+esc(o)+'</button>'});
   }else{
-    h+='<input class="inp" id="inp" inputmode="decimal" placeholder="число, например 0,35 или 3/7" autocomplete="off"><button class="btn" id="chk">Проверить</button>';
+    // на цифровой клавиатуре телефона нет «−» и «/», поэтому свои кнопки
+    h+='<input class="inp" id="inp" inputmode="decimal" placeholder="число, например 0,35 или 3/7" autocomplete="off">'
+      +'<div class="keys"><button data-ins="−" aria-label="минус">−</button><button data-ins="," aria-label="запятая">,</button><button data-ins="/" aria-label="дробная черта">/</button><button data-del="1" aria-label="стереть">⌫</button></div>'
+      +'<button class="btn" id="chk">Проверить</button>';
   }
   app.innerHTML=h;
   if(st.k==='choice')app.querySelectorAll('.opt').forEach(b=>b.onclick=()=>answer(cur.order[+b.dataset.k]===st.opts[0]));
   else{
     const inp=$('#inp');
+    app.querySelectorAll('.keys button').forEach(b=>{
+      b.onmousedown=e=>e.preventDefault();   // поле не теряет фокус, клавиатура не прячется
+      b.onclick=()=>{
+        const s=inp.selectionStart==null?inp.value.length:inp.selectionStart,e=inp.selectionEnd==null?s:inp.selectionEnd;
+        if(b.dataset.del){
+          const a=s===e?Math.max(0,s-1):s;inp.value=inp.value.slice(0,a)+inp.value.slice(e);inp.setSelectionRange(a,a);
+        }else{
+          inp.value=inp.value.slice(0,s)+b.dataset.ins+inp.value.slice(e);inp.setSelectionRange(s+1,s+1);
+        }
+        inp.focus();
+      };
+    });
     const go=()=>{const r=checkNum(inp.value,st);if(r===null){cur.fb={cls:'bad',text:'Напиши ответ числом (например 0,35 или 3/7).'};render();return}answer(r)};
     $('#chk').onclick=go;inp.onkeydown=e=>{if(e.key==='Enter')go()};inp.focus();
   }
@@ -253,9 +272,9 @@ function doneView(){
   const stars=bad===0?3:bad===1?2:1;
   let h='<div class="stars">'+'⭐'.repeat(stars)+'<span style="opacity:.25">'+'⭐'.repeat(3-stars)+'</span></div>';
   h+='<div class="card"><div class="task">'+esc(t.t)+'</div></div><ul class="res card">';
-  t.st.forEach((st,k)=>{h+='<li>'+(cur.res[k]?'✅':'❌')+' Шаг '+(k+1)+': '+esc(PACK.skills[st.s].name)+'</li>';if(!cur.res[k])failed.push(st)});
+  t.st.forEach((st,k)=>{h+='<li>'+(cur.res[k]?'✅':'❌')+' Шаг '+(k+1)+': '+(st.rc===1?'вспомнить правило':st.rc===2?'как это делается':esc(PACK.skills[st.s].name))+'</li>';if(!cur.res[k])failed.push(st)});
   h+='</ul><div class="fb good">Ответ: <b>'+esc(t.f)+'</b>'+(t.st[t.st.length-1].d===2?' (до сотых)':'')+'<br>Получено: +'+cur.gain+' XP</div>';
-  if(failed.length)h+='<div class="fb bad"><b>Где споткнулся:</b><br>'+failed.map(s=>'• '+esc(PACK.skills[s.s].name)+'<br>&nbsp;&nbsp;'+esc(s.r)).join('<br>')+'</div>';
+  if(failed.length)h+='<div class="fb bad"><b>Где споткнулся:</b><br>'+failed.map(s=>'• '+(s.rc?'не вспомнил правило: ':'')+esc(PACK.skills[s.s].name)+'<br>&nbsp;&nbsp;'+esc(s.r)).join('<br>')+'</div>';
   else h+='<div class="fb good">Все шаги с первой попытки! 👏</div>';
   const sk=failed.length?failed[0].s:t.sk;
   h+='<button class="btn" id="again">'+(failed.length?'🎯 Потренировать то, где споткнулся':'🔁 Ещё такую же')+'</button>';
