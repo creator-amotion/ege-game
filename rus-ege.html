@@ -598,13 +598,35 @@ function checkG(){
 function nextG(){gidx++;showGTask();}
 
 /* --- CUSTOM GAME --- */
+/* =================== СВЯЗЬ С БОТОМ =================== */
+/* Результат игры уходит ссылкой t.me/<бот>?start=g<игра>_<верно>_<всего>_<хэши ошибок>. Хэш слова: FNV-1a по UTF-16, 3 знака base62
+   (так же считает бот), поэтому репетитор видит, на каких словах ученик споткнулся. */
+const BOT_USERNAME='examzadrotbot';
+const B62='0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+function fnv(str){let h=0x811c9dc5;for(let i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,0x01000193)>>>0}return h>>>0}
+function b62(n,w){let o='';for(let i=0;i<w;i++){o=B62[n%62]+o;n=Math.floor(n/62)}return o}
+function wordHash(w){return b62(fnv(w)%238328,3)}
+function resultLink(game,ok,tot,wrongWords){
+  const head='g'+game+'_'+ok+'_'+tot+'_';let hs='';
+  for(const w of wrongWords){const h=wordHash(w);if((head+hs+h).length>64)break;hs+=h}
+  return 'https://t.me/'+BOT_USERNAME+'?start='+head+hs;
+}
+function sendResult(url){
+  const tg=window.Telegram&&Telegram.WebApp;
+  if(tg&&tg.initData&&tg.openTelegramLink)tg.openTelegramLink(url);else window.open(url,'_blank');
+}
+function resultBlock(link){
+  return `<div class="cg-hint on" style="margin-top:14px">Чтобы бот учёл игру в твоём прогрессе, а репетитор увидел, где ты споткнулся, отправь результат.</div>
+<button class="btp" style="margin-top:10px" onclick="sendResult('${link}')">📤 Отправить результат боту</button>`;
+}
+
 function startCustomGame(num,category){
   const cg=CUSTOM_GAMES[num];if(!cg)return;
   window._cg=cg;window._cgNum=num;window._cgCategory=category;
   let items=cg.items;
   if(category&&category!=='__mix__')items=items.filter(it=>it.category===category);
   window._cgItems=[...items].sort(()=>Math.random()-.5).slice(0,cg.roundSize||20);
-  window._cgIdx=0;window._cgOk=0;window._cgAnswered=false;
+  window._cgIdx=0;window._cgOk=0;window._cgAnswered=false;window._cgWrong=[];
   showCustomItem();
 }
 
@@ -615,7 +637,7 @@ function showCustomItem(){
     const ok=window._cgOk,tot=items.length,pts=ok*10;
     score+=pts;sv();
     const catBtn=(cg.categories&&cg.categories.length)?`<button class="bts" onclick="renderGameTab(${num})">📋 К темам</button>`:'';
-    c.innerHTML=`<div class="game-hero"><div class="gi">${ok/tot>=.8?'🏆':ok/tot>=.5?'🎯':'💪'}</div><div class="fs ${ok/tot>=.8?'g':ok/tot>=.5?'y':'r'}" style="font-size:44px">${ok}/${tot}</div><p style="color:var(--m)">+${pts} очков</p><div class="acts" style="margin-top:16px"><button class="btp" onclick="startCustomGame(${num},window._cgCategory)">🔄 Ещё раз</button>${catBtn}<button class="bts" onclick="sTab(0)">📖 Теория</button></div></div>`;
+    c.innerHTML=`<div class="game-hero"><div class="gi">${ok/tot>=.8?'🏆':ok/tot>=.5?'🎯':'💪'}</div><div class="fs ${ok/tot>=.8?'g':ok/tot>=.5?'y':'r'}" style="font-size:44px">${ok}/${tot}</div><p style="color:var(--m)">+${pts} очков</p>${resultBlock(resultLink(num,ok,tot,window._cgWrong||[]))}<div class="acts" style="margin-top:16px"><button class="btp" onclick="startCustomGame(${num},window._cgCategory)">🔄 Ещё раз</button>${catBtn}<button class="bts" onclick="sTab(0)">📖 Теория</button></div></div>`;
     return;
   }
   const item=items[window._cgIdx];
@@ -641,6 +663,7 @@ function checkCustomAns(btn,chosen,correct){
   if(ok){window._cgOk++;btn.className='cg-opt ok';}
   else{
     btn.className='cg-opt err';
+    const cur=(window._cgItems||[])[window._cgIdx];if(cur)(window._cgWrong=window._cgWrong||[]).push(cur.word);
     document.querySelectorAll('.cg-opt').forEach(b=>{if(b.textContent.trim()===correct)b.className='cg-opt ok';});
   }
   document.querySelectorAll('.cg-opt').forEach(b=>b.disabled=true);
@@ -685,7 +708,7 @@ function renderStressCards(){
 function renderStressGame(){
   const c=document.getElementById('st2');
   const shuffled=[...STRESS_TRAPS].sort(()=>Math.random()-.5).slice(0,20);
-  window._sw=shuffled;window._swIdx=0;window._swOk=0;window._swBad=0;
+  window._sw=shuffled;window._swIdx=0;window._swOk=0;window._swBad=0;window._swWrong=[];
   showStressQ();
 }
 
@@ -695,7 +718,7 @@ function showStressQ(){
   if(window._swIdx>=words.length){
     const ok=window._swOk,bad=window._swBad,tot=ok+bad;
     const pts=ok*3;score+=pts;sv();
-    c.innerHTML=`<div class="game-hero"><div class="gi">${ok/tot>=.8?'🏆':ok/tot>=.5?'🎯':'💪'}</div><div class="fs ${ok/tot>=.8?'g':ok/tot>=.5?'y':'r'}" style="font-size:44px">${ok}/${tot}</div><p style="color:var(--m)">+${pts} очков</p><button class="btp" style="margin-top:16px" onclick="renderStressGame()">🔄 Ещё раз</button></div>`;
+    c.innerHTML=`<div class="game-hero"><div class="gi">${ok/tot>=.8?'🏆':ok/tot>=.5?'🎯':'💪'}</div><div class="fs ${ok/tot>=.8?'g':ok/tot>=.5?'y':'r'}" style="font-size:44px">${ok}/${tot}</div><p style="color:var(--m)">+${pts} очков</p>${resultBlock(resultLink(0,ok,tot,window._swWrong||[]))}<button class="btp" style="margin-top:16px" onclick="renderStressGame()">🔄 Ещё раз</button></div>`;
     return;
   }
   const [word,isOk]=words[window._swIdx];
@@ -716,7 +739,7 @@ function showStressQ(){
 function ansStress(userSaysYes){
   const [word,isOk]=window._sw[window._swIdx];
   const correct=userSaysYes===isOk;
-  if(correct)window._swOk++;else window._swBad++;
+  if(correct)window._swOk++;else{window._swBad++;(window._swWrong=window._swWrong||[]).push(word)}
   const info=document.getElementById('sInfo');
   info.className='stress-info on '+(correct?'ok':'err');
   info.textContent=correct?'✅ Верно!':'❌ '+(isOk?'Ударение поставлено верно':'Ударение поставлено НЕВЕРНО');

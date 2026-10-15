@@ -156,7 +156,7 @@ function home(){
     h+='<button class="pk" data-p="'+p.id+'"><span class="ic">'+p.emoji+'</span><span class="t">'+esc(p.title)+'<small>'+esc(p.desc)+'</small></span>'
       +(m!==null?'<span class="bar"><i style="width:'+m+'%"></i></span>':'')+'</button>';
   });
-  if(session.length&&TG)h+='<button class="btn ok" id="send">📤 Отправить результаты боту ('+session.length+' шагов)</button>';
+  if(session.length)h+='<button class="btn ok" id="send">📤 Отправить результаты боту ('+session.length+' шагов)</button>';
   h+='<p class="sub" style="text-align:center;margin-top:14px">'+(TG?'Результаты уходят боту по кнопке выше.':'Прогресс хранится на этом устройстве.')+'</p>';
   app.innerHTML=h;
   app.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>openPack(b.dataset.p));
@@ -180,7 +180,7 @@ function packView(){
     h+='</div>';
   });
   h+='</div>';
-  if(session.length&&TG)h+='<button class="btn ok" id="send">📤 Отправить результаты боту ('+session.length+' шагов)</button>';
+  if(session.length)h+='<button class="btn ok" id="send">📤 Отправить результаты боту ('+session.length+' шагов)</button>';
   app.innerHTML=h;
   app.querySelectorAll('[data-g]').forEach(b=>b.onclick=()=>gameStart(b.dataset.g));
   $('#steps').onclick=()=>start(weightedSkill(skillsOfPack(PACK)));
@@ -279,7 +279,7 @@ function doneView(){
   const sk=failed.length?failed[0].s:t.sk;
   h+='<button class="btn" id="again">'+(failed.length?'🎯 Потренировать то, где споткнулся':'🔁 Ещё такую же')+'</button>';
   h+='<button class="btn sec" id="other">🧩 Другое задание</button>';
-  if(TG)h+='<button class="btn ok" id="send">📤 Закончить и отправить результаты боту</button>';
+  h+='<button class="btn ok" id="send">📤 Закончить и отправить результаты боту</button>';
   h+='<button class="btn sec" id="menu">⬅️ К разделу</button>';
   app.innerHTML=h;
   $('#again').onclick=()=>start(sk);
@@ -337,16 +337,34 @@ function gameDone(){
   let h='<div class="stars">'+'⭐'.repeat(stars)+'<span style="opacity:.25">'+'⭐'.repeat(3-stars)+'</span></div>';
   h+='<div class="fb good" style="text-align:center;font-size:18px">'+gm.ok+' из '+n+' верно<br>+'+gm.gain+' XP</div>';
   h+='<button class="btn" id="again">🔁 Ещё раз</button><button class="btn sec" id="menu">🎮 Другие игры</button>';
-  if(TG)h+='<button class="btn ok" id="send">📤 Отправить результаты боту</button>';
+  h+='<button class="btn ok" id="send">📤 Отправить результаты боту</button>';
   app.innerHTML=h;
   $('#again').onclick=()=>gameStart(gm.g.id);
   $('#menu').onclick=()=>setView('pack');
   const sb=$('#send');if(sb)sb.onclick=sendToBot;
 }
 
+// ── связь с ботом: те же хэши, что у бота (game_sync.py) ──
+const BOT_USERNAME='examzadrotbot';
+const B62='0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+function fnv(str){let h=0x811c9dc5;for(let i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,0x01000193)>>>0}return h>>>0}
+function b62(n,w){let o='';for(let i=0;i<w;i++){o=B62[n%62]+o;n=Math.floor(n/62)}return o}
+
 function sendToBot(){
-  if(!TG||!session.length)return;
-  TG.sendData(JSON.stringify({v:1,t:'math_stages',r:session.slice(-150)}));
+  if(!session.length)return;
+  // из кнопки на клавиатуре бота данные уходят напрямую, во всех остальных случаях — ссылкой с результатом
+  const keyboardLaunch=TG&&TG.initDataUnsafe&&!TG.initDataUnsafe.query_id;
+  if(keyboardLaunch){
+    TG.sendData(JSON.stringify({v:1,t:'math_stages',r:session.slice(-150)}));
+    return;
+  }
+  const agg={};
+  session.forEach(([sk,ok])=>{const a=agg[sk]||(agg[sk]=[0,0]);a[1]=Math.min(9,a[1]+1);a[0]=Math.min(a[1],a[0]+(ok?1:0))});
+  let body='';
+  Object.keys(agg).slice(-15).forEach(sk=>{body+=b62(fnv(sk)%3844,2)+agg[sk][0]+agg[sk][1]});
+  const url='https://t.me/'+BOT_USERNAME+'?start=m_'+body;
+  session=[];
+  if(TG&&TG.openTelegramLink)TG.openTelegramLink(url);else window.open(url,'_blank');
 }
 
 // ── Запуск ──
