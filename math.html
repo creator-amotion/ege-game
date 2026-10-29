@@ -372,6 +372,9 @@ loadAll();
 fetch('math_packs.json').then(r=>r.json()).then(idx=>{
   INDEX=idx;
   const h=location.hash;let m;
+  if((m=h.match(/^#pack=(\w+)&game=(\w+)$/))){          // ссылка репетитора: конкретная игра раздела
+    return loadPack(m[1]).then(p=>{PACK=p;if(p.games.some(g=>g.id===m[2]))gameStart(m[2]);else setView('pack')}).catch(()=>setView('home'));
+  }
   if((m=h.match(/^#skill=(\w+)$/))){
     return fetch('math_skills.json').then(r=>r.json()).then(sk=>{
       const meta=sk[m[1]];

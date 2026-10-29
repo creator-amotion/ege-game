@@ -358,8 +358,10 @@ function init(){
   else{
     // Ссылка вида index.html#game=17 — открыть задание сразу на вкладке «Игра»
     // (кнопка «Игра по этой теме» в Telegram-боте после неверного ответа)
-    const m=/^#game=(\d+)$/.exec(location.hash);
-    if(m){const n=+m[1];if(TOPICS.some(t=>t.num===n)){openTopic(n);sTab(2);}}
+    // ...или #game=17&cat=<тема> — сразу запустить игру по выбранной теме (так репетитор задаёт конкретную тему игры)
+    const m=/^#game=(\d+)(?:&cat=([\w-]+))?$/.exec(location.hash);
+    if(m){const n=+m[1];if(TOPICS.some(t=>t.num===n)){openTopic(n);sTab(2);
+      if(m[2]&&typeof CUSTOM_GAMES!=='undefined'&&CUSTOM_GAMES[n]&&CUSTOM_GAMES[n].categories.some(c=>c.id===m[2]))startCustomGame(n,m[2]);}}
   }
 }
 
@@ -606,11 +608,13 @@ const B62='0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
 function fnv(str){let h=0x811c9dc5;for(let i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,0x01000193)>>>0}return h>>>0}
 function b62(n,w){let o='';for(let i=0;i<w;i++){o=B62[n%62]+o;n=Math.floor(n/62)}return o}
 function wordHash(w){return b62(fnv(w)%238328,3)}
-function resultLink(game,ok,tot,wrongWords){
+function resultLink(game,ok,tot,wrongWords,catIdx){
   const head='g'+game+'_'+ok+'_'+tot+'_';let hs='';
-  for(const w of wrongWords){const h=wordHash(w);if((head+hs+h).length>64)break;hs+=h}
-  return 'https://t.me/'+BOT_USERNAME+'?start='+head+hs;
+  const tail=(catIdx>=0&&catIdx<62)?'_'+B62[catIdx]:'';
+  for(const w of wrongWords){const h=wordHash(w);if((head+hs+h+tail).length>64)break;hs+=h}
+  return 'https://t.me/'+BOT_USERNAME+'?start='+head+hs+tail;
 }
+function catIndex(num,cat){const cg=typeof CUSTOM_GAMES!=='undefined'&&CUSTOM_GAMES[num];return(cg&&cg.categories&&cat)?cg.categories.findIndex(c=>c.id===cat):-1}
 function sendResult(url){
   const tg=window.Telegram&&Telegram.WebApp;
   if(tg&&tg.initData&&tg.openTelegramLink)tg.openTelegramLink(url);else window.open(url,'_blank');
@@ -637,7 +641,7 @@ function showCustomItem(){
     const ok=window._cgOk,tot=items.length,pts=ok*10;
     score+=pts;sv();
     const catBtn=(cg.categories&&cg.categories.length)?`<button class="bts" onclick="renderGameTab(${num})">📋 К темам</button>`:'';
-    c.innerHTML=`<div class="game-hero"><div class="gi">${ok/tot>=.8?'🏆':ok/tot>=.5?'🎯':'💪'}</div><div class="fs ${ok/tot>=.8?'g':ok/tot>=.5?'y':'r'}" style="font-size:44px">${ok}/${tot}</div><p style="color:var(--m)">+${pts} очков</p>${resultBlock(resultLink(num,ok,tot,window._cgWrong||[]))}<div class="acts" style="margin-top:16px"><button class="btp" onclick="startCustomGame(${num},window._cgCategory)">🔄 Ещё раз</button>${catBtn}<button class="bts" onclick="sTab(0)">📖 Теория</button></div></div>`;
+    c.innerHTML=`<div class="game-hero"><div class="gi">${ok/tot>=.8?'🏆':ok/tot>=.5?'🎯':'💪'}</div><div class="fs ${ok/tot>=.8?'g':ok/tot>=.5?'y':'r'}" style="font-size:44px">${ok}/${tot}</div><p style="color:var(--m)">+${pts} очков</p>${resultBlock(resultLink(num,ok,tot,window._cgWrong||[],catIndex(num,window._cgCategory)))}<div class="acts" style="margin-top:16px"><button class="btp" onclick="startCustomGame(${num},window._cgCategory)">🔄 Ещё раз</button>${catBtn}<button class="bts" onclick="sTab(0)">📖 Теория</button></div></div>`;
     return;
   }
   const item=items[window._cgIdx];
