@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#F3EEE2">
 <title>Аник — подготовка к ЕГЭ и ОГЭ</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script>
@@ -13,47 +14,63 @@
   else if(/^#(skill=\w+|n=\d+)$/.test(h)){location.replace('math.html'+h);}
 })();
 </script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@700;800&family=Golos+Text:wght@400..700&display=swap">
+<link rel="stylesheet" href="anik.css?v=1">
 <style>
-:root{--bg:#0a0a14;--card:#13132a;--card2:#1a1a35;--acc:#e94560;--g:#4ecca3;--y:#ffd700;--b:#74c0fc;--txt:#eaeaea;--m:#8a90a0;--r:16px}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-body{background:var(--bg);color:var(--txt);font-family:Segoe UI,system-ui,sans-serif;min-height:100vh}
-main{max-width:640px;margin:0 auto;padding:22px 16px 40px}
-h1{font-size:28px;font-weight:800;text-align:center;background:linear-gradient(135deg,var(--acc),var(--g));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.sub{color:var(--m);text-align:center;font-size:15px;margin:6px 0 22px;line-height:1.5}
-.step{font-size:12px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--m);margin:22px 0 10px}
-.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.pick{background:var(--card);border:2px solid #2a2a4e;border-radius:var(--r);padding:20px 12px;text-align:center;cursor:pointer;transition:all .15s;color:var(--txt);font-size:18px;font-weight:800}
-.pick small{display:block;margin-top:6px;font-size:13px;font-weight:500;color:var(--m)}
-.pick .ic{font-size:36px;display:block;margin-bottom:6px}
-.pick:hover{border-color:var(--b)}
-.pick.on{border-color:var(--acc);background:#1d1226}
-.subj{display:flex;align-items:center;gap:14px;text-align:left;padding:16px;margin-top:10px;width:100%}
-.subj .ic{font-size:34px;margin:0}
-.subj .t{flex:1}
-.badge{font-size:11px;font-weight:800;padding:3px 8px;border-radius:999px;margin-left:6px;vertical-align:middle}
-.badge.ready{background:#10281f;color:var(--g);border:1px solid #1f5a43}
-.badge.pilot{background:#2a2410;color:var(--y);border:1px solid #5a4a1f}
-.badge.soon{background:#1e1e30;color:var(--m);border:1px solid #33334d}
-.subj.soon{opacity:.6;cursor:default}
-.go{display:block;width:100%;margin-top:22px;padding:15px;border:none;border-radius:var(--r);background:var(--acc);color:#fff;font-size:17px;font-weight:800;cursor:pointer}
-.go:disabled{opacity:.35;cursor:default}
-.hint{color:var(--m);font-size:13px;text-align:center;margin-top:18px;line-height:1.5}
+body{min-height:100vh}
+main{max-width:520px;margin:0 auto;padding:26px 20px 34px;display:flex;flex-direction:column;gap:22px;min-height:100vh}
+.top{display:flex;align-items:baseline;justify-content:space-between}
+h1{font-family:var(--display);font-size:38px;font-weight:800;letter-spacing:-1.5px;line-height:.98}
+.step{color:var(--ink);margin-bottom:10px}
+.exams{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.exam{position:relative;height:196px;padding:0;border:0;overflow:hidden;text-align:left;cursor:pointer;color:var(--ink);background:var(--red)}
+.exams:has(.on) .exam:not(.on){opacity:.55}
+.exam.e-oge{background:var(--blue);color:#fff}
+.exam.on{opacity:1;outline:3px solid var(--ink);outline-offset:3px}
+.exam .big{position:absolute;right:-14px;bottom:-36px;font-family:var(--display);font-weight:800;font-size:190px;line-height:.8;letter-spacing:-10px;color:var(--yellow);pointer-events:none}
+.exam .nm{position:absolute;left:14px;top:14px;display:flex;flex-direction:column;gap:2px;font-family:var(--display);font-size:34px;font-weight:800;letter-spacing:-1px;line-height:1}
+.exam .nm small{font-family:var(--body);font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase}
+.exam .chk{display:none;position:absolute;right:12px;top:12px;width:28px;height:28px;border-radius:14px;background:var(--ink);color:var(--yellow);align-items:center;justify-content:center;font-size:15px;font-weight:700}
+.exam.on .chk{display:flex}
+.subj{display:flex;align-items:center;gap:14px;width:100%;min-height:72px;padding:12px 16px;margin-top:8px;border:2px solid var(--ink);background:transparent;color:var(--ink);text-align:left;cursor:pointer}
+.subj:first-child{margin-top:0}
+.subj .t{flex:1;font-family:var(--display);font-size:19px;font-weight:800;letter-spacing:-.4px;line-height:1.15}
+.subj .t small{display:block;margin-top:4px;font-family:var(--body);font-size:13px;font-weight:400;letter-spacing:0;color:var(--muted)}
+.subj.on{background:var(--ink);color:var(--paper)}
+.subj.on .t small{color:#CFC7B5}
+.subj.soon{opacity:.55;cursor:default;border-style:dashed}
+.badge{display:inline-block;margin-left:8px;padding:2px 7px;vertical-align:middle;font-family:var(--body);font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;background:var(--chip);color:var(--ink)}
+.badge.ready{background:var(--blue);color:#fff}
+.badge.pilot{background:var(--yellow)}
+.subj.on .badge.soon{background:var(--chip)}
+.sp{flex:1}
+.go{width:100%}
+.go:disabled{background:var(--ink);color:var(--paper)}
+.hint{color:var(--muted);font-size:13px;line-height:1.5;text-align:center}
 </style>
 </head>
-<body>
+<body class="hub">
 <main>
-  <h1>Аник</h1>
-  <p class="sub">Тренируйся по шагам: игры, разбор заданий и прогресс. Выбери экзамен и предмет.</p>
+  <div class="top"><span class="wm">аник<i>.</i></span><span class="eyebrow">ЕГЭ · ОГЭ</span></div>
+  <h1>К чему<br>готовимся?</h1>
 
-  <div class="step">1. Экзамен</div>
-  <div class="row">
-    <button class="pick" data-exam="ege"><span class="ic">🎓</span>ЕГЭ<small>11 класс</small></button>
-    <button class="pick" data-exam="oge"><span class="ic">📘</span>ОГЭ<small>9 класс</small></button>
-  </div>
+  <section>
+    <div class="step">Экзамен</div>
+    <div class="exams">
+      <button class="exam e-ege" data-exam="ege" aria-pressed="false"><span class="big" aria-hidden="true">11</span><span class="nm">ЕГЭ<small>11 класс</small></span><span class="chk" aria-hidden="true">✓</span></button>
+      <button class="exam e-oge" data-exam="oge" aria-pressed="false"><span class="big" aria-hidden="true">9</span><span class="nm">ОГЭ<small>9 класс</small></span><span class="chk" aria-hidden="true">✓</span></button>
+    </div>
+  </section>
 
-  <div class="step" id="step2" style="display:none">2. Предмет</div>
-  <div id="subjects"></div>
+  <section id="step2" style="display:none">
+    <div class="step">Предмет</div>
+    <div id="subjects"></div>
+  </section>
 
+  <div class="sp"></div>
   <button class="go" id="go" disabled>Выбери экзамен и предмет</button>
   <p class="hint">Прогресс сохраняется на этом устройстве. Чтобы результаты видел бот-помощник, открывай приложение кнопкой в чате с ботом.</p>
 </main>
@@ -62,30 +79,30 @@ h1{font-size:28px;font-weight:800;text-align:center;background:linear-gradient(1
 // Каталог: что уже готово. Новые экзамены и предметы добавляются сюда.
 var CATALOG={
   ege:{
-    rus:{name:'Русский язык',icon:'📖',status:'ready',desc:'Все 26 заданий: теория, практика, игры',url:'rus-ege.html'},
-    math:{name:'Математика (профиль)',icon:'📐',status:'pilot',desc:'11 разделов: геометрия, уравнения, производная, вероятность и др. — игры и разбор по шагам',url:'math.html'}
+    rus:{name:'Русский язык',status:'ready',desc:'Все 26 заданий: теория, практика, игры',url:'rus-ege.html'},
+    math:{name:'Математика (профиль)',status:'pilot',desc:'11 разделов: геометрия, уравнения, производная, вероятность и др. — игры и разбор по шагам',url:'math.html'}
   },
   oge:{
-    rus:{name:'Русский язык',icon:'📖',status:'soon',desc:'Готовим материалы'},
-    math:{name:'Математика',icon:'📐',status:'soon',desc:'Готовим материалы'}
+    rus:{name:'Русский язык',status:'soon',desc:'Готовим материалы'},
+    math:{name:'Математика',status:'soon',desc:'Готовим материалы'}
   }
 };
 var BADGE={ready:'<span class="badge ready">готово</span>',pilot:'<span class="badge pilot">пилот</span>',soon:'<span class="badge soon">скоро</span>'};
 var exam=null,subj=null;
 var TG=window.Telegram&&window.Telegram.WebApp?window.Telegram.WebApp:null;
-if(TG){try{TG.ready();TG.expand();}catch(e){}}
+if(TG){try{TG.ready();TG.expand();TG.setHeaderColor('#F3EEE2');TG.setBackgroundColor('#F3EEE2');}catch(e){}}
 function save(){try{localStorage.setItem('anik_choice',JSON.stringify({exam:exam,subj:subj}))}catch(e){}}
 function load(){try{var c=JSON.parse(localStorage.getItem('anik_choice')||'null');if(c&&CATALOG[c.exam]){exam=c.exam;subj=c.subj}}catch(e){}}
 
 function render(){
-  document.querySelectorAll('[data-exam]').forEach(function(b){b.classList.toggle('on',b.dataset.exam===exam)});
+  document.querySelectorAll('[data-exam]').forEach(function(b){var on=b.dataset.exam===exam;b.classList.toggle('on',on);b.setAttribute('aria-pressed',on?'true':'false')});
   var box=document.getElementById('subjects'),st=document.getElementById('step2');
   if(!exam){st.style.display='none';box.innerHTML='';}
   else{
     st.style.display='block';
     box.innerHTML=Object.keys(CATALOG[exam]).map(function(k){
       var s=CATALOG[exam][k];
-      return '<button class="pick subj '+(s.status==='soon'?'soon':'')+(subj===k?' on':'')+'" data-subj="'+k+'"><span class="ic">'+s.icon+'</span><span class="t">'+s.name+' '+BADGE[s.status]+'<small>'+s.desc+'</small></span></button>';
+      return '<button class="subj '+(s.status==='soon'?'soon':'')+(subj===k?' on':'')+'" data-subj="'+k+'" aria-pressed="'+(subj===k?'true':'false')+'"><span class="t">'+s.name+' '+BADGE[s.status]+'<small>'+s.desc+'</small></span></button>';
     }).join('');
     box.querySelectorAll('[data-subj]').forEach(function(b){b.onclick=function(){
       var s=CATALOG[exam][b.dataset.subj];if(s.status==='soon')return;
@@ -93,7 +110,7 @@ function render(){
   }
   var go=document.getElementById('go');
   var s=exam&&subj&&CATALOG[exam][subj];
-  if(s&&s.status!=='soon'){go.disabled=false;go.textContent='Играть: '+(exam==='ege'?'ЕГЭ':'ОГЭ')+' · '+s.name+' →';}
+  if(s&&s.status!=='soon'){go.disabled=false;go.textContent=(exam==='ege'?'ЕГЭ':'ОГЭ')+' · '+s.name;}
   else{go.disabled=true;go.textContent=exam?'Выбери предмет':'Выбери экзамен и предмет';}
 }
 document.querySelectorAll('[data-exam]').forEach(function(b){b.onclick=function(){exam=b.dataset.exam;if(!CATALOG[exam][subj]||CATALOG[exam][subj].status==='soon')subj=null;save();render();}});

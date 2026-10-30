@@ -58,8 +58,13 @@ h1{font-size:22px;margin:14px 0 4px;background:linear-gradient(135deg,var(--acc)
 .res li{list-style:none;margin:8px 0;font-size:15px;line-height:1.6}
 .katex{font-size:1.05em}
 </style>
+<meta name="theme-color" content="#F3EEE2">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@700;800&family=Golos+Text:wght@400..700&display=swap">
+<link rel="stylesheet" href="anik.css?v=1">
 </head>
-<body>
+<body class="math">
 <nav><button class="nb" id="back">←</button><b id="title">Математика</b><span id="xp"></span></nav>
 <main id="app"></main>
 
@@ -68,7 +73,7 @@ h1{font-size:22px;margin:14px 0 4px;background:linear-gradient(135deg,var(--acc)
 const P_L0=0.30,P_T=0.09,P_S=0.10,P_G=0.20,MAX_TRIES=2,ROUNDS=10;
 let INDEX=null, PACK=null, packCache={}, prog={}, xp=0, session=[], cur=null, gm=null, view='home', openHelp=null;
 const TG=window.Telegram&&window.Telegram.WebApp&&window.Telegram.WebApp.initData?window.Telegram.WebApp:null;
-if(TG){try{TG.ready();TG.expand();}catch(e){}}
+if(TG){try{TG.ready();TG.expand();TG.setHeaderColor('#F3EEE2');TG.setBackgroundColor('#F3EEE2');}catch(e){}}
 const $=s=>document.querySelector(s);
 const app=$('#app');
 
@@ -309,8 +314,8 @@ function gameView(){
   gm.order.forEach((o,k)=>{
     let st='';
     if(gm.picked!==null){
-      if(o===it.opts[0])st=' style="border-color:var(--g);background:#10281f"';
-      else if(k===gm.picked)st=' style="border-color:var(--acc);background:#2a1218"';
+      if(o===it.opts[0])st=' style="border-color:var(--blue);background:var(--blue);color:#fff"';
+      else if(k===gm.picked)st=' style="border-color:var(--red);background:var(--red);color:var(--ink)"';
     }
     h+='<button class="opt" data-k="'+k+'"'+st+(gm.picked!==null?' disabled':'')+'>'+esc(o)+'</button>';
   });

@@ -178,8 +178,13 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:12px 1
 .hid{display:none!important}
 .sep{height:1px;background:#2a2a3e;margin:6px 0}
 </style>
+<meta name="theme-color" content="#F3EEE2">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@700;800&family=Golos+Text:wght@400..700&display=swap">
+<link rel="stylesheet" href="anik.css?v=1">
 </head>
-<body>
+<body class="rus">
 <nav>
   <button class="nbtn" id="backBtn" onclick="goHome()">&#8592;</button>
   <a class="nbtn" href="./" title="Все предметы">&#127968;</a>
@@ -190,8 +195,9 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:12px 1
 <!-- HOME -->
 <div id="s-home" class="scr on">
   <div class="hero">
-    <h1>&#129504; ЕГЭ Тренажёр</h1>
-    <p>Русский язык &middot; все 26 заданий &middot; База Школково</p>
+    <div class="wm">аник<i>.</i></div>
+    <h1>ЕГЭ Тренажёр</h1>
+    <p>Русский язык &middot; все 26 заданий</p>
     <div class="srow">
       <div class="sbox"><div class="n">4969</div><div class="l">задач в базе</div></div>
       <div class="sbox"><div class="n">26</div><div class="l">заданий</div></div>
@@ -260,24 +266,24 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:12px 1
     <button class="tab" onclick="sTabs('stress',2)">&#9889; Игра</button>
   </div>
   <div class="tb on" id="st0">
-    <div class="tcard" style="--col:#ff9f43">
+    <div class="tcard" style="--col:#F49AC1">
       <h3>&#127462; Глаголы прошедшего времени</h3>
       <p>У глаголов прошедшего времени женского рода ударение часто на окончании -А</p>
       <div class="exs"><span class="ex">звал<b style="color:var(--acc)">А</b></span><span class="ex">лгал<b style="color:var(--acc)">А</b></span><span class="ex">ждал<b style="color:var(--acc)">А</b></span><span class="ex">создал<b style="color:var(--acc)">А</b></span><span class="ex">бралА</span><span class="ex">рвалА</span><span class="ex">клалА</span></div>
       <div class="warn">&#9888;&#65039; НО: клАла (НЕ клалА) — некоторые глаголы исключения</div>
     </div>
-    <div class="tcard" style="--col:#ff9f43">
+    <div class="tcard" style="--col:#F49AC1">
       <h3>&#127462; Глаголы на -ИТЬ: ударение смещается</h3>
       <div class="rbox"><b>звонИт, включИт, облегчИт, углубИт</b><small>Не звОнит, не вклЮчит!</small></div>
       <div class="rbox"><b>баловАть, премировАть, нормировАть</b><small>Глаголы на -ОВАТЬ: ударение на -АТЬ</small></div>
       <div class="rbox"><b>закУпорить, откУпорить</b><small>НЕ закупОрить!</small></div>
     </div>
-    <div class="tcard" style="--col:#ff9f43">
+    <div class="tcard" style="--col:#F49AC1">
       <h3>&#127462; Существительные</h3>
       <div class="exs"><span class="ex">тОрты</span><span class="ex">шАрфы</span><span class="ex">тамОжня</span><span class="ex">дешевИзна</span><span class="ex">Отрочество</span><span class="ex">корЫсть</span><span class="ex">знАмение</span><span class="ex">вероисповЕдание</span></div>
       <div class="warn">&#9888;&#65039; тОрты (НЕ тортЫ!), шАрфы (НЕ шарфЫ!)</div>
     </div>
-    <div class="tcard" style="--col:#ff9f43">
+    <div class="tcard" style="--col:#F49AC1">
       <h3>&#127462; Краткие прилагательные и причастия</h3>
       <p>Краткая форма ж.р. — ударение на окончании -А</p>
       <div class="exs"><span class="ex">вернА</span><span class="ex">снятА</span><span class="ex">занятА</span><span class="ex">начатА</span><span class="ex">прИнятА</span><span class="ex">ободренА</span></div>
@@ -313,32 +319,32 @@ const CUSTOM_GAMES={"1":{"type":"four","title":"Части речи и сред�
 
 /* =================== КОНФИГ =================== */
 const TOPICS=[
-  {num:1,emoji:"&#128195;",name:"Связь предложений",col:"#a8edea",cnt:166,desc:"Союзы, местоимения, наречия"},
-  {num:2,emoji:"&#128218;",name:"Значение слова",col:"#a8d8ea",cnt:169,desc:"Лексическое значение в контексте"},
-  {num:3,emoji:"&#127800;",name:"Стилистика",col:"#aa96da",cnt:164,desc:"Типы речи, стили"},
-  {num:4,emoji:"&#127462;",name:"Ударение",col:"#ff9f43",cnt:179,desc:"Акцентологические нормы"},
-  {num:5,emoji:"&#129300;",name:"Паронимы",col:"#ff6b81",cnt:109,desc:"Слова, похожие по звучанию"},
-  {num:6,emoji:"&#9999;",name:"Лексические ошибки",col:"#ff4757",cnt:202,desc:"Плеоназм, тавтология"},
-  {num:7,emoji:"&#128290;",name:"Морфол. нормы",col:"#eccc68",cnt:208,desc:"Числительные, склонение"},
-  {num:8,emoji:"&#128279;",name:"Синтаксис. нормы",col:"#ffa502",cnt:165,desc:"Деепричастный оборот, связь"},
-  {num:9,emoji:"&#127807;",name:"Корни",col:"#ff6b6b",cnt:218,desc:"Чередующиеся гласные"},
-  {num:10,emoji:"&#128295;",name:"Приставки",col:"#ff9f43",cnt:236,desc:"ПРЕ/ПРИ, З/С"},
-  {num:11,emoji:"&#128204;",name:"Суффиксы",col:"#ffd43b",cnt:186,desc:"Суффиксы сущ., прил., гл."},
-  {num:12,emoji:"&#9889;",name:"Окончания глаг.",col:"#69db7c",cnt:178,desc:"Спряжения и причастия"},
-  {num:13,emoji:"&#10060;",name:"НЕ и НИ",col:"#4dabf7",cnt:175,desc:"Слитно и раздельно"},
-  {num:14,emoji:"&#128256;",name:"Слитно/раздельно",col:"#9775fa",cnt:183,desc:"Предлоги, союзы, частицы"},
-  {num:15,emoji:"&#9996;",name:"Н и НН",col:"#f783ac",cnt:212,desc:"Одна или две Н"},
-  {num:16,emoji:"&#128203;",name:"Однородные",col:"#e64980",cnt:209,desc:"Запятые при однородных"},
-  {num:17,emoji:"&#128204;",name:"Обособление",col:"#cc5de8",cnt:203,desc:"Причастные/деепричастные обороты"},
-  {num:18,emoji:"&#128172;",name:"Вводные слова",col:"#74c0fc",cnt:170,desc:"Вводные конструкции"},
-  {num:19,emoji:"&#128279;",name:"СПП",col:"#63e6be",cnt:208,desc:"Сложноподчинённые"},
-  {num:20,emoji:"&#9939;",name:"Разные виды связи",col:"#a9e34b",cnt:197,desc:"Стык союзов, однородное подчинение"},
-  {num:21,emoji:"&#128221;",name:"Тире и двоеточие",col:"#ffa8a8",cnt:168,desc:"Знаки в простом и сложном"},
-  {num:22,emoji:"&#127775;",name:"Тропы",col:"#da77f2",cnt:101,desc:"Метафора, эпитет, сравнение"},
-  {num:23,emoji:"&#128196;",name:"Смысловой анализ",col:"#fcc419",cnt:215,desc:"Верные утверждения о тексте"},
-  {num:24,emoji:"&#128241;",name:"Типы речи",col:"#51cf66",cnt:230,desc:"Повест., описание, рассуждение"},
-  {num:25,emoji:"&#128483;",name:"Лексические средства",col:"#339af0",cnt:212,desc:"Синонимы, антонимы, фразеологизмы"},
-  {num:26,emoji:"&#127968;",name:"Связь в тексте",col:"#20c997",cnt:214,desc:"Средства связи предложений"},
+  {num:1,emoji:"&#128195;",name:"Связь предложений",col:"#F6CE2E",cnt:166,desc:"Союзы, местоимения, наречия"},
+  {num:2,emoji:"&#128218;",name:"Значение слова",col:"#F6CE2E",cnt:169,desc:"Лексическое значение в контексте"},
+  {num:3,emoji:"&#127800;",name:"Стилистика",col:"#F6CE2E",cnt:164,desc:"Типы речи, стили"},
+  {num:4,emoji:"&#127462;",name:"Ударение",col:"#F49AC1",cnt:179,desc:"Акцентологические нормы"},
+  {num:5,emoji:"&#129300;",name:"Паронимы",col:"#F49AC1",cnt:109,desc:"Слова, похожие по звучанию"},
+  {num:6,emoji:"&#9999;",name:"Лексические ошибки",col:"#F49AC1",cnt:202,desc:"Плеоназм, тавтология"},
+  {num:7,emoji:"&#128290;",name:"Морфол. нормы",col:"#F49AC1",cnt:208,desc:"Числительные, склонение"},
+  {num:8,emoji:"&#128279;",name:"Синтаксис. нормы",col:"#F49AC1",cnt:165,desc:"Деепричастный оборот, связь"},
+  {num:9,emoji:"&#127807;",name:"Корни",col:"#E5332A",cnt:218,desc:"Чередующиеся гласные"},
+  {num:10,emoji:"&#128295;",name:"Приставки",col:"#E5332A",cnt:236,desc:"ПРЕ/ПРИ, З/С"},
+  {num:11,emoji:"&#128204;",name:"Суффиксы",col:"#E5332A",cnt:186,desc:"Суффиксы сущ., прил., гл."},
+  {num:12,emoji:"&#9889;",name:"Окончания глаг.",col:"#E5332A",cnt:178,desc:"Спряжения и причастия"},
+  {num:13,emoji:"&#10060;",name:"НЕ и НИ",col:"#E5332A",cnt:175,desc:"Слитно и раздельно"},
+  {num:14,emoji:"&#128256;",name:"Слитно/раздельно",col:"#E5332A",cnt:183,desc:"Предлоги, союзы, частицы"},
+  {num:15,emoji:"&#9996;",name:"Н и НН",col:"#E5332A",cnt:212,desc:"Одна или две Н"},
+  {num:16,emoji:"&#128203;",name:"Однородные",col:"#2E55C9",cnt:209,desc:"Запятые при однородных"},
+  {num:17,emoji:"&#128204;",name:"Обособление",col:"#2E55C9",cnt:203,desc:"Причастные/деепричастные обороты"},
+  {num:18,emoji:"&#128172;",name:"Вводные слова",col:"#2E55C9",cnt:170,desc:"Вводные конструкции"},
+  {num:19,emoji:"&#128279;",name:"СПП",col:"#2E55C9",cnt:208,desc:"Сложноподчинённые"},
+  {num:20,emoji:"&#9939;",name:"Разные виды связи",col:"#2E55C9",cnt:197,desc:"Стык союзов, однородное подчинение"},
+  {num:21,emoji:"&#128221;",name:"Тире и двоеточие",col:"#2E55C9",cnt:168,desc:"Знаки в простом и сложном"},
+  {num:22,emoji:"&#127775;",name:"Тропы",col:"#F6CE2E",cnt:101,desc:"Метафора, эпитет, сравнение"},
+  {num:23,emoji:"&#128196;",name:"Смысловой анализ",col:"#F6CE2E",cnt:215,desc:"Верные утверждения о тексте"},
+  {num:24,emoji:"&#128241;",name:"Типы речи",col:"#F6CE2E",cnt:230,desc:"Повест., описание, рассуждение"},
+  {num:25,emoji:"&#128483;",name:"Лексические средства",col:"#F6CE2E",cnt:212,desc:"Синонимы, антонимы, фразеологизмы"},
+  {num:26,emoji:"&#127968;",name:"Связь в тексте",col:"#F6CE2E",cnt:214,desc:"Средства связи предложений"},
 ];
 
 /* =================== STATE =================== */
@@ -366,12 +372,13 @@ function init(){
 }
 
 /* =================== HOME =================== */
+function kindOf(n){return n<=3||n>=22?'text':n<=8?'norm':n<=15?'orth':'punct';}
 function renderGrid(){
   const g=document.getElementById('topicsGrid');g.innerHTML='';
   TOPICS.forEach(t=>{
     const p=prog[t.num]||{d:0,tot:15};const pct=Math.round(p.d/p.tot*100);
-    const d=document.createElement('div');d.className='tc';d.style.setProperty('--col',t.col);
-    d.innerHTML=`<div class="tn">Задание №${t.num}</div><div class="nm">${t.emoji} ${t.name}</div><div class="ds">${t.desc}</div><div class="bdg">${t.cnt}</div><div class="pb"><div class="pf" style="width:${pct}%"></div></div>`;
+    const d=document.createElement('div');d.className='tc';d.style.setProperty('--col',t.col);d.dataset.k=kindOf(t.num);
+    d.innerHTML=`<div class="big" aria-hidden="true">${t.num}</div><div class="tn">Задание №${t.num}</div><div class="nm">${t.emoji} ${t.name}</div><div class="ds">${t.desc}</div><div class="bdg">${t.cnt}</div><div class="pb"><div class="pf" style="width:${pct}%"></div></div>`;
     d.onclick=()=>openTopic(t.num);g.appendChild(d);
   });
 }
@@ -384,6 +391,7 @@ function openTopic(num){
   document.getElementById('tName').textContent=t.name;
   document.getElementById('tSub').textContent='Задание №'+num+' · '+t.cnt+' задач в базе';
   document.getElementById('tb0').style.setProperty('--col',t.col);
+  {const th=document.querySelector('#s-topic .th');th.style.setProperty('--col',t.col);th.dataset.k=kindOf(num);th.dataset.n=String(num).padStart(2,'0');}
   renderTheory(num);renderPractice(num);renderGameTab(num);
   showScr('topic');sTab(0);
   document.getElementById('backBtn').style.display='block';
