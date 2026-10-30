@@ -94,6 +94,23 @@ table.t tr:first-child td{background:var(--chip);font-weight:600}
 .rbox small{display:block;margin-top:4px;font-size:13px;line-height:1.5;color:var(--muted)}
 .exs{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 .ex{background:#fff;padding:4px 10px;font-size:13px}
+.gcard{display:block;width:100%;text-align:left;margin-top:10px;padding:14px 16px;border:0;border-left:8px solid var(--col,var(--red));background:#fff;color:var(--ink);cursor:pointer;font-size:15px}
+.gcard b{display:block;font-family:var(--display);font-size:18px;font-weight:800;letter-spacing:-.3px;margin-bottom:4px}
+.gcard span{font-size:13px;color:var(--muted)}
+.gcard:hover{outline:3px solid var(--ink);outline-offset:2px}
+.gq{font-size:17px;line-height:1.6;overflow-wrap:anywhere}
+.gq i{color:var(--muted)}
+.opts{display:grid;gap:8px;margin-top:4px}
+.optb{min-height:54px;padding:10px 14px;border:2px solid var(--ink);border-radius:0;background:#fff;color:var(--ink);font-size:16px;text-align:left;cursor:pointer;overflow-wrap:anywhere}
+.optb:hover:not([disabled]){background:var(--chip)}
+.optb.right{background:var(--blue);border-color:var(--blue);color:#fff}
+.optb.wrong{background:var(--red);border-color:var(--red);color:var(--ink);text-decoration:line-through}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+.chip{min-height:44px;padding:6px 12px;border:2px solid var(--ink);background:transparent;color:var(--ink);font-size:14px;cursor:pointer;text-align:left}
+.chip:hover{background:var(--ink);color:var(--paper)}
+.chip.mix{background:var(--yellow)}
+.chip small{opacity:.6}
+.fb small{display:block;font-weight:400;margin-top:4px}
 .tabs2{display:flex;gap:6px;margin:0 0 14px}
 .tabs2 .tab{flex:1;padding:0 6px;cursor:pointer}
 [hidden]{display:none!important}
@@ -247,13 +264,14 @@ function topic(set,n){
     '<div id="pan-p"><p class="lead">Только настоящие задания из экзаменов и сборников — те же, что в боте.</p>'+
     '<button class="btn" id="start">Начать: '+cnt+' '+plural(cnt,'задание','задания','заданий')+'</button>'+
     '<p class="src" style="margin-top:14px">Подход можно закончить в любой момент: засчитаются решённые.</p></div>'+
-    '<div id="pan-g" hidden><div class="card"><div class="txt"><p><b>Игры и упражнения готовим.</b></p><p>Здесь появятся упражнения и игры, которые подводят к этому заданию. Пока тренируйся в «Практике».</p></div></div></div>'+
+    '<div id="pan-g" hidden><div class="card"><div class="txt"><p>Загружаю…</p></div></div></div>'+
     '<div id="pan-t" hidden><div id="theory" class="card"><div class="txt"><p>Загружаю…</p></div></div></div>';
   document.getElementById('start').onclick=function(){start(set,n);};
   Array.prototype.forEach.call(app.querySelectorAll('.tabs2 .tab'),function(b){b.onclick=function(){
     Array.prototype.forEach.call(app.querySelectorAll('.tabs2 .tab'),function(x){x.classList.toggle('on',x===b);});
     ['p','g','t'].forEach(function(k){document.getElementById('pan-'+k).hidden=(k!==b.dataset.t);});
-    if(b.dataset.t==='t')loadTheory(set,n,col);};});
+    if(b.dataset.t==='t')loadTheory(set,n,col);
+    if(b.dataset.t==='g')loadGames(set,n,col);};});
 }
 
 /* ───────── теория: карточки {title, content, rules:[{r,t,ex}], tip, warn} ───────── */
@@ -274,6 +292,94 @@ function loadTheory(set,n,col){
   var soon='<div class="card"><div class="txt"><p><b>Теория скоро появится.</b></p><p>Конспект по заданию №'+n+' будет здесь, рядом с практикой.</p></div></div>';
   (theoryCache[key]?Promise.resolve(theoryCache[key]):getJSON('trainer/theory_'+key+'.json').then(function(c){theoryCache[key]=c;return c;}))
     .then(function(c){put(c&&c.length?theoryHtml(c,col):soon);}).catch(function(){put(soon);});
+}
+
+/* ───────── игры к заданию: вопросы с вариантами ответа ───────── */
+var GAME_KIND={'oge-rus':'q','oge-math':'p'};            // буква в строке результата n_… (игра, не настоящее задание)
+var G=null;
+function gbox(){return document.getElementById('pan-g');}
+function loadGames(set,n,col){
+  var box=gbox();
+  if(box.dataset.ready)return;
+  var soon='<div class="card"><div class="txt"><p><b>Игры и упражнения готовим.</b></p><p>Здесь появятся игры, которые подводят к этому заданию. Пока тренируйся в «Практике».</p></div></div>';
+  if(!GAME_KIND[set]){box.innerHTML=soon;box.dataset.ready='1';return;}
+  getJSON('trainer/games_'+set+'_'+n+'.json').then(function(d){
+    box.dataset.ready='1';
+    G={set:set,n:n,col:col,games:d.games};
+    gamesList();
+  }).catch(function(){box.innerHTML=soon;box.dataset.ready='1';});
+}
+function gamesList(){
+  var box=gbox();
+  box.innerHTML='<p class="lead">Короткие игры по 10 вопросов — они тренируют навык, который нужен в этом задании. После ответа видно правило из теории.</p>'+
+    G.games.map(function(g,i){
+      var cnt=g.items.length;
+      return '<button class="gcard" data-g="'+i+'" style="--col:'+G.col+'"><b>'+esc(g.title)+'</b><span>'+esc(g.instruction)+' · '+cnt+' '+plural(cnt,'вопрос','вопроса','вопросов')+'</span></button>';
+    }).join('');
+  Array.prototype.forEach.call(box.querySelectorAll('[data-g]'),function(b){b.onclick=function(){openGame(+b.dataset.g);};});
+  G.round=null;
+}
+function openGame(i){
+  var g=G.games[i];G.gi=i;
+  if(g.cats.length<2)return startRound(null);
+  var box=gbox();
+  box.innerHTML='<div class="ph"><span><b>'+esc(g.title)+'</b></span></div><p class="lead">Выбери тему или играй вперемешку.</p><div class="chips">'+
+    '<button class="chip mix" data-c="">🎲 Вперемешку</button>'+
+    g.cats.map(function(c){var k=g.items.filter(function(x){return x.c===c.id;}).length;return '<button class="chip" data-c="'+esc(c.id)+'">'+esc(c.name)+' <small>'+k+'</small></button>';}).join('')+'</div>'+
+    '<button class="btn sec" id="gback">← К играм</button>';
+  Array.prototype.forEach.call(box.querySelectorAll('[data-c]'),function(b){b.onclick=function(){startRound(b.dataset.c||null);};});
+  document.getElementById('gback').onclick=gamesList;
+}
+function startRound(cat){
+  var g=G.games[G.gi],pool=g.items.filter(function(x){return !cat||x.c===cat;});
+  pool=pool.slice().sort(function(){return Math.random()-.5;}).slice(0,10);
+  G.round={cat:cat,items:pool,i:0,ok:0,res:[],answered:false};
+  gameQ();
+}
+function gameQ(){
+  var R=G.round,g=G.games[G.gi];
+  if(R.i>=R.items.length)return gameEnd();
+  var x=R.items[R.i],o=x.o.slice();
+  if(o.length>=4)o.sort(function(){return Math.random()-.5;});
+  R.cur=x;R.answered=false;
+  gbox().innerHTML='<div class="ph"><span>'+esc(g.title)+' · <b>'+(R.i+1)+'</b> из '+R.items.length+'</span><button class="back" id="gquit" style="min-height:32px;height:32px;font-size:13px">Закончить</button></div>'+
+    '<div class="dots">'+R.items.map(function(_,k){var r=R.res[k];return '<span class="dot '+(r===undefined?(k===R.i?'cur':''):r?'ok':'bad')+'"></span>';}).join('')+'</div>'+
+    '<div class="card"><div class="gq">'+x.w+'</div></div>'+
+    '<div class="opts">'+o.map(function(t,k){return '<button class="optb" data-k="'+k+'">'+esc(t)+'</button>';}).join('')+'</div><div id="gfb"></div>';
+  document.getElementById('gquit').onclick=function(){if(R.res.length)gameEnd();else gamesList();};
+  Array.prototype.forEach.call(gbox().querySelectorAll('.optb'),function(b){b.onclick=function(){gameAnswer(b,x);};});
+}
+function gameAnswer(btn,x){
+  var R=G.round;
+  if(R.answered)return;R.answered=true;
+  var ok=btn.textContent===x.a;
+  R.res[R.i]=ok;if(ok)R.ok++;
+  Array.prototype.forEach.call(gbox().querySelectorAll('.optb'),function(b){
+    b.disabled=true;
+    if(b.textContent===x.a)b.classList.add('right');else if(b===btn)b.classList.add('wrong');
+  });
+  var last=R.i+1>=R.items.length;
+  document.getElementById('gfb').innerHTML='<div class="fb '+(ok?'good':'bad')+'">'+(ok?'✅ Верно':'❌ Неверно')+(ok?'':'. Правильный ответ: '+esc(x.a))+
+    (x.h?'<small>'+esc(x.h)+'</small>':'')+'</div><button class="btn sec" id="gtheory">📖 Открыть теорию</button><button class="btn" id="gnext">'+(last?'Итог':'Дальше')+'</button>';
+  document.getElementById('gnext').onclick=function(){R.i++;gameQ();};
+  document.getElementById('gtheory').onclick=function(){var t=document.querySelector('.tabs2 [data-t=t]');if(t){t.click();window.scrollTo(0,0);}};
+}
+function gameEnd(){
+  var R=G.round,tot=R.res.length;
+  if(!tot)return gamesList();
+  var ok=R.ok,ratio=ok/tot,cls=ratio>=.8?'g':ratio>=.5?'y':'r';
+  var payload='n_'+GAME_KIND[G.set]+pad2(G.n)+pad2(ok)+pad2(tot);
+  var sent=window.AnikSync&&AnikSync.send(payload),link='https://t.me/'+BOT_USERNAME+'?start='+payload;
+  gbox().innerHTML='<div class="fin"><div class="fs '+cls+'">'+ok+'/'+tot+'</div><p class="lead" style="margin-top:8px">'+
+    (ratio>=.8?'Отлично! Навык закрепляется.':ratio>=.5?'Неплохо. Загляни в теорию и сыграй ещё раз.':'Пока трудно — прочитай теорию и попробуй снова.')+'</p></div>'+
+    (sent?'<div class="hint">✅ Результат записан в твой прогресс — бот и репетитор его увидят.</div>':'<div class="hint">Чтобы бот учёл игру в твоём прогрессе, отправь результат.</div><button class="btn" id="gsend">📤 Отправить результат боту</button>')+
+    '<button class="btn" id="gagain">Ещё раз</button><button class="btn sec" id="gtheory2">📖 Теория</button><button class="btn sec" id="glist">К играм</button>';
+  var sb=document.getElementById('gsend');
+  if(sb)sb.onclick=function(){if(TG&&TG.initData&&TG.openTelegramLink)TG.openTelegramLink(link);else window.open(link,'_blank');};
+  document.getElementById('gagain').onclick=function(){startRound(R.cat);};
+  document.getElementById('gtheory2').onclick=function(){var t=document.querySelector('.tabs2 [data-t=t]');if(t){t.click();window.scrollTo(0,0);}};
+  document.getElementById('glist').onclick=gamesList;
+  G.round=null;
 }
 
 /* ───────── подход ───────── */
