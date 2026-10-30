@@ -86,6 +86,14 @@ table.t tr:first-child td{background:var(--chip);font-weight:600}
 .fb.good{background:var(--blue);color:#fff}
 .fb.bad{background:var(--red);color:var(--ink)}
 .fb small{display:block;font-weight:400;margin-top:2px}
+.tcard{background:#fff;border-top:6px solid var(--col,var(--red));padding:16px;margin-bottom:10px}
+.tcard h3{font-family:var(--display);font-size:19px;font-weight:800;letter-spacing:-.4px;margin-bottom:8px}
+.tcard p{font-size:14px;line-height:1.6;color:var(--muted)}
+.rbox{background:var(--chip);padding:10px 12px;margin-top:8px;font-size:14px}
+.rbox b{display:block;background:linear-gradient(transparent 58%,var(--yellow) 58%);width:max-content;max-width:100%}
+.rbox small{display:block;margin-top:4px;font-size:13px;line-height:1.5;color:var(--muted)}
+.exs{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.ex{background:#fff;padding:4px 10px;font-size:13px}
 .tabs2{display:flex;gap:6px;margin:0 0 14px}
 .tabs2 .tab{flex:1;padding:0 6px;cursor:pointer}
 [hidden]{display:none!important}
@@ -240,11 +248,32 @@ function topic(set,n){
     '<button class="btn" id="start">Начать: '+cnt+' '+plural(cnt,'задание','задания','заданий')+'</button>'+
     '<p class="src" style="margin-top:14px">Подход можно закончить в любой момент: засчитаются решённые.</p></div>'+
     '<div id="pan-g" hidden><div class="card"><div class="txt"><p><b>Игры и упражнения готовим.</b></p><p>Здесь появятся упражнения и игры, которые подводят к этому заданию. Пока тренируйся в «Практике».</p></div></div></div>'+
-    '<div id="pan-t" hidden><div class="card"><div class="txt"><p><b>Теория скоро появится.</b></p><p>Конспект по заданию №'+n+' будет здесь, рядом с практикой.</p></div></div></div>';
+    '<div id="pan-t" hidden><div id="theory" class="card"><div class="txt"><p>Загружаю…</p></div></div></div>';
   document.getElementById('start').onclick=function(){start(set,n);};
   Array.prototype.forEach.call(app.querySelectorAll('.tabs2 .tab'),function(b){b.onclick=function(){
     Array.prototype.forEach.call(app.querySelectorAll('.tabs2 .tab'),function(x){x.classList.toggle('on',x===b);});
-    ['p','g','t'].forEach(function(k){document.getElementById('pan-'+k).hidden=(k!==b.dataset.t);});};});
+    ['p','g','t'].forEach(function(k){document.getElementById('pan-'+k).hidden=(k!==b.dataset.t);});
+    if(b.dataset.t==='t')loadTheory(set,n,col);};});
+}
+
+/* ───────── теория: карточки {title, content, rules:[{r,t,ex}], tip, warn} ───────── */
+var theoryCache={};
+function theoryHtml(cards,col){
+  return cards.map(function(c){
+    return '<div class="tcard" style="--col:'+col+'"><h3>'+esc(c.title)+'</h3>'+(c.content?'<p>'+esc(c.content)+'</p>':'')+
+      (c.rules||[]).map(function(r){
+        return '<div class="rbox"><b>'+esc(r.r)+'</b><small>'+esc(r.t)+'</small>'+
+          (r.ex&&r.ex.length?'<div class="exs">'+r.ex.map(function(e){return '<span class="ex">'+esc(e)+'</span>';}).join('')+'</div>':'')+'</div>';
+      }).join('')+(c.tip?'<div class="tip" style="margin-top:10px">💡 '+esc(c.tip)+'</div>':'')+(c.warn?'<div class="warn" style="margin-top:10px">⚠️ '+esc(c.warn)+'</div>':'')+'</div>';
+  }).join('');
+}
+function loadTheory(set,n,col){
+  var box=document.getElementById('theory'),key=set+'_'+n;
+  if(box.dataset.done)return;
+  var put=function(html){box.outerHTML='<div id="theory" data-done="1">'+html+'</div>';};
+  var soon='<div class="card"><div class="txt"><p><b>Теория скоро появится.</b></p><p>Конспект по заданию №'+n+' будет здесь, рядом с практикой.</p></div></div>';
+  (theoryCache[key]?Promise.resolve(theoryCache[key]):getJSON('trainer/theory_'+key+'.json').then(function(c){theoryCache[key]=c;return c;}))
+    .then(function(c){put(c&&c.length?theoryHtml(c,col):soon);}).catch(function(){put(soon);});
 }
 
 /* ───────── подход ───────── */
