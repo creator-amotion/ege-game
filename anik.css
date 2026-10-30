@@ -224,3 +224,11 @@ body.math .tag{color:var(--muted)}
 .fb.good{background:var(--blue);color:#fff}
 .fb.bad{background:var(--red);color:var(--ink)}
 .res li{font-size:15px}
+
+/* ── нижняя панель (anik-nav.js) ── */
+body.has-tabs{padding-bottom:calc(64px + env(safe-area-inset-bottom))}
+.anik-tabs{position:fixed;left:0;right:0;bottom:0;z-index:20;display:flex;background:var(--paper);border-top:2px solid var(--ink);padding-bottom:env(safe-area-inset-bottom)}
+.anik-tabs a{flex:1;min-height:56px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:var(--ink);text-decoration:none;font-size:11px;font-weight:600;letter-spacing:.5px;text-transform:uppercase}
+.anik-tabs a i{font-style:normal;font-size:18px;line-height:1}
+.anik-tabs a.on{background:var(--ink);color:var(--paper)}
+.anik-tabs a.on i{color:var(--yellow)}

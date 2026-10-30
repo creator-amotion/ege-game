@@ -51,7 +51,15 @@
   }
 
   /** Результат игры в виде короткой строки (та же, что в ссылке-кнопке). true — принят в очередь отправки. */
+  function markDay() {
+    var d = new Date(), p = function (n) { return (n < 10 ? '0' : '') + n; };
+    var key = d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+    var days = read('anik_days', []);
+    if (days.indexOf(key) < 0) { days.push(key); write('anik_days', days.slice(-120)); }
+  }
+
   function send(payload) {
+    if (payload) markDay();                       // календарь занятий работает и без облака
     if (!enabled() || !payload) return false;
     var q = read(QUEUE, []);
     q.push({ id: newId(), p: payload, ts: Math.floor(Date.now() / 1000) });
@@ -80,6 +88,7 @@
     refresh: refresh,
     state: function () { return state; },
     pending: function () { return read(QUEUE, []).length; },
+    localDays: function () { return read('anik_days', []); },
     onState: function (fn) { listeners.push(fn); if (state) fn(state); },
   };
 })();
