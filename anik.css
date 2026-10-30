@@ -22,7 +22,7 @@ button,input,select{font-family:inherit}
 /* ── общие элементы ── */
 .wm{font-family:var(--display);font-weight:800;font-size:26px;letter-spacing:-.8px;line-height:1}
 .wm i{font-style:normal;color:var(--red)}
-.eyebrow,.stl,.step,.albl,.tc .tn,.sbox .l,.tag{font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase}
+.eyebrow,.stl,.step,.albl,.sgt .tn,.sbox .l,.tag{font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase}
 
 /* верхняя панель */
 nav{background:var(--paper);border-bottom:2px solid var(--ink);padding:8px 16px;gap:8px}
@@ -78,24 +78,25 @@ body.rus .srow{display:none}
 /* плитки заданий: цвет — раздел (орфография красный, пунктуация синий, текст жёлтый, нормы розовый) */
 .tgrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
 @media (min-width:560px){.tgrid{grid-template-columns:repeat(3,minmax(0,1fr))}}
-.tc{position:relative;overflow:hidden;background:var(--col,var(--red));border:0;border-radius:0;padding:10px 12px 16px;min-height:124px;color:var(--ink);cursor:pointer}
+.sgt{position:relative;overflow:hidden;background:var(--col,var(--red));border:0;border-radius:0;padding:10px 12px 16px;min-height:124px;color:var(--ink);cursor:pointer}
 .tc::before{content:none}
 
-.tc:hover{transform:none;outline:3px solid var(--ink-c,#111);outline-offset:2px}
+.sgt:hover{transform:none;outline:3px solid var(--ink-c,#111);outline-offset:2px}
 /* знак задания — огромный, срезан краем плитки, как «а́» у специгры */
-.tc .big{position:absolute;right:-4px;bottom:-30px;font-family:var(--display);font-size:150px;font-weight:800;line-height:.8;letter-spacing:-4px;color:var(--bigc);pointer-events:none}
-.tc .big.wide{font-size:116px}
-.tc .big.low{bottom:22px;font-size:190px}
-.tc .big.mk{box-sizing:border-box;border:0 solid var(--bigc)}
-.tc .big.mk-square{right:-16px;bottom:-22px;width:104px;height:92px;border-width:24px}
-.tc .big.mk-arc{right:-22px;bottom:-24px;width:140px;height:76px;border-width:24px 24px 0;border-radius:70px 70px 0 0}
-.tc .big.mk-prefix{right:18px;bottom:-14px;width:104px;height:64px;border-top-width:24px;border-right-width:24px}
-.tc .big.mk-suffix{right:26px;bottom:-58px;width:84px;height:84px;border-top-width:24px;border-left-width:24px;transform:rotate(45deg)}
-.tc .tn,.tc .nm{position:relative;color:inherit}
-.tc .tn{margin-bottom:2px}
-.tc .nm{font-family:var(--display);font-size:17px;font-weight:800;letter-spacing:-.4px;line-height:1.1;max-width:85%}
-.tc .pb{position:absolute;left:0;right:0;bottom:0;margin:0;height:5px;background:transparent;border-radius:0}
-.tc .pf{height:100%;background:var(--ink);border-radius:0}
+.sgt .big{position:absolute;right:-4px;bottom:-30px;font-family:var(--display);font-size:150px;font-weight:800;line-height:.8;letter-spacing:-4px;color:var(--bigc);pointer-events:none}
+.sgt .big.wide{font-size:116px}
+.sgt .big.low{bottom:22px;font-size:190px}
+.sgt .big.num{letter-spacing:-8px}
+.sgt .big.mk{box-sizing:border-box;border:0 solid var(--bigc)}
+.sgt .big.mk-square{right:-16px;bottom:-22px;width:104px;height:92px;border-width:24px}
+.sgt .big.mk-arc{right:-22px;bottom:-24px;width:140px;height:76px;border-width:24px 24px 0;border-radius:70px 70px 0 0}
+.sgt .big.mk-prefix{right:18px;bottom:-14px;width:104px;height:64px;border-top-width:24px;border-right-width:24px}
+.sgt .big.mk-suffix{right:26px;bottom:-58px;width:84px;height:84px;border-top-width:24px;border-left-width:24px;transform:rotate(45deg)}
+.sgt .tn,.tc .nm{position:relative;color:inherit}
+.sgt .tn{margin-bottom:2px}
+.sgt .nm{font-family:var(--display);font-size:17px;font-weight:800;letter-spacing:-.4px;line-height:1.1;max-width:85%}
+.sgt .pb{position:absolute;left:0;right:0;bottom:0;margin:0;height:5px;background:transparent;border-radius:0}
+.sgt .pf{height:100%;background:var(--ink);border-radius:0}
 /* заголовок темы */
 body.rus #s-topic .th{position:relative;overflow:hidden;text-align:left;margin:-16px -16px 0;padding:24px 20px 20px;min-height:150px;background:var(--col,var(--red));color:var(--ink,var(--ink))}
 body.rus #s-topic .th::after{content:attr(data-n);position:absolute;right:-12px;bottom:-34px;z-index:0;font-family:var(--display);font-size:200px;font-weight:800;line-height:.8;letter-spacing:-12px;color:var(--bigc,rgba(255,255,255,.55));pointer-events:none}
@@ -247,9 +248,9 @@ body.math .lv{display:none}
 .game-hero .gi{display:none}
 
 /* ── нижняя панель (anik-nav.js) ── */
-body.has-tabs{padding-bottom:calc(64px + env(safe-area-inset-bottom))}
-.anik-tabs{position:fixed;left:0;right:0;bottom:0;z-index:20;display:flex;background:var(--paper);border-top:2px solid var(--ink);padding-bottom:env(safe-area-inset-bottom)}
-.anik-tabs a{flex:1;min-height:56px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:var(--ink);text-decoration:none;font-size:11px;font-weight:600;letter-spacing:.5px;text-transform:uppercase}
-.anik-tabs a i{font-style:normal;font-size:18px;line-height:1}
-.anik-tabs a.on{background:var(--ink);color:var(--paper)}
-.anik-tabs a.on i{color:var(--yellow)}
+body.has-tabs{padding-bottom:calc(78px + env(safe-area-inset-bottom))}
+/* нижняя панель — чёрная, без значков; открытый раздел отмечен жёлтым квадратом */
+.anik-tabs{position:fixed;left:0;right:0;bottom:0;z-index:20;display:flex;background:var(--ink);padding:6px 8px calc(10px + env(safe-area-inset-bottom))}
+.anik-tabs a{flex:1;min-height:48px;display:flex;align-items:center;justify-content:center;gap:6px;color:#A9A397;text-decoration:none;font-size:13px;font-weight:500}
+.anik-tabs a.on{color:var(--paper);font-weight:700}
+.anik-tabs a.on::before{content:"";width:8px;height:8px;background:var(--yellow)}

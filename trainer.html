@@ -9,9 +9,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@700;800&family=Golos+Text:wght@400..700&display=swap">
-<link rel="stylesheet" href="anik.css?v=3">
+<link rel="stylesheet" href="anik.css?v=4">
+<script src="anik-look.js?v=1"></script>
 <script src="anik-sync.js?v=2"></script>
-<script src="anik-nav.js?v=1" defer></script>
+<script src="anik-nav.js?v=2" defer></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{min-height:100vh}
@@ -23,38 +24,31 @@ h1{font-family:var(--display);font-size:40px;font-weight:800;letter-spacing:-1.6
 .lead{font-size:16px;line-height:1.5;margin-bottom:6px}
 .stl{margin:24px 0 12px;padding-top:8px;border-top:2px solid var(--ink)}
 .cards{display:grid;gap:10px}
-.setcard{display:block;width:100%;text-align:left;position:relative;overflow:hidden;border:0;min-height:112px;padding:16px;color:var(--ink);cursor:pointer;text-decoration:none}
+.setcard{display:block;width:100%;text-align:left;position:relative;overflow:hidden;border:0;min-height:150px;padding:12px 130px 12px 14px;color:var(--ink);cursor:pointer;text-decoration:none;background:var(--col)}
 .setcard:hover{outline:3px solid var(--ink);outline-offset:2px}
-.setcard .nm{font-family:var(--display);font-size:24px;font-weight:800;letter-spacing:-.7px;line-height:1.05;position:relative;max-width:75%}
-.setcard .ds{font-size:13px;margin-top:6px;position:relative;max-width:75%}
-.setcard .big{position:absolute;right:-4px;bottom:-22px;font-family:var(--display);font-weight:800;font-size:120px;line-height:.8;letter-spacing:-7px;color:rgba(255,255,255,.55);pointer-events:none}
-.s-oge-rus{background:var(--blue);color:#fff}.s-oge-rus .big{color:#93A9EA}
-.s-oge-math{background:var(--yellow)}
-.s-ege-mathb{background:var(--pink)}.s-ege-mathb .big{color:var(--red)}
+.setcard .tn{position:relative;font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase}
+.setcard .nm{font-family:var(--display);font-size:24px;font-weight:800;letter-spacing:-.6px;line-height:1.05;position:relative;margin-top:3px}
+.setcard .ds{font-size:13px;line-height:1.35;margin-top:4px;position:relative}
+.setcard .big{position:absolute;right:-10px;bottom:-40px;font-family:var(--display);font-weight:800;font-size:210px;line-height:.8;letter-spacing:-12px;color:var(--bigc);pointer-events:none}
 .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
-.tile{position:relative;overflow:hidden;text-align:left;border:0;padding:12px 14px 18px;min-height:128px;background:var(--col,var(--red));color:var(--ink);cursor:pointer}
-.tile.blue{color:#fff}
+.tile{text-align:left;border:0;padding:10px 12px 16px;min-height:124px;cursor:pointer;font:inherit}
 .tile:hover{outline:3px solid var(--ink);outline-offset:2px}
-.tile .tn{position:relative;font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}
-.tile .nm{position:relative;font-family:var(--display);font-size:17px;font-weight:800;letter-spacing:-.4px;line-height:1.1;max-width:80%}
-.tile .ds{position:relative;font-size:12px;line-height:1.35;margin-top:6px}
-.tile .big{position:absolute;right:-6px;bottom:-22px;font-family:var(--display);font-size:110px;font-weight:800;line-height:.8;letter-spacing:-7px;color:rgba(255,255,255,.6);pointer-events:none}
-.tile.blue .big{color:#93A9EA}
-.tile .pb{position:absolute;left:0;right:0;bottom:0;height:6px;background:rgba(17,17,17,.2)}
+.tile .tn{position:relative;margin-bottom:2px}
+.tile .nm{position:relative;font-family:var(--display);font-size:17px;font-weight:800;letter-spacing:-.4px;line-height:1.1;max-width:85%}
+.tile .pb{position:absolute;left:0;right:0;bottom:0;height:5px}
 .tile .pf{display:block;height:100%;background:var(--ink)}
-.tile .st{position:absolute;right:8px;top:8px;background:var(--ink);color:var(--yellow);font-size:11px;font-weight:700;padding:2px 6px;letter-spacing:.5px}
+.tile .st{position:absolute;right:8px;top:8px;background:var(--ink);color:var(--yellow);font-size:10px;font-weight:700;padding:2px 6px;letter-spacing:1px}
 .plan{background:#fff;padding:14px 16px}
 .plan a{display:flex;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);color:var(--ink);text-decoration:none;font-weight:600}
 .plan a:last-child{border-bottom:0}
 .plan a small{font-weight:400;color:var(--muted)}
-.hero-n{position:relative;overflow:hidden;margin:-16px -16px 16px;padding:22px 20px 20px;min-height:150px;background:var(--col,var(--red));color:var(--ink)}
-.hero-n.blue{color:#fff}
-.hero-n::after{content:attr(data-n);position:absolute;right:-12px;bottom:-34px;font-family:var(--display);font-size:190px;font-weight:800;line-height:.8;letter-spacing:-12px;color:rgba(255,255,255,.55);pointer-events:none}
-.hero-n.blue::after{color:#93A9EA}
-.hero-n>*{position:relative;z-index:1}
-.hero-n .tn{font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}
-.hero-n h2{font-family:var(--display);font-size:30px;font-weight:800;letter-spacing:-1px;line-height:1;max-width:80%}
-.hero-n .sub{font-size:13px;margin-top:8px}
+/* шапка номера — цвет и знак плитки */
+.hero-n{position:relative;overflow:hidden;margin:-16px -16px 16px;padding:24px 20px 18px;min-height:168px;display:flex;flex-direction:column;justify-content:flex-end;background:var(--col);color:var(--ink)}
+.hero-n .big{right:-6px;bottom:-40px;font-size:230px}
+.hero-n .big.wide{font-size:170px}
+.hero-n .big.low{bottom:26px;font-size:240px}
+.hero-n .tn{position:relative;font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px}
+.hero-n h2{position:relative;font-family:var(--display);font-size:28px;font-weight:800;letter-spacing:-.8px;line-height:1.05;max-width:80%}
 .facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:0 0 16px}
 .fact{background:#fff;padding:10px 12px}
 .fact b{display:block;font-family:var(--display);font-size:26px;font-weight:800;letter-spacing:-1px;line-height:1}
@@ -113,8 +107,25 @@ table.t tr:first-child td{background:var(--chip);font-weight:600}
 .chip.mix{background:var(--yellow)}
 .chip small{opacity:.6}
 .fb small{display:block;font-weight:400;margin-top:4px}
-.tabs2{display:flex;gap:6px;margin:0 0 14px}
-.tabs2 .tab{flex:1;padding:0 6px;cursor:pointer}
+.tabs2{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));margin:0 -16px 16px;border-top:2px solid var(--ink);border-bottom:2px solid var(--ink)}
+.tabs2 .tab{min-height:50px;border:0;background:transparent;color:var(--ink);font-size:15px;font-weight:600;cursor:pointer}
+.tabs2 .tab.on{background:var(--ink);color:var(--paper)}
+.facts .fact{background:none;padding:0}
+/* ответ «цифры подряд» — кнопками-номерами */
+.nbs{display:grid;grid-template-columns:repeat(var(--cols,5),minmax(0,1fr));gap:6px;margin:10px 0 0}
+.nbs button{min-height:56px;border:2px solid var(--ink);background:transparent;color:var(--ink);font-family:var(--display);font-size:22px;font-weight:800;cursor:pointer}
+.nbs button.on{background:var(--ink);color:var(--paper)}
+.nbs button:disabled{cursor:default}
+/* итог подхода */
+.res-hero{position:relative;overflow:hidden;margin:-16px -16px 16px;min-height:300px;padding:54px 20px 20px;background:var(--col);color:var(--ink)}
+.res-hero .ra,.res-hero .rb{position:absolute;font-family:var(--display);font-weight:800;line-height:.8;pointer-events:none}
+.res-hero .ra{left:-16px;top:110px;font-size:280px;letter-spacing:-14px;color:var(--bigc)}
+.res-hero .rb{right:-30px;top:160px;font-size:220px;letter-spacing:-14px;color:transparent;-webkit-text-stroke:3px var(--ink)}
+.res-hero .tn{position:relative;font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase}
+.res-hero h2{position:relative;font-family:var(--display);font-size:44px;font-weight:800;letter-spacing:-1.8px;line-height:.94;margin-top:8px}
+.marks{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:4px;margin-top:8px}
+.marks span{height:30px;display:flex;align-items:center;justify-content:center;font-family:var(--display);font-size:14px;font-weight:800}
+.marks .ok{background:var(--blue);color:#fff}.marks .bad{background:var(--red);color:var(--ink)}
 [hidden]{display:none!important}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .row2 .btn{padding:0 16px}
@@ -135,9 +146,9 @@ table.t tr:first-child td{background:var(--chip);font-weight:600}
 var BOT_USERNAME='examzadrotbot';
 var SESSION=10;                                    // сколько заданий в одном подходе
 var SETS={
-  'oge-rus':{skill:'oge.rus',cls:'s-oge-rus',blue:true,exam:'ОГЭ',desc:'Задания 2–12: анализ текста, орфография, пунктуация, нормы'},
-  'oge-math':{skill:'oge.math',cls:'s-oge-math',exam:'ОГЭ',desc:'Часть 1: расчёты, алгебра, геометрия'},
-  'ege-mathb':{skill:'ege.mathb',cls:'s-ege-mathb',exam:'ЕГЭ',desc:'Базовый уровень: задания 1–21 по номерам'}
+  'oge-rus':{skill:'oge.rus',exam:'ОГЭ',sign:'Аа',skin:['#E5332A','#111111','#F6CE2E'],desc:'Задания 2–12: текст, орфография, пунктуация, нормы'},
+  'oge-math':{skill:'oge.math',exam:'ОГЭ',sign:'%',skin:['#2E55C9','#FFFFFF','#7098F8'],desc:'Часть 1: расчёты, алгебра, геометрия'},
+  'ege-mathb':{skill:'ege.mathb',exam:'ЕГЭ',sign:'÷',skin:['#F6CE2E','#111111','#E5332A'],desc:'Базовый уровень: задания 1–21'}
 };
 var TG=window.Telegram&&window.Telegram.WebApp?window.Telegram.WebApp:null;
 if(TG){try{TG.ready();TG.expand();TG.setHeaderColor('#F3EEE2');TG.setBackgroundColor('#F3EEE2');}catch(e){}}
@@ -206,6 +217,9 @@ function loadPack(set,n){
   if(cache[key])return Promise.resolve(cache[key]);
   return getJSON('trainer/'+key+'.json').then(function(p){cache[key]=p;return p;});
 }
+// цвет и знак номера: у каждого номера в разделе свой цвет (anik-look.js), у математики — от синего к жёлтому
+function numSkin(set,n){var list=INDEX.sets[set].numbers,i=list.map(function(x){return x.n;}).indexOf(n);return AnikLook.ramp(list.length,set!=='oge-rus')[i<0?0:i];}
+function numSign(set,n){return AnikLook.signOf(SETS[set].skill,n);}
 function sectionColor(sec){return REG&&REG.sections&&REG.sections[sec]?REG.sections[sec].color:'#E5332A';}
 function isBlue(color){return color==='#2E55C9';}
 function numStats(set,n){return lsGet('anik_tr',{})[set+'_'+n]||{ok:0,tot:0};}
@@ -226,10 +240,10 @@ function go(h){if(location.hash.replace(/^#/,'')===h)route();else location.hash=
 
 function home(){
   app.innerHTML='<div class="bar-top"><span class="wm">аник<i>.</i></span><a class="back" href="index.html">← Выбор</a></div>'+
-    '<h1>Тренажёр<br>заданий</h1><p class="lead">Настоящие задания с проверкой. Решай по номерам — бот и приложение видят твой прогресс.</p>'+
+    '<div class="eyebrow" style="margin-top:14px">настоящие задания с проверкой</div><h1 style="margin-top:6px">Тренажёр</h1><p class="lead">Решай по номерам — бот и приложение видят твой прогресс.</p>'+
     '<div class="cards" style="margin-top:18px">'+Object.keys(SETS).map(function(k){
       var s=SETS[k],tot=INDEX.sets[k].numbers.reduce(function(a,x){return a+x.count;},0);
-      return '<a class="setcard '+s.cls+'" href="#'+k+'"><div class="nm">'+esc(INDEX.sets[k].title)+'</div><div class="ds">'+esc(s.desc)+' · '+tot+' '+plural(tot,'задание','задания','заданий')+'</div><div class="big">'+(s.exam==='ОГЭ'?'9':'11')+'</div></a>';
+      return '<a class="setcard" style="'+AnikLook.style(s.skin)+'" href="#'+k+'"><div class="big" aria-hidden="true">'+s.sign+'</div><div class="tn">'+s.exam+' · '+tot+' '+plural(tot,'задание','задания','заданий')+'</div><div class="nm">'+esc(INDEX.sets[k].title.replace(/^(ОГЭ|ЕГЭ)\s*·\s*/,''))+'</div><div class="ds">'+esc(s.desc)+'</div></a>';
     }).join('')+'</div>';
 }
 
@@ -244,25 +258,25 @@ function setScreen(set){
       return '<a href="'+esc(p.link.replace('trainer.html',''))+'"><span>№'+p.number+' '+esc(p.name)+'<br><small>'+(p.why==='weak'?'слабое место':p.why==='repeat'?'пора повторить':'новое')+' · ~'+p.minutes+' мин</small></span><span>→</span></a>';
     }).join('')+'</div>';
   }
-  html+='<div class="stl">Номера заданий</div><div class="grid">'+S.numbers.map(function(x){
-    var col=sectionColor(x.section),blue=isBlue(col),sk=skills[x.skill],stat=numStats(set,x.n);
+  html+='<div class="stl" style="display:flex;justify-content:space-between"><span>Номера заданий</span><span>полоса — знание</span></div><div class="grid">'+S.numbers.map(function(x){
+    var c=numSkin(set,x.n),sk=skills[x.skill],stat=numStats(set,x.n);
     var p=sk?Math.round(sk.p*100):(stat.tot?Math.round(100*stat.ok/stat.tot):0);
     var ds=sk?'знание '+p+'%':stat.tot?'верно '+stat.ok+' из '+stat.tot:x.count+' '+plural(x.count,'задание','задания','заданий');
-    return '<button class="tile'+(blue?' blue':'')+'" style="--col:'+col+'" data-n="'+x.n+'"><div class="tn">№'+x.n+'</div><div class="nm">'+esc(x.name)+'</div><div class="ds">'+esc(ds)+'</div><div class="big">'+x.n+'</div>'+
-      (stamps[x.skill]?'<span class="st">🏅 МАРКА</span>':'')+'<span class="pb"><i class="pf" style="width:'+p+'%"></i></span></button>';
+    return '<button class="tile sgt" style="'+AnikLook.style(c)+'" data-n="'+x.n+'">'+AnikLook.signHTML(numSign(set,x.n))+'<div class="tn">№ '+pad2(x.n)+' · '+esc(ds)+'</div><div class="nm">'+esc(x.name)+'</div>'+
+      (stamps[x.skill]?'<span class="st">МАРКА</span>':'')+'<span class="pb"><i class="pf" style="width:'+p+'%"></i></span></button>';
   }).join('')+'</div>';
   app.innerHTML=html;
   Array.prototype.forEach.call(app.querySelectorAll('[data-n]'),function(b){b.onclick=function(){go(set+'&n='+b.dataset.n);};});
 }
 
 function topic(set,n){
-  var S=INDEX.sets[set],x=S.numbers.filter(function(y){return y.n===n;})[0],col=sectionColor(x.section),blue=isBlue(col);
+  var S=INDEX.sets[set],x=S.numbers.filter(function(y){return y.n===n;})[0],c=numSkin(set,n),col=c[0];
   var st=snap(),sk=st&&st.skills&&st.skills[x.skill],stat=numStats(set,n);
   var cnt=Math.min(SESSION,x.count);
   app.innerHTML='<div class="bar-top"><span class="wm">аник<i>.</i></span><a class="back" href="#'+set+'">← Номера</a></div>'+
-    '<div class="hero-n'+(blue?' blue':'')+'" style="--col:'+col+'" data-n="'+n+'"><div class="tn">'+esc(S.title)+'</div><h2>'+esc(x.name)+'</h2><div class="sub">Задание №'+n+'</div></div>'+
+    '<div class="hero-n sgt" style="'+AnikLook.style(c)+'">'+AnikLook.signHTML(numSign(set,n))+'<div class="tn">'+esc(S.title)+' · задание '+n+'</div><h2>'+esc(x.name)+'</h2></div>'+
     '<div class="facts"><div class="fact"><b>'+x.count+'</b><span>заданий</span></div><div class="fact"><b>'+(sk?Math.round(sk.p*100)+'%':'—')+'</b><span>знание</span></div><div class="fact"><b>'+(stat.tot?Math.round(100*stat.ok/stat.tot)+'%':'—')+'</b><span>верно здесь</span></div></div>'+
-    '<div class="tabs2"><button class="tab on" data-t="p">🎯 Практика</button><button class="tab" data-t="g">🎮 Игры</button><button class="tab" data-t="t">📚 Теория</button></div>'+
+    '<div class="tabs2" role="tablist"><button class="tab on" data-t="p">Практика</button><button class="tab" data-t="g">Игры</button><button class="tab" data-t="t">Теория</button></div>'+
     '<div id="pan-p"><p class="lead">Только настоящие задания из экзаменов и сборников — те же, что в боте.</p>'+
     '<button class="btn" id="start">Начать: '+cnt+' '+plural(cnt,'задание','задания','заданий')+'</button>'+
     '<p class="src" style="margin-top:14px">Подход можно закончить в любой момент: засчитаются решённые.</p></div>'+
@@ -284,7 +298,7 @@ function theoryHtml(cards,col){
       (c.rules||[]).map(function(r){
         return '<div class="rbox"><b>'+esc(r.r)+'</b><small>'+esc(r.t)+'</small>'+
           (r.ex&&r.ex.length?'<div class="exs">'+r.ex.map(function(e){return '<span class="ex">'+esc(e)+'</span>';}).join('')+'</div>':'')+'</div>';
-      }).join('')+(c.tip?'<div class="tip" style="margin-top:10px">💡 '+esc(c.tip)+'</div>':'')+(c.warn?'<div class="warn" style="margin-top:10px">⚠️ '+esc(c.warn)+'</div>':'')+'</div>';
+      }).join('')+(c.tip?'<div class="tip" style="margin-top:10px">'+esc(c.tip)+'</div>':'')+(c.warn?'<div class="warn" style="margin-top:10px">'+esc(c.warn)+'</div>':'')+'</div>';
   }).join('');
 }
 function loadTheory(set,n,col){
@@ -326,7 +340,7 @@ function openGame(i){
   if(g.cats.length<2)return startRound(null);
   var box=gbox();
   box.innerHTML='<div class="ph"><span><b>'+esc(g.title)+'</b></span></div><p class="lead">Выбери тему или играй вперемешку.</p><div class="chips">'+
-    '<button class="chip mix" data-c="">🎲 Вперемешку</button>'+
+    '<button class="chip mix" data-c="">Вперемешку</button>'+
     g.cats.map(function(c){var k=g.items.filter(function(x){return x.c===c.id;}).length;return '<button class="chip" data-c="'+esc(c.id)+'">'+esc(c.name)+' <small>'+k+'</small></button>';}).join('')+'</div>'+
     '<button class="btn sec" id="gback">← К играм</button>';
   Array.prototype.forEach.call(box.querySelectorAll('[data-c]'),function(b){b.onclick=function(){startRound(b.dataset.c||null);};});
@@ -361,8 +375,8 @@ function gameAnswer(btn,x){
     if(b.textContent===x.a)b.classList.add('right');else if(b===btn)b.classList.add('wrong');
   });
   var last=R.i+1>=R.items.length;
-  document.getElementById('gfb').innerHTML='<div class="fb '+(ok?'good':'bad')+'">'+(ok?'✅ Верно':'❌ Неверно')+(ok?'':'. Правильный ответ: '+esc(x.a))+
-    (x.h?'<small>'+esc(x.h)+'</small>':'')+'</div><button class="btn sec" id="gtheory">📖 Открыть теорию</button><button class="btn" id="gnext">'+(last?'Итог':'Дальше')+'</button>';
+  document.getElementById('gfb').innerHTML='<div class="fb '+(ok?'good':'bad')+'">'+(ok?'Верно':'Неверно')+(ok?'':'. Правильный ответ: '+esc(x.a))+
+    (x.h?'<small>'+esc(x.h)+'</small>':'')+'</div><button class="btn sec" id="gtheory">Открыть теорию</button><button class="btn" id="gnext">'+(last?'Итог':'Дальше')+'</button>';
   document.getElementById('gnext').onclick=function(){R.i++;gameQ();};
   document.getElementById('gtheory').onclick=function(){var t=document.querySelector('.tabs2 [data-t=t]');if(t){t.click();window.scrollTo(0,0);}};
 }
@@ -374,8 +388,8 @@ function gameEnd(){
   var sent=window.AnikSync&&AnikSync.send(payload),link='https://t.me/'+BOT_USERNAME+'?start='+payload;
   gbox().innerHTML='<div class="fin"><div class="fs '+cls+'">'+ok+'/'+tot+'</div><p class="lead" style="margin-top:8px">'+
     (ratio>=.8?'Отлично! Навык закрепляется.':ratio>=.5?'Неплохо. Загляни в теорию и сыграй ещё раз.':'Пока трудно — прочитай теорию и попробуй снова.')+'</p></div>'+
-    (sent?'<div class="hint">✅ Результат записан в твой прогресс — бот и репетитор его увидят.</div>':'<div class="hint">Чтобы бот учёл игру в твоём прогрессе, отправь результат.</div><button class="btn" id="gsend">📤 Отправить результат боту</button>')+
-    '<button class="btn" id="gagain">Ещё раз</button><button class="btn sec" id="gtheory2">📖 Теория</button><button class="btn sec" id="glist">К играм</button>';
+    (sent?'<div class="hint">Результат записан в твой прогресс — бот и репетитор его увидят.</div>':'<div class="hint">Чтобы бот учёл игру в твоём прогрессе, отправь результат.</div><button class="btn" id="gsend">Отправить результат боту</button>')+
+    '<button class="btn" id="gagain">Ещё раз</button><button class="btn sec" id="gtheory2">Теория</button><button class="btn sec" id="glist">К играм</button>';
   var sb=document.getElementById('gsend');
   if(sb)sb.onclick=function(){if(TG&&TG.initData&&TG.openTelegramLink)TG.openTelegramLink(link);else window.open(link,'_blank');};
   document.getElementById('gagain').onclick=function(){startRound(R.cat);};
@@ -415,9 +429,10 @@ function show(){
     (passage?'<details class="card" open><summary>Текст для чтения</summary><div class="passage">'+esc(passage)+'</div></details>':'')+
     '<div class="card"><div class="txt">'+renderText(t.t)+'</div>'+figs+(t.s?'<div class="src">Источник: '+esc(t.s)+'</div>':'')+'</div>'+
     '<input class="inp" id="ans" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" inputmode="'+(t.k==='word'?'text':'text')+'" placeholder="'+esc(ph)+'">'+
-    '<div id="fb"></div>'+
+    nbsHtml(t)+'<div id="fb"></div>'+
     '<div id="acts"><button class="btn" id="chk">Проверить</button><button class="btn sec" id="skip">Не знаю</button></div>';
   var inp=document.getElementById('ans');
+  wireNbs(t,inp);
   document.getElementById('chk').onclick=check;
   document.getElementById('skip').onclick=function(){reveal(null);};
   document.getElementById('quit').onclick=function(){if(run.res.length)finish();else go(run.set+'&n='+run.n);};
@@ -425,6 +440,32 @@ function show(){
   inp.focus({preventScroll:true});
 }
 
+// ответ «цифры подряд»: столько кнопок, сколько вариантов в условии («1)», «2)»…) или мест для знаков «(1)»…«(9)»;
+// не меньше старшей цифры ответа, чтобы ответ всегда можно было набрать. Нажатие дописывает или убирает цифру
+function nbsCount(t){
+  var txt=String(t.t),opts=txt.match(/(^|\n)\s*\d\)/g),marks=(txt.match(/\((\d)\)/g)||[]).map(function(x){return +x.charAt(1);});
+  var n=opts?opts.length:marks.length?Math.max.apply(null,marks):5;
+  (t.a||[]).forEach(function(a){digitsOf(a).split('').forEach(function(d){n=Math.max(n,+d);});});
+  return Math.min(9,Math.max(5,n));
+}
+function nbsHtml(t){
+  if(t.k!=='seq'&&t.k!=='set')return '';
+  var n=nbsCount(t),h='';
+  for(var i=1;i<=n;i++)h+='<button type="button" data-d="'+i+'" aria-pressed="false">'+i+'</button>';
+  return '<div class="nbs" style="--cols:'+Math.min(n,5)+'">'+h+'</div>';
+}
+function wireNbs(t,inp){
+  var box=app.querySelector('.nbs');if(!box)return;
+  var sync=function(){Array.prototype.forEach.call(box.children,function(b){var on=inp.value.indexOf(b.dataset.d)>=0;b.classList.toggle('on',on);b.setAttribute('aria-pressed',on?'true':'false');});};
+  Array.prototype.forEach.call(box.children,function(b){b.onclick=function(){
+    if(run.answered)return;
+    var d=b.dataset.d,v=digitsOf(inp.value);
+    v=v.indexOf(d)>=0?v.replace(d,''):v+d;
+    if(t.k==='set')v=v.split('').sort().join('');
+    inp.value=v;sync();
+  };});
+  inp.addEventListener('input',sync);
+}
 function check(){
   if(run.answered)return;
   var t=run.items[run.i],inp=document.getElementById('ans'),v=inp.value;
@@ -442,8 +483,9 @@ function reveal(v){
   run.res[run.i]=ok;
   var inp=document.getElementById('ans');
   inp.disabled=true;inp.classList.add(ok?'ok':'err');
+  Array.prototype.forEach.call(app.querySelectorAll('.nbs button'),function(b){b.disabled=true;});
   var last=run.i+1>=run.items.length;
-  document.getElementById('fb').innerHTML=ok?'<div class="fb good">✅ Верно</div>':'<div class="fb bad">❌ '+(v===null?'Пропущено':'Неверно')+'. Правильный ответ: '+esc(t.a[0])+(t.a.length>1&&t.k!=='word'?'<small>Подходят также: '+esc(t.a.slice(1,4).join(', '))+'</small>':'')+'</div>';
+  document.getElementById('fb').innerHTML=ok?'<div class="fb good">Верно</div>':'<div class="fb bad">'+(v===null?'Пропущено':'Неверно')+'. Правильный ответ: '+esc(t.a[0])+(t.a.length>1&&t.k!=='word'?'<small>Подходят также: '+esc(t.a.slice(1,4).join(', '))+'</small>':'')+'</div>';
   document.getElementById('acts').innerHTML='<button class="btn" id="nx">'+(last?'Итог':'Дальше')+'</button>';
   document.getElementById('nx').onclick=function(){run.i++;run.answered=false;show();};
   var dots=document.querySelector('.dots');if(dots)dots.outerHTML=dotsHtml();
@@ -462,12 +504,15 @@ function finish(){
   var payload=payloadOf(),sent=window.AnikSync&&AnikSync.send(payload);
   var link='https://t.me/'+BOT_USERNAME+'?start='+payload;
   var S=INDEX.sets[run.set];
-  var list=run.items.slice(0,tot).map(function(t,k){return '<div><b>'+(run.res[k]?'✅':'❌')+'</b><span>'+(run.res[k]?'Задание '+(k+1)+' — верно':'Задание '+(k+1)+' — ответ: '+esc(t.a[0]))+'</span></div>';}).join('');
-  app.innerHTML='<div class="bar-top"><span class="wm">аник<i>.</i></span><a class="back" href="#'+run.set+'">← Номера</a></div>'+
-    '<div class="fin"><div class="eyebrow">'+esc(S.title)+' · №'+run.n+'</div><div class="fs '+cls+'">'+ok+'/'+tot+'</div>'+
-    '<p class="lead" style="margin-top:8px">'+(ratio>=.8?'Отлично! Тема получается.':ratio>=.5?'Неплохо. Разбери ошибки и закрепи ещё одним подходом.':'Эта тема пока трудная — ничего, повтори ещё раз.')+'</p></div>'+
-    (sent?'<div class="hint">✅ Результат записан в твой прогресс — бот и репетитор его увидят.</div>':
-      '<div class="hint">Чтобы бот учёл подход в твоём прогрессе, отправь результат.</div><button class="btn" id="sendbtn">📤 Отправить результат боту</button>')+
+  var marks=run.res.map(function(r,k){return '<span class="'+(r?'ok':'bad')+'">'+(k+1)+'</span>';}).join('');
+  var list=run.items.slice(0,tot).map(function(t,k){return run.res[k]?'':'<div><b>'+(k+1)+'</b><span>ответ: '+esc(t.a[0])+'</span></div>';}).join('');
+  var x=S.numbers.filter(function(y){return y.n===run.n;})[0];
+  app.innerHTML='<div class="res-hero" style="'+AnikLook.style(numSkin(run.set,run.n))+'"><span class="ra" aria-hidden="true">'+ok+'</span><span class="rb" aria-hidden="true">'+tot+'</span>'+
+    '<div class="tn">'+esc(S.title)+' · № '+pad2(run.n)+(x?' · '+esc(x.name):'')+'</div><h2>'+ok+' из '+tot+'.</h2></div>'+
+    '<p class="lead">'+(ratio>=.8?'Отлично! Тема получается.':ratio>=.5?'Неплохо. Разбери ошибки и закрепи ещё одним подходом.':'Эта тема пока трудная — ничего, повтори ещё раз.')+'</p>'+
+    '<div class="stl">Ответы по порядку</div><div class="marks">'+marks+'</div>'+
+    (sent?'<div class="hint">Результат записан в твой прогресс — бот и репетитор его увидят.</div>':
+      '<div class="hint">Чтобы бот учёл подход в твоём прогрессе, отправь результат.</div><button class="btn" id="sendbtn">Отправить результат боту</button>')+
     '<div class="list">'+list+'</div>'+
     '<button class="btn" id="again">Ещё подход</button><button class="btn sec" id="back">К номерам</button>';
   var sb=document.getElementById('sendbtn');

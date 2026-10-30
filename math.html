@@ -62,9 +62,10 @@ h1{font-size:22px;margin:14px 0 4px;background:linear-gradient(135deg,var(--acc)
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@700;800&family=Golos+Text:wght@400..700&display=swap">
-<link rel="stylesheet" href="anik.css?v=3">
+<link rel="stylesheet" href="anik.css?v=4">
+<script src="anik-look.js?v=1"></script>
 <script src="anik-sync.js?v=2"></script>
-<script src="anik-nav.js?v=1" defer></script>
+<script src="anik-nav.js?v=2" defer></script>
 </head>
 <body class="math">
 <nav><button class="nb" id="back">←</button><b id="title">Математика</b><span id="xp"></span></nav>
@@ -142,9 +143,8 @@ function weightedSkill(skills){
 function packMastery(p){const s=skillsOfPack(p);return s.reduce((a,k)=>a+pOf(k),0)/s.length}
 
 // ── Экраны ──
-// Цвет каждого раздела (как на холсте «аника»): фон, текст, цвет большого номера — без повторов, от синего к жёлтому
-const PACK_SKINS=[['#2E55C9','#FFFFFF','#7098F8'],['#705CA3','#FFFFFF','#AA9CD8'],['#A45779','#FFFFFF','#DD9AB5'],['#D54245','#FFFFFF','#FF928D'],['#E94F4E','#111111','#A80002'],['#EE6E7B','#111111','#AF233F'],['#F289A5','#111111','#B34769'],['#F4A0B7','#111111','#B5607A'],['#F5B198','#111111','#B67157'],['#F5C071','#111111','#B7801B'],['#F6CE2E','#111111','#B88D00']];
-function packSkin(id){const k=INDEX?INDEX.packs.findIndex(p=>p.id===id):-1;return PACK_SKINS[(k<0?0:k)%PACK_SKINS.length]}
+// Цвет каждого раздела — из anik-look.js: без повторов, от синего к жёлтому
+function packSkin(id){const n=INDEX?INDEX.packs.length:11,k=INDEX?INDEX.packs.findIndex(p=>p.id===id):-1;return AnikLook.ramp(n,true)[k<0?0:k]}
 function packNum(p){return p.numbers.length>1?p.numbers[0]+'–'+p.numbers[p.numbers.length-1]:String(p.numbers[0])}
 function setView(v){view=v;render()}
 function render(){

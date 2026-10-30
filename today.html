@@ -9,9 +9,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@700;800&family=Golos+Text:wght@400..700&display=swap">
-<link rel="stylesheet" href="anik.css?v=3">
+<link rel="stylesheet" href="anik.css?v=4">
+<script src="anik-look.js?v=1"></script>
 <script src="anik-sync.js?v=2"></script>
-<script src="anik-nav.js?v=1" defer></script>
+<script src="anik-nav.js?v=2" defer></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{min-height:100vh}
@@ -21,62 +22,69 @@ main{max-width:520px;margin:0 auto;padding:18px 16px 24px}
 h1{font-family:var(--display);font-size:38px;font-weight:800;letter-spacing:-1.5px;line-height:.98;margin:12px 0 6px}
 .lead{font-size:15px;line-height:1.5;margin-bottom:6px}
 .stl{margin:26px 0 12px;padding-top:8px;border-top:2px solid var(--ink);font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase}
+.stl{display:flex;justify-content:space-between;gap:10px}
 .row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.big-n{position:relative;overflow:hidden;padding:14px 16px;min-height:110px}
-.big-n .n{font-family:var(--display);font-size:58px;font-weight:800;letter-spacing:-3px;line-height:.9}
-.big-n .l{font-size:12px;font-weight:600;letter-spacing:1px;text-transform:uppercase;margin-top:6px}
-.big-n.red{background:var(--red)}.big-n.blue{background:var(--blue);color:#fff}.big-n.yellow{background:var(--yellow)}
-.goalbar{height:10px;background:rgba(17,17,17,.25);margin-top:10px}.goalbar i{display:block;height:100%;background:var(--ink)}
-.blue .goalbar{background:rgba(255,255,255,.3)}.blue .goalbar i{background:#fff}
+/* серия и цель дня — огромные цифры, срезанные краем плашки */
+.big-n{position:relative;overflow:hidden;padding:10px 12px;min-height:150px}
+.big-n .g{position:absolute;right:-8px;bottom:-36px;font-family:var(--display);font-size:190px;font-weight:800;line-height:.8;letter-spacing:-12px;pointer-events:none}
+.big-n .l{position:relative;font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase}
+.big-n .t{position:relative;font-family:var(--display);font-size:19px;font-weight:800;line-height:1.05;margin-top:2px}
+.big-n.red{background:var(--red)}.big-n.red .g{color:var(--yellow)}
+.big-n.blue{background:var(--blue);color:#fff}.big-n.blue .g{color:#7098F8}
+.goalbar{position:absolute;left:0;right:0;bottom:0;height:5px}.goalbar i{display:block;height:100%;background:var(--yellow)}
 .cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-top:4px}
-.cal .h{font-size:10px;font-weight:600;color:var(--muted);text-align:center;letter-spacing:1px}
-.cal .d{aspect-ratio:1;background:var(--chip);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:var(--muted)}
+.cal .h{font-size:11px;font-weight:600;color:var(--muted);text-align:center}
+.cal .d{height:40px;background:#fff;display:flex;align-items:center;justify-content:center;font-family:var(--display);font-size:14px;font-weight:800;color:var(--ink)}
 .cal .d.on{background:var(--blue);color:#fff}
-.cal .d.today{outline:3px solid var(--ink);outline-offset:1px}
+.cal .d.today{background:var(--yellow);color:var(--ink);outline:2px solid var(--ink);outline-offset:-2px}
 .cal .d.future{background:transparent;color:var(--line)}
-.legend{font-size:12px;color:var(--muted);margin-top:8px}
-.plan{display:grid;gap:8px}
-.pitem{position:relative;display:block;text-decoration:none;color:var(--ink);padding:14px 16px 14px 20px;background:#fff;border-left:8px solid var(--col,var(--red))}
+.plan{display:grid;gap:6px}
+.pitem{display:block;min-height:80px;padding:11px 110px 11px 14px;text-decoration:none}
 .pitem:hover{outline:3px solid var(--ink);outline-offset:2px}
-.pitem .t{font-family:var(--display);font-size:18px;font-weight:800;letter-spacing:-.4px;line-height:1.15}
-.pitem .s{font-size:13px;color:var(--muted);margin-top:4px}
-.pitem .arr{position:absolute;right:14px;top:50%;transform:translateY(-50%);font-weight:700}
-.badge{display:inline-block;margin-right:6px;padding:1px 6px;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;background:var(--yellow);color:var(--ink)}
-.badge.weak{background:var(--red-t)}.badge.repeat{background:var(--blue-t)}
-.near{background:#fff;padding:12px 16px;margin-top:8px}
-.near .t{font-weight:600}
-.near .b{height:8px;background:var(--line2);margin-top:8px}.near .b i{display:block;height:100%;background:var(--blue)}
-.near small{display:block;margin-top:4px;color:var(--muted);font-size:12px}
+.pitem .nm{max-width:none}
+.pitem .s{position:relative;font-size:12px;margin-top:3px}
+.pitem .big{font-size:120px;bottom:-26px;right:8px}
+.pitem .big.wide{font-size:96px}
+.near{display:flex;flex-direction:column;gap:6px;padding:10px 0;border-bottom:1px solid var(--line)}
+.near .t{display:flex;justify-content:space-between;align-items:baseline;font-size:15px;font-weight:600}
+.near .t small{color:var(--muted);font-weight:400}
+.near .t b{font-family:var(--display);font-size:17px;font-weight:800}
+.near .b{height:8px;background:var(--line2)}.near .b i{display:block;height:100%}
 .empty{background:#fff;padding:18px 16px;color:var(--muted);font-size:14px;line-height:1.55}
 .empty b{color:var(--ink)}
-.btn{display:flex;align-items:center;justify-content:space-between;width:100%;min-height:52px;padding:0 20px;margin-top:10px;border:0;background:var(--ink);color:var(--paper);font-size:15px;font-weight:600;text-decoration:none;cursor:pointer}
+.btn{display:flex;align-items:center;justify-content:space-between;width:100%;min-height:56px;padding:0 22px;margin-top:10px;border:0;background:var(--ink);color:var(--paper);font-size:16px;font-weight:600;text-decoration:none;cursor:pointer}
 .btn::after{content:"→";color:var(--yellow);font-weight:700}
 /* марки */
-.tabs3{display:flex;gap:6px;overflow-x:auto;margin:14px -16px 12px;padding:0 16px;scrollbar-width:none}
+.mhead{display:flex;align-items:flex-end;justify-content:space-between}
+.mhead .cnt{font-family:var(--display);font-size:34px;font-weight:800;letter-spacing:-1.2px;line-height:.9;margin-bottom:6px}
+.mhead .cnt small{font-size:16px;letter-spacing:0;color:var(--muted)}
+.tabs3{display:flex;gap:6px;overflow-x:auto;margin:14px -16px 0;padding:0 16px;scrollbar-width:none}
 .tabs3::-webkit-scrollbar{display:none}
-.tabs3 button{flex:none;min-height:42px;padding:0 14px;border:2px solid var(--ink);background:transparent;color:var(--ink);font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}
+.tabs3 button{flex:none;min-height:40px;padding:0 14px;border:2px solid var(--ink);background:transparent;color:var(--ink);font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap}
 .tabs3 button.on{background:var(--ink);color:var(--paper)}
-.counter{font-family:var(--display);font-size:20px;font-weight:800;letter-spacing:-.5px;margin-bottom:8px}
-.counter small{font-family:var(--body);font-size:13px;font-weight:400;color:var(--muted);letter-spacing:0}
-.sgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
-@media (max-width:360px){.sgrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-.stamp{position:relative;overflow:hidden;aspect-ratio:3/4;padding:8px;border:0;background:var(--col,var(--red));color:var(--ink);text-align:left;cursor:pointer;display:flex;flex-direction:column;justify-content:space-between;
-  box-shadow:inset 0 0 0 3px var(--paper),0 0 0 2px var(--ink);outline:2px dashed var(--ink);outline-offset:3px;margin:3px}
-.stamp.blue{color:#fff}
-.stamp .num{position:absolute;right:-4px;bottom:-14px;font-family:var(--display);font-size:78px;font-weight:800;line-height:.8;letter-spacing:-5px;color:rgba(255,255,255,.6);pointer-events:none}
-.stamp.blue .num{color:#93A9EA}
-.stamp .nm{position:relative;hyphens:auto;overflow-wrap:break-word;font-family:var(--display);font-size:12px;font-weight:800;line-height:1.1;letter-spacing:-.2px;padding:8px 6px 0}
-.stamp .dt{position:relative;font-size:10px;font-weight:600;letter-spacing:.5px;padding:0 6px 6px}
-.stamp.locked{background:transparent;color:var(--muted);box-shadow:none;outline:2px dashed var(--line);border:0}
-.stamp.locked .num{color:var(--chip)}
-.stamp.locked .pb{position:absolute;left:8px;right:8px;bottom:10px;height:6px;background:var(--line2)}
-.stamp.locked .pb i{display:block;height:100%;background:var(--blue)}
-.stamp .new{position:absolute;right:6px;top:6px;background:var(--ink);color:var(--yellow);font-size:9px;font-weight:700;letter-spacing:1px;padding:2px 5px}
-.sheet{position:fixed;inset:0;background:rgba(17,17,17,.5);display:flex;align-items:flex-end;z-index:30}
-.sheet>div{width:100%;max-width:520px;margin:0 auto;background:var(--paper);padding:20px 16px 90px;border-top:3px solid var(--ink)}
-.sheet h3{font-family:var(--display);font-size:24px;font-weight:800;letter-spacing:-.7px;line-height:1.05}
-.sheet p{font-size:14px;line-height:1.55;margin-top:8px}
-.sheet .x{float:right;min-width:44px;height:44px;border:2px solid var(--ink);background:transparent;font-size:18px;cursor:pointer}
+.sgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+/* марка — плитка в цвете и со знаком своего задания; неполученная — пунктир и контурный знак */
+.stamp{display:block;min-height:124px;padding:10px 12px 16px;border:0;text-align:left;cursor:pointer;font:inherit}
+.stamp:hover{outline:3px solid var(--ink);outline-offset:2px}
+.stamp .tn{position:relative;margin-bottom:2px}
+.stamp .nm{position:relative;max-width:90%}
+.stamp.locked{background:transparent;color:var(--ink);outline:2px dashed var(--line);outline-offset:-2px}
+.stamp.locked .big{color:transparent;-webkit-text-stroke:2px var(--line)}
+.stamp.locked .big.mk{border-color:var(--line)}
+.stamp .pb{position:absolute;left:0;bottom:0;height:5px}
+.stamp .new{position:absolute;right:8px;top:8px;background:var(--ink);color:var(--yellow);font-size:10px;font-weight:700;letter-spacing:1px;padding:2px 6px}
+.sheet{position:fixed;inset:0;background:rgba(17,17,17,.45);display:flex;align-items:flex-end;z-index:30}
+.sheet>div{width:100%;max-width:520px;margin:0 auto;background:var(--paper);padding:0 0 90px}
+.sheet .sh{position:relative;overflow:hidden;min-height:150px;padding:0 20px 16px;display:flex;flex-direction:column;justify-content:flex-end}
+.sheet .sh .big{font-size:200px;bottom:-40px;right:-6px}
+.sheet .sh .big.low{bottom:26px;font-size:220px}
+.sheet .sh .tn{position:relative;font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase}
+.sheet h3{position:relative;font-family:var(--display);font-size:28px;font-weight:800;letter-spacing:-.8px;line-height:1.05}
+.sheet .x{position:absolute;right:16px;top:16px;z-index:1;width:44px;height:44px;border:0;background:var(--ink);color:var(--paper);font-size:20px;cursor:pointer}
+.sheet .bd{padding:16px 20px 0}
+.sheet p{font-size:15px;line-height:1.45}
+.sheet .rule{margin-top:12px;padding:10px 14px;background:#fff;font-size:14px;line-height:1.4}
+.sheet .rule b{display:block;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px}
 .banner{background:var(--yellow);padding:14px 16px;margin:12px 0;font-weight:600}
 .banner b{display:block;font-family:var(--display);font-size:20px;font-weight:800;letter-spacing:-.4px}
 </style>
@@ -102,6 +110,10 @@ function daysSet(){
   ((window.AnikSync&&AnikSync.localDays&&AnikSync.localDays())||[]).forEach(function(d){set[d]=1;});
   return set;
 }
+// цвет и знак навыка: у каждой марки в разделе свой цвет (anik-look.js) и знак своего задания
+function groupOf(k){return REG.skills.filter(function(x){return x.stamp&&x.exam===k.exam&&x.subject===k.subject;}).sort(function(a,b){return a.number-b.number||a.name.localeCompare(b.name,'ru');});}
+function skinOf(k){var g=groupOf(k),i=g.indexOf(k);return AnikLook.ramp(g.length||1,k.subject!=='rus')[i<0?0:i];}
+function signFor(k){return AnikLook.signOf(k.exam+'.'+k.subject,k.number);}
 function colorOf(skill){var sec=REG&&REG.sections[skill.section];return sec?sec.color:'#E5332A';}
 function isBlue(c){return c==='#2E55C9';}
 /* куда вести с навыка: игра по теме (ЕГЭ русский и профильная математика) или тренажёр по номеру */
@@ -125,8 +137,8 @@ function today(){
   var wd=['воскресенье','понедельник','вторник','среда','четверг','пятница','суббота'][now.getDay()];
   var html='<div class="top"><span class="wm">аник<i>.</i></span><span class="date">'+now.getDate()+' '+['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'][now.getMonth()]+', '+wd+'</span></div>'+
     '<h1>Сегодня</h1>';
-  html+='<div class="row"><div class="big-n red"><div class="n">'+streak+'</div><div class="l">'+plural(streak,'день','дня','дней')+' подряд</div></div>'+
-    '<div class="big-n blue"><div class="n">'+(s?done:'—')+'<small style="font-size:22px;letter-spacing:-1px">'+(s?'/'+goal:'')+'</small></div><div class="l">ответов сегодня</div>'+(s?'<div class="goalbar"><i style="width:'+Math.min(100,Math.round(100*done/goal))+'%"></i></div>':'')+'</div></div>';
+  html+='<div class="row"><div class="big-n red"><span class="g" aria-hidden="true">'+streak+'</span><div class="l">серия</div><div class="t">'+plural(streak,'день','дня','дней')+'<br>подряд</div></div>'+
+    '<div class="big-n blue"><span class="g" aria-hidden="true">'+(s?done:0)+'</span><div class="l">цель дня · '+goal+'</div><div class="t">'+plural(s?done:0,'ответ','ответа','ответов')+'<br>сегодня</div>'+(s?'<div class="goalbar"><i style="width:'+Math.min(100,Math.round(100*done/goal))+'%"></i></div>':'')+'</div></div>';
   // календарь: пять недель, неделя с понедельника
   var end=new Date(todayIso+'T12:00:00'),startMon=new Date(end);
   startMon.setDate(end.getDate()-((end.getDay()+6)%7)-28);
@@ -139,16 +151,16 @@ function today(){
     if(on)cnt++;
     cells+='<div class="d'+(on?' on':'')+(key===todayIso?' today':'')+(fut?' future':'')+'">'+d.getDate()+'</div>';
   }
-  html+='<div class="stl">Календарь занятий</div><div class="cal">'+cells+'</div><div class="legend">За пять недель занимался '+cnt+' '+plural(cnt,'день','дня','дней')+'. Синий — день с занятием.</div>';
+  html+='<div class="stl"><span>Календарь занятий</span><span>'+cnt+' '+plural(cnt,'день','дня','дней')+' за 5 недель</span></div><div class="cal">'+cells+'</div>';
 
   // план
   html+='<div class="stl">План на сегодня</div>';
   var plan=(s&&s.plan)||[];
   if(plan.length){
     html+='<div class="plan">'+plan.map(function(p){
-      var sk=REG&&REG.skills.filter(function(x){return x.id===p.skill;})[0],col=sk?colorOf(sk):'#E5332A';
+      var sk=REG&&REG.skills.filter(function(x){return x.id===p.skill;})[0],c=sk?skinOf(sk):AnikLook.ramp(1)[0];
       var href=p.link||(sk?linkFor(sk):'index.html');
-      return '<a class="pitem" style="--col:'+col+'" href="'+esc(href)+'"><div class="t">№'+p.number+' · '+esc(p.name)+'</div><div class="s"><span class="badge '+(p.why==='weak'?'weak':p.why==='repeat'?'repeat':'')+'">'+(WHY[p.why]||'Тема')+'</span>'+p.count+' '+plural(p.count,'вопрос','вопроса','вопросов')+' · ~'+p.minutes+' мин</div><span class="arr">→</span></a>';
+      return '<a class="pitem sgt" style="'+AnikLook.style(c)+'" href="'+esc(href)+'">'+AnikLook.signHTML(sk?signFor(sk):String(p.number))+'<div class="tn">№ '+pad(p.number)+' · '+(WHY[p.why]||'тема').toLowerCase()+'</div><div class="nm">'+esc(p.name)+'</div><div class="s">'+p.count+' '+plural(p.count,'вопрос','вопроса','вопросов')+' · ≈ '+p.minutes+' мин</div></a>';
     }).join('')+'</div>';
   }else if(s){
     html+='<div class="empty"><b>На сегодня всё.</b> План собран по твоим слабым местам. Если хочешь ещё — открой любое задание ниже.</div>';
@@ -158,8 +170,8 @@ function today(){
   // ближайшие марки
   var near=nearStamps(s);
   if(near.length){
-    html+='<div class="stl">Ближе всего к марке</div>'+near.map(function(x){
-      return '<div class="near"><div class="t">'+esc(x.sk.name)+' <small style="display:inline;color:var(--muted)">№'+x.sk.number+'</small></div><div class="b"><i style="width:'+x.pct+'%"></i></div><small>знание '+Math.round(x.p*100)+' % из 80 %</small></div>';
+    html+='<div class="stl"><span>Ближе всего к марке</span><a href="today.html#stamps" style="color:inherit">все марки →</a></div>'+near.map(function(x){
+      return '<div class="near"><div class="t"><span>'+esc(x.sk.name)+' <small>№ '+x.sk.number+'</small></span><b>'+x.pct+'%</b></div><div class="b"><i style="width:'+x.pct+'%;background:'+skinOf(x.sk)[0]+'"></i></div></div>';
     }).join('');
   }
   html+='<a class="btn" href="index.html">Выбрать задание</a><a class="btn" href="today.html#stamps">Мои марки</a>';
@@ -187,19 +199,19 @@ function stamps(setKey){
   var gotHere=list.filter(function(k){return have[k.id];}).length;
   var todayIso=(s&&s.today)||iso(new Date()),recent=[];
   list.forEach(function(k){var h=have[k.id];if(h&&h.at){var dd=(new Date(todayIso)-new Date(h.at))/86400000;if(dd<=2)recent.push(k);}});
-  var html='<div class="top"><span class="wm">аник<i>.</i></span></div><h1>Марки</h1>'+
-    '<p class="lead">Марка — знак того, что тема действительно твоя. Получить её можно только занимаясь несколько дней подряд.</p>'+
-    '<div class="counter">'+earnedTotal+' <small>из '+all.length+' марок получено</small></div>';
-  if(recent.length)html+=recent.map(function(k){return '<div class="banner"><b>🏅 Новая марка</b>«'+esc(k.name)+'» — поздравляю!</div>';}).join('');
+  var html='<div class="top"><span class="wm">аник<i>.</i></span></div><div class="mhead"><h1>Марки</h1><div class="cnt">'+earnedTotal+'<small> / '+all.length+'</small></div></div>'+
+    '<p class="lead">Тема получается несколько дней подряд — марка твоя навсегда.</p>';
+  if(recent.length)html+=recent.map(function(k){return '<div class="banner"><b>Новая марка</b>«'+esc(k.name)+'» — поздравляю!</div>';}).join('');
   html+='<div class="tabs3">'+SETS.filter(function(x){return groups[x[0]];}).map(function(x){return '<button data-s="'+x[0]+'" class="'+(x[0]===setKey?'on':'')+'">'+x[1]+'</button>';}).join('')+'</div>'+
-    '<div class="counter" style="font-size:16px">'+gotHere+' <small>из '+list.length+' в этом разделе</small></div><div class="sgrid">'+
+    '<div class="stl"><span>'+esc((SETS.filter(function(x){return x[0]===setKey;})[0]||['',''])[1])+'</span><span>'+gotHere+' из '+list.length+'</span></div><div class="sgrid">'+
     list.map(function(k){
-      var h=have[k.id],col=colorOf(k),sk=s&&s.skills&&s.skills[k.id],p=sk?sk.p:0;
+      var h=have[k.id],c=skinOf(k),sk=s&&s.skills&&s.skills[k.id],p=sk?sk.p:0,pct=Math.min(100,Math.round(p/0.8*100));
+      var head=AnikLook.signHTML(signFor(k))+'<div class="tn">№ '+pad(k.number)+' · '+(h?esc(fmtDate(h.at)):pct+'%')+'</div><div class="nm">'+esc(k.name)+'</div>';
       if(h){
         var isNew=h.at&&((new Date(todayIso)-new Date(h.at))/86400000<=2);
-        return '<button class="stamp'+(isBlue(col)?' blue':'')+'" style="--col:'+col+'" data-id="'+esc(k.id)+'"><span class="num">'+k.number+'</span>'+(isNew?'<span class="new">NEW</span>':'')+'<span class="nm">'+esc(k.name)+'</span><span class="dt">'+esc(fmtDate(h.at))+'</span></button>';
+        return '<button class="stamp sgt" style="'+AnikLook.style(c)+'" data-id="'+esc(k.id)+'">'+head+(isNew?'<span class="new">NEW</span>':'')+'</button>';
       }
-      return '<button class="stamp locked" data-id="'+esc(k.id)+'"><span class="num">'+k.number+'</span><span class="nm">'+esc(k.name)+'</span><span class="pb"><i style="width:'+Math.min(100,Math.round(p/0.8*100))+'%"></i></span></button>';
+      return '<button class="stamp sgt locked" style="--col:transparent;--ink:#111111" data-id="'+esc(k.id)+'">'+head+'<span class="pb" style="width:'+pct+'%;background:'+c[0]+'"></span></button>';
     }).join('')+'</div>'+
     (s?'':'<div class="empty" style="margin-top:14px"><b>Пока марок нет.</b> Занимайся через бота — здесь появится прогресс по каждой теме.</div>');
   app.innerHTML=html;
@@ -214,9 +226,11 @@ function fmtDate(iso_){
 function sheet(id,h){
   var k=REG.skills.filter(function(x){return x.id===id;})[0],s=snap(),sk=s&&s.skills&&s.skills[id];
   var box=document.createElement('div');box.className='sheet';
-  box.innerHTML='<div><button class="x" aria-label="Закрыть">×</button><h3>'+esc(k.name)+'</h3><p><b>'+({ege:'ЕГЭ',oge:'ОГЭ'}[k.exam])+' · задание №'+k.number+'</b></p><p>'+
-    (h?'🏅 Марка получена '+esc(fmtDate(h.at))+'. Она остаётся навсегда.':(sk?'Знание сейчас '+Math.round(sk.p*100)+' %, ответов '+sk.n+'. ':'Ты ещё не занимался этой темой. ')+STAMP_RULE)+'</p>'+
-    '<a class="btn" href="'+esc(linkFor(k))+'">'+(h?'Повторить тему':'Тренироваться')+'</a></div>';
+  box.innerHTML='<div><div class="sh sgt" style="'+AnikLook.style(skinOf(k))+'">'+AnikLook.signHTML(signFor(k))+'<button class="x" aria-label="Закрыть">×</button>'+
+    '<div class="tn">'+({ege:'ЕГЭ',oge:'ОГЭ'}[k.exam])+' · задание '+k.number+'</div><h3>'+esc(k.name)+'</h3></div><div class="bd"><p>'+
+    (h?'Марка получена '+esc(fmtDate(h.at))+'. Она остаётся навсегда — даже если сделать перерыв.':(sk?'Знание сейчас '+Math.round(sk.p*100)+' %, ответов '+sk.n+'.':'Ты ещё не занимался этой темой.'))+'</p>'+
+    (h?'':'<div class="rule"><b>как получить марку</b>'+STAMP_RULE+'</div>')+
+    '<a class="btn" href="'+esc(linkFor(k))+'">'+(h?'Повторить тему':'Тренироваться')+'</a></div></div>';
   box.onclick=function(e){if(e.target===box||e.target.className==='x')box.remove();};
   document.body.appendChild(box);
 }

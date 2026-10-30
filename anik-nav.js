@@ -1,9 +1,9 @@
 /* Аник — нижняя панель: Сегодня · Задания · Марки. Подключается на всех страницах приложения. */
 (function () {
   var ITEMS = [
-    { id: 'today', label: 'Сегодня', href: 'today.html', icon: '◉' },
-    { id: 'tasks', label: 'Задания', href: 'index.html', icon: '▦' },
-    { id: 'stamps', label: 'Марки', href: 'today.html#stamps', icon: '★' },
+    { id: 'today', label: 'Сегодня', href: 'today.html' },
+    { id: 'tasks', label: 'Задания', href: 'index.html' },
+    { id: 'stamps', label: 'Марки', href: 'today.html#stamps' },
   ];
   function active() {
     var p = location.pathname.split('/').pop() || 'index.html';
@@ -13,7 +13,7 @@
   function render(bar) {
     var a = active();
     bar.innerHTML = ITEMS.map(function (it) {
-      return '<a href="' + it.href + '"' + (it.id === a ? ' class="on" aria-current="page"' : '') + '><i aria-hidden="true">' + it.icon + '</i><span>' + it.label + '</span></a>';
+      return '<a href="' + it.href + '"' + (it.id === a ? ' class="on" aria-current="page"' : '') + '>' + it.label + '</a>';
     }).join('');
   }
   function mount() {

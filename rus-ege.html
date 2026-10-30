@@ -182,10 +182,11 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:12px 1
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@700;800&family=Golos+Text:wght@400..700&display=swap">
-<link rel="stylesheet" href="anik.css?v=3">
+<link rel="stylesheet" href="anik.css?v=4">
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="anik-look.js?v=1"></script>
 <script src="anik-sync.js?v=2"></script>
-<script src="anik-nav.js?v=1" defer></script>
+<script src="anik-nav.js?v=2" defer></script>
 </head>
 <body class="rus">
 <nav>
@@ -379,26 +380,17 @@ function init(){
 }
 
 /* =================== HOME =================== */
-// Знак и цвет каждого задания (как на холсте «аника»): фон, текст, цвет знака. Цвета плавно идут жёлтый → розовый → красный → синий.
-// SQUARE/ARC/PREFIX/SUFFIX — значки разбора слова по составу, рисуются рамками.
-const SIGNS={1:['&','#F6CE2E','#111111','#B88D00'],2:['?','#F6C950','#111111','#B88800'],3:['«»','#F5C367','#111111','#B78300'],4:['а́','#F5BD7A','#111111','#B77D2E'],5:['≈','#F5B789','#111111','#B77746'],6:['=','#F5B198','#111111','#B67157'],7:['SQUARE','#F4AAA5','#111111','#B66B66'],8:['¿','#F4A4B1','#111111','#B56474'],9:['ARC','#F49CBD','#111111','#B55C80'],10:['PREFIX','#F393B6','#111111','#B45279'],11:['SUFFIX','#F289A5','#111111','#B34769'],12:['е/и','#F17F94','#111111','#B23A58'],13:['не','#EF7483','#111111','#B02C47'],14:['-','#ED6872','#111111','#AE1736'],15:['нн','#EB5C61','#111111','#AB0021'],16:[',','#E94F4E','#111111','#A80002'],17:[',','#E73F3A','#FFFFFF','#FF9588'],18:['()','#DF3A36','#FFFFFF','#FF9084'],19:['[ ]','#CB4851','#FFFFFF','#FF9496'],20:['+','#B85167','#FFFFFF','#F098A6'],21:[':','#A45779','#FFFFFF','#DD9AB5'],22:['*','#905B8A','#FFFFFF','#C99BC4'],23:['…','#7B5C9B','#FFFFFF','#B59CD1'],24:['→','#655CAB','#FFFFFF','#A09BDF'],25:['≠','#4C59BA','#FFFFFF','#899AEC'],26:['¶','#2E55C9','#FFFFFF','#7098F8']};
-function signHTML(g){
-  if(g==='SQUARE'||g==='ARC'||g==='PREFIX'||g==='SUFFIX')return `<span class="big mk mk-${g.toLowerCase()}" aria-hidden="true"></span>`;
-  const cls=g===','||g==='…'?' low':g.length>1&&g!=='а́'?' wide':'';
-  return `<span class="big${cls}" aria-hidden="true">${g}</span>`;
-}
-function skinTile(el,num){
-  const sg=SIGNS[num];if(!sg)return;
-  el.style.setProperty('--col',sg[1]);el.style.setProperty('--ink',sg[2]);el.style.setProperty('--bigc',sg[3]);
-}
+// Знак и цвет каждого задания — из anik-look.js (общий для всех страниц)
+const RUS_SKINS=AnikLook.ramp(TOPICS.length);
+function skinTile(el,num){AnikLook.paint(el,RUS_SKINS[num-1]);}
 
 function kindOf(n){return n<=3||n>=22?'text':n<=8?'norm':n<=15?'orth':'punct';}
 function renderGrid(){
   const g=document.getElementById('topicsGrid');g.innerHTML='';
   TOPICS.forEach(t=>{
     const p=prog[t.num]||{d:0,tot:15};const pct=Math.round(p.d/p.tot*100);
-    const d=document.createElement('div');d.className='tc';skinTile(d,t.num);
-    d.innerHTML=`${signHTML(SIGNS[t.num][0])}<div class="tn">№ ${String(t.num).padStart(2,'0')} · ${t.cnt}</div><div class="nm">${t.name}</div><div class="pb"><div class="pf" style="width:${pct}%"></div></div>`;
+    const d=document.createElement('div');d.className='tc sgt';skinTile(d,t.num);
+    d.innerHTML=`${AnikLook.signHTML(AnikLook.signOf('ege.rus',t.num))}<div class="tn">№ ${String(t.num).padStart(2,'0')} · ${t.cnt}</div><div class="nm">${t.name}</div><div class="pb"><div class="pf" style="width:${pct}%"></div></div>`;
     d.onclick=()=>openTopic(t.num);g.appendChild(d);
   });
 }
