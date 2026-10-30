@@ -53,7 +53,9 @@ nav{background:var(--paper);border-bottom:2px solid var(--ink);padding:8px 16px;
 /* ── РУССКИЙ ЯЗЫК (rus-ege.html) ── */
 body.rus .scr{padding:16px}
 .hero{text-align:left;padding:24px 0 8px}
-.hero .wm{margin-bottom:18px}
+.hero .wm{margin-bottom:22px}
+.hero .eyebrow{margin-bottom:6px}
+body.rus .srow{display:none}
 .hero h1{background:none;-webkit-text-fill-color:currentColor;color:var(--ink);font-family:var(--display);font-size:42px;font-weight:800;letter-spacing:-1.8px;line-height:.96}
 .hero p{color:var(--ink);font-size:16px;margin-top:10px}
 .srow{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:18px}
@@ -62,44 +64,45 @@ body.rus .scr{padding:16px}
 .sbox:nth-child(3){background:var(--blue);color:#fff}
 .sbox .n{font-family:var(--display);font-size:34px;font-weight:800;letter-spacing:-1.4px;line-height:1;color:inherit}
 .sbox .l{color:inherit;margin-top:4px}
-.stl{color:var(--ink);margin:26px 0 12px;padding-top:8px;border-top:2px solid var(--ink)}
+.stl{display:flex;justify-content:space-between;color:var(--ink);margin:26px 0 12px;padding-top:8px;border-top:2px solid var(--ink)}
 
 .spec-grid{gap:8px}
-.spec-card{background:var(--yellow);border:0;border-radius:0;text-align:left;padding:16px;min-height:112px}
-.spec-card:nth-child(2){background:var(--pink)}
+.spec-card{position:relative;overflow:hidden;background:var(--pink);border:0;border-radius:0;text-align:left;padding:10px 12px;min-height:104px}
 .spec-card:hover{transform:none;box-shadow:none;outline:3px solid var(--ink);outline-offset:2px}
-.spec-card .si{font-size:28px;margin-bottom:10px}
+.spec-card .si{position:absolute;right:-4px;bottom:-34px;margin:0;font-family:var(--display);font-size:150px;font-weight:800;line-height:.8;color:var(--red);pointer-events:none}
+.spec-card:nth-child(2) .si{right:8px;bottom:-30px}
 .spec-card .sn{font-family:var(--display);font-size:20px;font-weight:800;letter-spacing:-.5px}
-.spec-card .sd{color:var(--ink);font-size:13px}
+.spec-card .sn,.spec-card .eyebrow{position:relative}
+.spec-card .sd{display:none}
 
 /* плитки заданий: цвет — раздел (орфография красный, пунктуация синий, текст жёлтый, нормы розовый) */
 .tgrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
 @media (min-width:560px){.tgrid{grid-template-columns:repeat(3,minmax(0,1fr))}}
-.tc{background:var(--col,var(--red));border:0;border-radius:0;padding:12px 14px 16px;min-height:118px;color:var(--ink);--bigc:rgba(255,255,255,.6)}
+.tc{position:relative;overflow:hidden;background:var(--col,var(--red));border:0;border-radius:0;padding:10px 12px 16px;min-height:124px;color:var(--ink);cursor:pointer}
 .tc::before{content:none}
-.tc[data-k=orth]{--bigc:var(--yellow)}
-.tc[data-k=punct]{color:#fff;--bigc:#93A9EA}
-.tc[data-k=text]{--bigc:#fff}
-.tc[data-k=norm]{--bigc:var(--red)}
-.tc:hover{transform:none;outline:3px solid var(--ink);outline-offset:2px}
-.tc .big{position:absolute;right:-6px;bottom:-22px;font-family:var(--display);font-size:112px;font-weight:800;line-height:.8;letter-spacing:-7px;color:var(--bigc);pointer-events:none}
-.tc .tn,.tc .nm,.tc .ds{position:relative;color:inherit}
-.tc .tn{margin-bottom:6px}
-.tc .nm{font-family:var(--display);font-size:17px;font-weight:800;letter-spacing:-.4px;line-height:1.1;max-width:78%}
-.tc .ds{font-size:12px;line-height:1.35;margin-top:6px;max-width:78%}
-.tc .bdg{background:var(--ink);color:var(--paper);border-radius:0;font-size:10px;padding:2px 6px;top:10px;right:10px}
-.tc .pb{position:absolute;left:0;right:0;bottom:0;margin:0;height:6px;background:rgba(17,17,17,.2);border-radius:0}
-.tc .pf{background:var(--ink);border-radius:0}
 
+.tc:hover{transform:none;outline:3px solid var(--ink-c,#111);outline-offset:2px}
+/* знак задания — огромный, срезан краем плитки, как «а́» у специгры */
+.tc .big{position:absolute;right:-4px;bottom:-30px;font-family:var(--display);font-size:150px;font-weight:800;line-height:.8;letter-spacing:-4px;color:var(--bigc);pointer-events:none}
+.tc .big.wide{font-size:116px}
+.tc .big.low{bottom:22px;font-size:190px}
+.tc .big.mk{box-sizing:border-box;border:0 solid var(--bigc)}
+.tc .big.mk-square{right:-16px;bottom:-22px;width:104px;height:92px;border-width:24px}
+.tc .big.mk-arc{right:-22px;bottom:-24px;width:140px;height:76px;border-width:24px 24px 0;border-radius:70px 70px 0 0}
+.tc .big.mk-prefix{right:18px;bottom:-14px;width:104px;height:64px;border-top-width:24px;border-right-width:24px}
+.tc .big.mk-suffix{right:26px;bottom:-58px;width:84px;height:84px;border-top-width:24px;border-left-width:24px;transform:rotate(45deg)}
+.tc .tn,.tc .nm{position:relative;color:inherit}
+.tc .tn{margin-bottom:2px}
+.tc .nm{font-family:var(--display);font-size:17px;font-weight:800;letter-spacing:-.4px;line-height:1.1;max-width:85%}
+.tc .pb{position:absolute;left:0;right:0;bottom:0;margin:0;height:5px;background:transparent;border-radius:0}
+.tc .pf{height:100%;background:var(--ink);border-radius:0}
 /* заголовок темы */
-body.rus #s-topic .th{position:relative;overflow:hidden;text-align:left;margin:-16px -16px 0;padding:24px 20px 20px;min-height:150px;background:var(--col,var(--red));color:var(--ink)}
-body.rus #s-topic .th[data-k=punct]{color:#fff}
-body.rus #s-topic .th::after{content:attr(data-n);position:absolute;right:-12px;bottom:-34px;font-family:var(--display);font-size:200px;font-weight:800;line-height:.8;letter-spacing:-12px;color:rgba(255,255,255,.55);pointer-events:none}
-body.rus #s-topic .th::after{z-index:0}
+body.rus #s-topic .th{position:relative;overflow:hidden;text-align:left;margin:-16px -16px 0;padding:24px 20px 20px;min-height:150px;background:var(--col,var(--red));color:var(--ink,var(--ink))}
+body.rus #s-topic .th::after{content:attr(data-n);position:absolute;right:-12px;bottom:-34px;z-index:0;font-family:var(--display);font-size:200px;font-weight:800;line-height:.8;letter-spacing:-12px;color:var(--bigc,rgba(255,255,255,.55));pointer-events:none}
 body.rus #s-topic .th>*{position:relative;z-index:1}
-body.rus #s-topic .th[data-k=orth]::after{color:var(--yellow)}
-body.rus #s-topic .th[data-k=punct]::after{color:#93A9EA}
-body.rus #s-topic .th[data-k=norm]::after{color:var(--red)}
+body.rus #s-topic .th .em{display:none}
+body.rus #s-topic .th .sub{font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;margin:0 0 4px;order:-1}
+body.rus #s-topic .th{display:flex;flex-direction:column;justify-content:flex-end}
 .th{padding:18px 0 14px}
 .th .em{font-size:28px;margin-bottom:6px;position:relative}
 .th h2{font-family:var(--display);font-size:30px;font-weight:800;letter-spacing:-1px;line-height:1;position:relative}
@@ -181,6 +184,8 @@ body.rus .nb.miss{background:var(--blue-t);border-color:var(--blue);color:var(--
 .q-opt.ok,.cg-opt.ok{background:var(--blue);border-color:var(--blue);color:#fff}
 .q-opt.err,.cg-opt.err{background:var(--red);border-color:var(--red);color:var(--ink)}
 .cg-word{background:#fff;border-radius:0;font-family:var(--display);font-size:24px;font-weight:800;letter-spacing:-.4px}
+.cg-word{background:none;padding:6px 0 10px;text-align:left;font-size:30px;letter-spacing:-.8px;line-height:1.1}
+.cg-opts.short .cg-opt{min-height:130px;font-family:var(--display);font-size:84px;font-weight:800;line-height:1;padding:0 0 12px}
 .cg-hint{background:var(--yellow);border:0;border-radius:0;color:var(--ink);font-size:14px}
 .sep{background:var(--line)}
 
@@ -190,18 +195,14 @@ body.math .sub{color:var(--ink);font-size:15px}
 body.math main{padding:16px}
 .card{background:#fff;border-radius:0;padding:16px}
 .btn{margin-top:10px}
-.pk{border:0;border-radius:0;background:var(--red);color:var(--ink);padding:14px 16px;min-height:84px;position:relative;overflow:hidden}
-.pk:nth-of-type(4n+2){background:var(--blue);color:#fff}
-.pk:nth-of-type(4n+3){background:var(--yellow)}
-.pk:nth-of-type(4n+4){background:var(--pink)}
-.pk:hover{outline:3px solid var(--ink);outline-offset:2px}
-.pk .ic{flex:none;width:38px;text-align:center}
-.pk .t{font-family:var(--display);font-size:19px;font-weight:800;letter-spacing:-.4px;line-height:1.1}
-.pk .t small{color:inherit;font-family:var(--body);font-size:13px;margin-top:4px;line-height:1.35}
-.bar{height:8px;border-radius:0;background:rgba(17,17,17,.2)}
-.bar i{background:var(--ink)}
-.pk:nth-of-type(4n+2) .bar{background:rgba(255,255,255,.3)}
-.pk:nth-of-type(4n+2) .bar i{background:#fff}
+.pk{position:relative;overflow:hidden;border:0;border-radius:0;background:var(--col,var(--red));color:var(--ink);padding:12px 14px;min-height:84px;margin-top:6px;align-items:flex-start}
+.pk:hover{outline:3px solid #111;outline-offset:2px}
+/* номер задания вместо значка — огромный, срезан краем, как у русского */
+.pk .big{position:absolute;right:-6px;bottom:-22px;font-family:var(--display);font-size:120px;font-weight:800;line-height:.8;letter-spacing:-6px;color:var(--bigc);pointer-events:none}
+.pk .t{position:relative;padding-right:96px;font-family:var(--display);font-size:19px;font-weight:800;letter-spacing:-.3px;line-height:1.1}
+.pk .t small{color:inherit;font-family:var(--body);font-size:12px;font-weight:400;margin-top:4px;line-height:1.3}
+.pk .bar{position:absolute;left:0;bottom:0;width:100%;height:5px;background:transparent}
+.pk .bar i{background:var(--ink)}
 .card .bar{background:var(--line2)}
 .card .bar i{background:var(--blue)}
 .sk{border-bottom:1px solid var(--line)}
@@ -224,3 +225,23 @@ body.math .tag{color:var(--muted)}
 .fb.good{background:var(--blue);color:#fff}
 .fb.bad{background:var(--red);color:var(--ink)}
 .res li{font-size:15px}
+/* внутри раздела шапка — цвета раздела */
+body.math.in-pack nav{background:var(--col,var(--paper));border-bottom:0;color:var(--ink-p,var(--ink))}
+body.math.in-pack nav b{color:inherit}
+body.math.in-pack #back{background:#111;border-color:#111;color:var(--paper)}
+body.math .lv{display:none}
+/* своя клавиатура для числового ответа */
+.inp{font-family:var(--display);font-size:34px;font-weight:800;letter-spacing:-1px;min-height:68px;caret-color:var(--blue)}
+.keys.pad{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-top:12px}
+.keys.pad button{min-height:56px;border:0;background:var(--chip);font-family:var(--display);font-size:24px;font-weight:800}
+.keys.pad button.d{background:#fff}
+.keys.pad .chk{grid-column:span 2;background:var(--ink);color:var(--paper);font-family:var(--body);font-size:17px;font-weight:600}
+.keys.pad .chk:active{background:#2a2a2a}
+/* итог: вместо звёзд — крупный счёт */
+.stars{text-align:left;letter-spacing:0;font-family:var(--display);font-size:22px;font-weight:800;margin:12px 0}
+.stars b{font-size:96px;letter-spacing:-5px;line-height:.9;color:var(--blue)}
+.stars small{display:block;font-family:var(--body);font-size:13px;font-weight:600;letter-spacing:1px;text-transform:uppercase;margin-top:6px}
+.rk{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;margin-right:6px;font-weight:800;font-size:14px}
+.rk.ok{background:var(--blue);color:#fff}.rk.bad{background:var(--red);color:var(--ink)}
+/* русский: от значков в итогах остались пустые места */
+.game-hero .gi{display:none}
