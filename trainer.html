@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#F3EEE2">
+<title>Аник — тренажёр заданий</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@700;800&family=Golos+Text:wght@400..700&display=swap">
+<link rel="stylesheet" href="anik.css?v=1">
+<script src="anik-sync.js?v=1"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{min-height:100vh}
+main{max-width:520px;margin:0 auto;padding:16px 16px 40px}
+.bar-top{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:44px;margin-bottom:10px}
+.back{min-width:44px;height:44px;padding:0 14px;border:2px solid var(--ink);background:transparent;color:var(--ink);font-weight:600;font-size:15px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.back:hover{background:var(--ink);color:var(--paper)}
+h1{font-family:var(--display);font-size:40px;font-weight:800;letter-spacing:-1.6px;line-height:.96;margin:14px 0 8px}
+.lead{font-size:16px;line-height:1.5;margin-bottom:6px}
+.stl{margin:24px 0 12px;padding-top:8px;border-top:2px solid var(--ink)}
+.cards{display:grid;gap:10px}
+.setcard{display:block;width:100%;text-align:left;position:relative;overflow:hidden;border:0;min-height:112px;padding:16px;color:var(--ink);cursor:pointer;text-decoration:none}
+.setcard:hover{outline:3px solid var(--ink);outline-offset:2px}
+.setcard .nm{font-family:var(--display);font-size:24px;font-weight:800;letter-spacing:-.7px;line-height:1.05;position:relative;max-width:75%}
+.setcard .ds{font-size:13px;margin-top:6px;position:relative;max-width:75%}
+.setcard .big{position:absolute;right:-4px;bottom:-22px;font-family:var(--display);font-weight:800;font-size:120px;line-height:.8;letter-spacing:-7px;color:rgba(255,255,255,.55);pointer-events:none}
+.s-oge-rus{background:var(--blue);color:#fff}.s-oge-rus .big{color:#93A9EA}
+.s-oge-math{background:var(--yellow)}
+.s-ege-mathb{background:var(--pink)}.s-ege-mathb .big{color:var(--red)}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.tile{position:relative;overflow:hidden;text-align:left;border:0;padding:12px 14px 18px;min-height:128px;background:var(--col,var(--red));color:var(--ink);cursor:pointer}
+.tile.blue{color:#fff}
+.tile:hover{outline:3px solid var(--ink);outline-offset:2px}
+.tile .tn{position:relative;font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}
+.tile .nm{position:relative;font-family:var(--display);font-size:17px;font-weight:800;letter-spacing:-.4px;line-height:1.1;max-width:80%}
+.tile .ds{position:relative;font-size:12px;line-height:1.35;margin-top:6px}
+.tile .big{position:absolute;right:-6px;bottom:-22px;font-family:var(--display);font-size:110px;font-weight:800;line-height:.8;letter-spacing:-7px;color:rgba(255,255,255,.6);pointer-events:none}
+.tile.blue .big{color:#93A9EA}
+.tile .pb{position:absolute;left:0;right:0;bottom:0;height:6px;background:rgba(17,17,17,.2)}
+.tile .pf{display:block;height:100%;background:var(--ink)}
+.tile .st{position:absolute;right:8px;top:8px;background:var(--ink);color:var(--yellow);font-size:11px;font-weight:700;padding:2px 6px;letter-spacing:.5px}
+.plan{background:#fff;padding:14px 16px}
+.plan a{display:flex;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);color:var(--ink);text-decoration:none;font-weight:600}
+.plan a:last-child{border-bottom:0}
+.plan a small{font-weight:400;color:var(--muted)}
+.hero-n{position:relative;overflow:hidden;margin:-16px -16px 16px;padding:22px 20px 20px;min-height:150px;background:var(--col,var(--red));color:var(--ink)}
+.hero-n.blue{color:#fff}
+.hero-n::after{content:attr(data-n);position:absolute;right:-12px;bottom:-34px;font-family:var(--display);font-size:190px;font-weight:800;line-height:.8;letter-spacing:-12px;color:rgba(255,255,255,.55);pointer-events:none}
+.hero-n.blue::after{color:#93A9EA}
+.hero-n>*{position:relative;z-index:1}
+.hero-n .tn{font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}
+.hero-n h2{font-family:var(--display);font-size:30px;font-weight:800;letter-spacing:-1px;line-height:1;max-width:80%}
+.hero-n .sub{font-size:13px;margin-top:8px}
+.facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:0 0 16px}
+.fact{background:#fff;padding:10px 12px}
+.fact b{display:block;font-family:var(--display);font-size:26px;font-weight:800;letter-spacing:-1px;line-height:1}
+.fact span{font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--muted)}
+.btn{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;min-height:56px;padding:0 22px;margin-top:10px;border:0;background:var(--ink);color:var(--paper);font-size:16px;font-weight:600;text-align:left;cursor:pointer}
+.btn::after{content:"→";color:var(--yellow);font-weight:700}
+.btn.sec{border:2px solid var(--ink);background:transparent;color:var(--ink)}
+.btn.sec::after{content:none}
+.btn:disabled{opacity:.35;cursor:default}
+.dots{display:flex;gap:3px;margin:4px 0 14px}
+.dot{flex:1;height:6px;background:var(--line2)}
+.dot.cur{background:var(--ink)}.dot.ok{background:var(--blue)}.dot.bad{background:var(--red)}
+.ph{display:flex;justify-content:space-between;font-size:13px;color:var(--muted);margin-bottom:6px}
+.ph b{color:var(--ink)}
+.card{background:#fff;padding:16px;margin-bottom:10px}
+.card summary{cursor:pointer;font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px}
+.txt{font-size:16px;line-height:1.65;white-space:pre-line;overflow-wrap:anywhere}
+.txt p+p{margin-top:8px}
+.passage{font-size:15px;line-height:1.7;max-height:260px;overflow:auto;white-space:pre-line}
+table.t{border-collapse:collapse;margin:10px 0;width:100%;font-size:14px}
+table.t td,table.t th{border:2px solid var(--ink);padding:6px 8px;text-align:left;vertical-align:top}
+table.t tr:first-child td{background:var(--chip);font-weight:600}
+.fig{display:block;max-width:100%;height:auto;margin:10px auto;background:#fff}
+.src{font-size:12px;color:var(--muted);margin-top:10px}
+.inp{width:100%;min-height:54px;padding:0 14px;border:2px solid var(--ink);border-radius:0;background:#fff;color:var(--ink);font-size:20px}
+.inp:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-t)}
+.inp.ok{border-color:var(--blue);background:var(--blue-t)}
+.inp.err{border-color:var(--red);background:var(--red-t)}
+.fb{padding:14px 16px;margin-top:10px;font-size:15px;line-height:1.55;font-weight:600}
+.fb.good{background:var(--blue);color:#fff}
+.fb.bad{background:var(--red);color:var(--ink)}
+.fb small{display:block;font-weight:400;margin-top:2px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.row2 .btn{padding:0 16px}
+.fin .fs{font-family:var(--display);font-size:96px;font-weight:800;letter-spacing:-5px;line-height:.9}
+.fin .fs.g{color:var(--blue)}.fin .fs.r{color:var(--red)}
+.fin .fs.y{display:inline-block;background:linear-gradient(transparent 60%,var(--yellow) 60%)}
+.hint{margin-top:12px;padding:10px 14px;background:var(--yellow);font-size:14px}
+.list{margin-top:14px}
+.list div{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px}
+.list div b{min-width:24px}
+.empty{padding:30px 0;color:var(--muted)}
+</style>
+</head>
+<body class="trainer">
+<main id="app"></main>
+
+<script>
+var BOT_USERNAME='examzadrotbot';
+var SESSION=10;                                    // сколько заданий в одном подходе
+var SETS={
+  'oge-rus':{skill:'oge.rus',cls:'s-oge-rus',blue:true,exam:'ОГЭ',desc:'Задания 2–12: анализ текста, орфография, пунктуация, нормы'},
+  'oge-math':{skill:'oge.math',cls:'s-oge-math',exam:'ОГЭ',desc:'Часть 1: расчёты, алгебра, геометрия'},
+  'ege-mathb':{skill:'ege.mathb',cls:'s-ege-mathb',exam:'ЕГЭ',desc:'Базовый уровень: задания 1–21 по номерам'}
+};
+var TG=window.Telegram&&window.Telegram.WebApp?window.Telegram.WebApp:null;
+if(TG){try{TG.ready();TG.expand();TG.setHeaderColor('#F3EEE2');TG.setBackgroundColor('#F3EEE2');}catch(e){}}
+
+var INDEX=null,REG=null,cache={},run=null;
+var app=document.getElementById('app');
+
+/* ───────── служебное ───────── */
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function lsGet(k,d){try{var v=JSON.parse(localStorage.getItem(k));return v==null?d:v;}catch(e){return d;}}
+function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
+function pad2(n){return (n<10?'0':'')+n;}
+function plural(n,a,b,c){var m=n%10,h=n%100;return h>10&&h<15?c:m===1?a:m>1&&m<5?b:c;}
+function getJSON(url){return fetch(url).then(function(r){if(!r.ok)throw new Error(url);return r.json();});}
+
+/* ───────── проверка ответа (те же правила, что у бота) ───────── */
+function normWord(s){return String(s).toUpperCase().replace(/Ё/g,'Е').replace(/[^0-9A-ZА-Я]/g,'');}
+function digitsOf(s){return String(s).replace(/\D/g,'');}
+function toNum(s){
+  s=String(s).trim().replace(/\s+/g,'').replace(',','.').replace(/[−–]/g,'-');
+  var m=s.match(/^(-?\d+(?:\.\d+)?)\/(-?\d+(?:\.\d+)?)$/);
+  if(m){var d=parseFloat(m[2]);return d?parseFloat(m[1])/d:NaN;}
+  return /^-?\d+(\.\d+)?$/.test(s)?parseFloat(s):NaN;
+}
+function isAnswerShaped(task,v){
+  v=String(v).trim();
+  if(!v)return false;
+  if(task.k==='num')return !isNaN(toNum(v));
+  if(task.k==='word')return normWord(v).length>0;
+  return digitsOf(v).length>0;
+}
+function checkAnswer(task,user){
+  return task.a.some(function(a){
+    if(task.k==='num'){var u=toNum(user),c=toNum(a);return !isNaN(u)&&!isNaN(c)&&Math.abs(u-c)<1e-9*Math.max(1,Math.abs(c));}
+    if(task.k==='set')return digitsOf(user).split('').sort().join('')===digitsOf(a).split('').sort().join('');
+    if(task.k==='seq')return digitsOf(user)===digitsOf(a);
+    return normWord(user)===normWord(a);
+  });
+}
+
+/* ───────── текст задания: таблицы «ячейка | ячейка» → таблица ───────── */
+function renderText(t){
+  var lines=String(t).split('\n'),out='',i=0;
+  while(i<lines.length){
+    if(lines[i].indexOf(' | ')>=0){
+      var rows=[];
+      while(i<lines.length&&lines[i].indexOf(' | ')>=0){rows.push(lines[i].split(' | '));i++;}
+      out+='<table class="t">'+rows.map(function(r){return '<tr>'+r.map(function(c){return '<td>'+esc(c)+'</td>';}).join('')+'</tr>';}).join('')+'</table>';
+    }else{
+      var chunk=[];
+      while(i<lines.length&&lines[i].indexOf(' | ')<0){chunk.push(lines[i]);i++;}
+      var txt=chunk.join('\n').replace(/^\n+|\n+$/g,'');
+      if(txt)out+='<p>'+esc(txt)+'</p>';
+    }
+  }
+  return out;
+}
+
+/* ───────── данные ───────── */
+function loadIndex(){
+  if(INDEX)return Promise.resolve();
+  return Promise.all([getJSON('trainer/index.json'),getJSON('skills_registry.json').catch(function(){return null;})]).then(function(r){INDEX=r[0];REG=r[1];});
+}
+function loadPack(set,n){
+  var key=set+'_'+n;
+  if(cache[key])return Promise.resolve(cache[key]);
+  return getJSON('trainer/'+key+'.json').then(function(p){cache[key]=p;return p;});
+}
+function sectionColor(sec){return REG&&REG.sections&&REG.sections[sec]?REG.sections[sec].color:'#E5332A';}
+function isBlue(color){return color==='#2E55C9';}
+function numStats(set,n){return lsGet('anik_tr',{})[set+'_'+n]||{ok:0,tot:0};}
+function addStats(set,n,ok,tot){var all=lsGet('anik_tr',{}),k=set+'_'+n,s=all[k]||{ok:0,tot:0};s.ok+=ok;s.tot+=tot;all[k]=s;lsSet('anik_tr',all);}
+function snap(){return window.AnikSync&&AnikSync.state()||null;}
+
+/* ───────── экраны ───────── */
+function route(){
+  var h=location.hash.replace(/^#/,''),parts=h.split('&'),set=parts[0],n=null;
+  parts.slice(1).forEach(function(p){var m=p.match(/^n=(\d+)$/);if(m)n=+m[1];});
+  run=null;
+  if(!INDEX){app.innerHTML='<div class="empty">Загружаю…</div>';loadIndex().then(route).catch(function(){app.innerHTML='<div class="empty">Не получилось загрузить задания. Проверь интернет и обнови страницу.</div>';});return;}
+  if(!SETS[set]||!INDEX.sets[set])return home();
+  if(n!==null&&INDEX.sets[set].numbers.some(function(x){return x.n===n;}))return topic(set,n);
+  setScreen(set);
+}
+function go(h){if(location.hash.replace(/^#/,'')===h)route();else location.hash=h;window.scrollTo(0,0);}
+
+function home(){
+  app.innerHTML='<div class="bar-top"><span class="wm">аник<i>.</i></span><a class="back" href="index.html">← Выбор</a></div>'+
+    '<h1>Тренажёр<br>заданий</h1><p class="lead">Настоящие задания с проверкой. Решай по номерам — бот и приложение видят твой прогресс.</p>'+
+    '<div class="cards" style="margin-top:18px">'+Object.keys(SETS).map(function(k){
+      var s=SETS[k],tot=INDEX.sets[k].numbers.reduce(function(a,x){return a+x.count;},0);
+      return '<a class="setcard '+s.cls+'" href="#'+k+'"><div class="nm">'+esc(INDEX.sets[k].title)+'</div><div class="ds">'+esc(s.desc)+' · '+tot+' '+plural(tot,'задание','задания','заданий')+'</div><div class="big">'+(s.exam==='ОГЭ'?'9':'11')+'</div></a>';
+    }).join('')+'</div>';
+}
+
+function setScreen(set){
+  var S=INDEX.sets[set],st=snap(),skills=(st&&st.skills)||{},stamps={};
+  ((st&&st.stamps)||[]).forEach(function(x){stamps[x.id]=1;});
+  var plan=((st&&st.plan)||[]).filter(function(p){return p.link&&p.link.indexOf('trainer.html#'+set)===0;});
+  var html='<div class="bar-top"><span class="wm">аник<i>.</i></span><a class="back" href="#">← Разделы</a></div>'+
+    '<h1>'+esc(S.title)+'</h1><p class="lead">Выбери номер задания. Каждый подход — до '+SESSION+' заданий.</p>';
+  if(plan.length){
+    html+='<div class="stl">Сегодня рекомендуем</div><div class="plan">'+plan.map(function(p){
+      return '<a href="'+esc(p.link.replace('trainer.html',''))+'"><span>№'+p.number+' '+esc(p.name)+'<br><small>'+(p.why==='weak'?'слабое место':p.why==='repeat'?'пора повторить':'новое')+' · ~'+p.minutes+' мин</small></span><span>→</span></a>';
+    }).join('')+'</div>';
+  }
+  html+='<div class="stl">Номера заданий</div><div class="grid">'+S.numbers.map(function(x){
+    var col=sectionColor(x.section),blue=isBlue(col),sk=skills[x.skill],stat=numStats(set,x.n);
+    var p=sk?Math.round(sk.p*100):(stat.tot?Math.round(100*stat.ok/stat.tot):0);
+    var ds=sk?'знание '+p+'%':stat.tot?'верно '+stat.ok+' из '+stat.tot:x.count+' '+plural(x.count,'задание','задания','заданий');
+    return '<button class="tile'+(blue?' blue':'')+'" style="--col:'+col+'" data-n="'+x.n+'"><div class="tn">№'+x.n+'</div><div class="nm">'+esc(x.name)+'</div><div class="ds">'+esc(ds)+'</div><div class="big">'+x.n+'</div>'+
+      (stamps[x.skill]?'<span class="st">🏅 МАРКА</span>':'')+'<span class="pb"><i class="pf" style="width:'+p+'%"></i></span></button>';
+  }).join('')+'</div>';
+  app.innerHTML=html;
+  Array.prototype.forEach.call(app.querySelectorAll('[data-n]'),function(b){b.onclick=function(){go(set+'&n='+b.dataset.n);};});
+}
+
+function topic(set,n){
+  var S=INDEX.sets[set],x=S.numbers.filter(function(y){return y.n===n;})[0],col=sectionColor(x.section),blue=isBlue(col);
+  var st=snap(),sk=st&&st.skills&&st.skills[x.skill],stat=numStats(set,n);
+  var cnt=Math.min(SESSION,x.count);
+  app.innerHTML='<div class="bar-top"><span class="wm">аник<i>.</i></span><a class="back" href="#'+set+'">← Номера</a></div>'+
+    '<div class="hero-n'+(blue?' blue':'')+'" style="--col:'+col+'" data-n="'+n+'"><div class="tn">'+esc(S.title)+'</div><h2>'+esc(x.name)+'</h2><div class="sub">Задание №'+n+'</div></div>'+
+    '<div class="facts"><div class="fact"><b>'+x.count+'</b><span>заданий</span></div><div class="fact"><b>'+(sk?Math.round(sk.p*100)+'%':'—')+'</b><span>знание</span></div><div class="fact"><b>'+(stat.tot?Math.round(100*stat.ok/stat.tot)+'%':'—')+'</b><span>верно здесь</span></div></div>'+
+    '<button class="btn" id="start">Начать: '+cnt+' '+plural(cnt,'задание','задания','заданий')+'</button>'+
+    '<p class="src" style="margin-top:14px">Задания — из банка ФИПИ и сборников подготовки. Подход можно закончить в любой момент: засчитаются решённые.</p>';
+  document.getElementById('start').onclick=function(){start(set,n);};
+}
+
+/* ───────── подход ───────── */
+function start(set,n){
+  document.getElementById('start').disabled=true;
+  loadPack(set,n).then(function(pack){
+    var seenKey='anik_seen_'+set+'_'+n,seen=lsGet(seenKey,[]);
+    var fresh=pack.tasks.filter(function(t){return seen.indexOf(t.id)<0;});
+    if(fresh.length<Math.min(SESSION,pack.tasks.length)){seen=[];fresh=pack.tasks.slice();}
+    fresh.sort(function(){return Math.random()-.5;});
+    var items=fresh.slice(0,SESSION);
+    seen=seen.concat(items.map(function(t){return t.id;})).slice(-400);
+    lsSet(seenKey,seen);
+    run={set:set,n:n,pack:pack,items:items,i:0,res:[],answered:false};
+    show();
+  }).catch(function(){app.innerHTML='<div class="empty">Не получилось загрузить задания. Проверь интернет и вернись назад.</div>';});
+}
+
+function dotsHtml(){
+  return '<div class="dots">'+run.items.map(function(_,k){var r=run.res[k];return '<span class="dot '+(r===undefined?(k===run.i?'cur':''):r?'ok':'bad')+'"></span>';}).join('')+'</div>';
+}
+
+function show(){
+  if(run.i>=run.items.length)return finish();
+  var t=run.items[run.i],S=INDEX.sets[run.set];
+  var passage=t.p!==undefined?run.pack.passages[t.p]:null;
+  var ph={num:'Ответ числом (можно дробью 3/7 или с запятой 0,35)',seq:'Цифры подряд, например 134',set:'Цифры подряд, например 134',word:'Одно слово'}[t.k]||'Ответ';
+  var figs=(t.f||[]).map(function(f){return '<img class="fig" src="'+esc(f)+'" alt="Чертёж к заданию" loading="lazy">';}).join('');
+  app.innerHTML='<div class="bar-top"><span class="wm">аник<i>.</i></span><button class="back" id="quit">Закончить</button></div>'+
+    '<div class="ph"><span>Задание <b>'+(run.i+1)+'</b> из '+run.items.length+' · №'+run.n+'</span><span>'+esc(S.title)+'</span></div>'+dotsHtml()+
+    (passage?'<details class="card" open><summary>Текст для чтения</summary><div class="passage">'+esc(passage)+'</div></details>':'')+
+    '<div class="card"><div class="txt">'+renderText(t.t)+'</div>'+figs+(t.s?'<div class="src">Источник: '+esc(t.s)+'</div>':'')+'</div>'+
+    '<input class="inp" id="ans" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" inputmode="'+(t.k==='word'?'text':'text')+'" placeholder="'+esc(ph)+'">'+
+    '<div id="fb"></div>'+
+    '<div id="acts"><button class="btn" id="chk">Проверить</button><button class="btn sec" id="skip">Не знаю</button></div>';
+  var inp=document.getElementById('ans');
+  document.getElementById('chk').onclick=check;
+  document.getElementById('skip').onclick=function(){reveal(null);};
+  document.getElementById('quit').onclick=function(){if(run.res.length)finish();else go(run.set+'&n='+run.n);};
+  inp.onkeydown=function(e){if(e.key==='Enter'){e.preventDefault();check();}};
+  inp.focus({preventScroll:true});
+}
+
+function check(){
+  if(run.answered)return;
+  var t=run.items[run.i],inp=document.getElementById('ans'),v=inp.value;
+  if(!isAnswerShaped(t,v)){
+    document.getElementById('fb').innerHTML='<div class="fb bad">'+(t.k==='num'?'Напиши ответ числом (например 0,35 или 3/7).':t.k==='word'?'Напиши ответ словом.':'Напиши цифры ответа (например 134).')+'</div>';
+    return;
+  }
+  reveal(v);
+}
+
+function reveal(v){
+  if(run.answered)return;
+  run.answered=true;
+  var t=run.items[run.i],ok=v!==null&&checkAnswer(t,v);
+  run.res[run.i]=ok;
+  var inp=document.getElementById('ans');
+  inp.disabled=true;inp.classList.add(ok?'ok':'err');
+  var last=run.i+1>=run.items.length;
+  document.getElementById('fb').innerHTML=ok?'<div class="fb good">✅ Верно</div>':'<div class="fb bad">❌ '+(v===null?'Пропущено':'Неверно')+'. Правильный ответ: '+esc(t.a[0])+(t.a.length>1&&t.k!=='word'?'<small>Подходят также: '+esc(t.a.slice(1,4).join(', '))+'</small>':'')+'</div>';
+  document.getElementById('acts').innerHTML='<button class="btn" id="nx">'+(last?'Итог':'Дальше')+'</button>';
+  document.getElementById('nx').onclick=function(){run.i++;run.answered=false;show();};
+  var dots=document.querySelector('.dots');if(dots)dots.outerHTML=dotsHtml();
+}
+
+function payloadOf(){
+  var ok=run.res.filter(Boolean).length,tot=run.res.length;
+  return 'n_'+INDEX.sets[run.set].kind+pad2(run.n)+pad2(ok)+pad2(tot);
+}
+
+function finish(){
+  var tot=run.res.length;
+  if(!tot){go(run.set+'&n='+run.n);return;}
+  var ok=run.res.filter(Boolean).length,ratio=ok/tot,cls=ratio>=.8?'g':ratio>=.5?'y':'r';
+  addStats(run.set,run.n,ok,tot);
+  var payload=payloadOf(),sent=window.AnikSync&&AnikSync.send(payload);
+  var link='https://t.me/'+BOT_USERNAME+'?start='+payload;
+  var S=INDEX.sets[run.set];
+  var list=run.items.slice(0,tot).map(function(t,k){return '<div><b>'+(run.res[k]?'✅':'❌')+'</b><span>'+(run.res[k]?'Задание '+(k+1)+' — верно':'Задание '+(k+1)+' — ответ: '+esc(t.a[0]))+'</span></div>';}).join('');
+  app.innerHTML='<div class="bar-top"><span class="wm">аник<i>.</i></span><a class="back" href="#'+run.set+'">← Номера</a></div>'+
+    '<div class="fin"><div class="eyebrow">'+esc(S.title)+' · №'+run.n+'</div><div class="fs '+cls+'">'+ok+'/'+tot+'</div>'+
+    '<p class="lead" style="margin-top:8px">'+(ratio>=.8?'Отлично! Тема получается.':ratio>=.5?'Неплохо. Разбери ошибки и закрепи ещё одним подходом.':'Эта тема пока трудная — ничего, повтори ещё раз.')+'</p></div>'+
+    (sent?'<div class="hint">✅ Результат записан в твой прогресс — бот и репетитор его увидят.</div>':
+      '<div class="hint">Чтобы бот учёл подход в твоём прогрессе, отправь результат.</div><button class="btn" id="sendbtn">📤 Отправить результат боту</button>')+
+    '<div class="list">'+list+'</div>'+
+    '<button class="btn" id="again">Ещё подход</button><button class="btn sec" id="back">К номерам</button>';
+  var sb=document.getElementById('sendbtn');
+  if(sb)sb.onclick=function(){if(TG&&TG.initData&&TG.openTelegramLink)TG.openTelegramLink(link);else window.open(link,'_blank');};
+  var set=run.set,n=run.n;
+  document.getElementById('again').onclick=function(){go(set+'&n='+n);setTimeout(function(){var b=document.getElementById('start');if(b)b.click();},0);};
+  document.getElementById('back').onclick=function(){go(set);};
+  run=null;
+}
+
+window.addEventListener('hashchange',route);
+if(window.AnikSync)AnikSync.onState(function(){if(INDEX&&!run){var h=location.hash.replace(/^#/,'');if(SETS[h.split('&')[0]])route();}});
+route();
+</script>
+</body>
+</html>
