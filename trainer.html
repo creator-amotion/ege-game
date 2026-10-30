@@ -86,6 +86,9 @@ table.t tr:first-child td{background:var(--chip);font-weight:600}
 .fb.good{background:var(--blue);color:#fff}
 .fb.bad{background:var(--red);color:var(--ink)}
 .fb small{display:block;font-weight:400;margin-top:2px}
+.tabs2{display:flex;gap:6px;margin:0 0 14px}
+.tabs2 .tab{flex:1;padding:0 6px;cursor:pointer}
+[hidden]{display:none!important}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .row2 .btn{padding:0 16px}
 .fin .fs{font-family:var(--display);font-size:96px;font-weight:800;letter-spacing:-5px;line-height:.9}
@@ -232,9 +235,16 @@ function topic(set,n){
   app.innerHTML='<div class="bar-top"><span class="wm">аник<i>.</i></span><a class="back" href="#'+set+'">← Номера</a></div>'+
     '<div class="hero-n'+(blue?' blue':'')+'" style="--col:'+col+'" data-n="'+n+'"><div class="tn">'+esc(S.title)+'</div><h2>'+esc(x.name)+'</h2><div class="sub">Задание №'+n+'</div></div>'+
     '<div class="facts"><div class="fact"><b>'+x.count+'</b><span>заданий</span></div><div class="fact"><b>'+(sk?Math.round(sk.p*100)+'%':'—')+'</b><span>знание</span></div><div class="fact"><b>'+(stat.tot?Math.round(100*stat.ok/stat.tot)+'%':'—')+'</b><span>верно здесь</span></div></div>'+
+    '<div class="tabs2"><button class="tab on" data-t="p">🎯 Практика</button><button class="tab" data-t="g">🎮 Игры</button><button class="tab" data-t="t">📚 Теория</button></div>'+
+    '<div id="pan-p"><p class="lead">Только настоящие задания из экзаменов и сборников — те же, что в боте.</p>'+
     '<button class="btn" id="start">Начать: '+cnt+' '+plural(cnt,'задание','задания','заданий')+'</button>'+
-    '<p class="src" style="margin-top:14px">Задания — из банка ФИПИ и сборников подготовки. Подход можно закончить в любой момент: засчитаются решённые.</p>';
+    '<p class="src" style="margin-top:14px">Подход можно закончить в любой момент: засчитаются решённые.</p></div>'+
+    '<div id="pan-g" hidden><div class="card"><div class="txt"><p><b>Игры и упражнения готовим.</b></p><p>Здесь появятся упражнения и игры, которые подводят к этому заданию. Пока тренируйся в «Практике».</p></div></div></div>'+
+    '<div id="pan-t" hidden><div class="card"><div class="txt"><p><b>Теория скоро появится.</b></p><p>Конспект по заданию №'+n+' будет здесь, рядом с практикой.</p></div></div></div>';
   document.getElementById('start').onclick=function(){start(set,n);};
+  Array.prototype.forEach.call(app.querySelectorAll('.tabs2 .tab'),function(b){b.onclick=function(){
+    Array.prototype.forEach.call(app.querySelectorAll('.tabs2 .tab'),function(x){x.classList.toggle('on',x===b);});
+    ['p','g','t'].forEach(function(k){document.getElementById('pan-'+k).hidden=(k!==b.dataset.t);});};});
 }
 
 /* ───────── подход ───────── */
