@@ -63,6 +63,7 @@ h1{font-size:22px;margin:14px 0 4px;background:linear-gradient(135deg,var(--acc)
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@700;800&family=Golos+Text:wght@400..700&display=swap">
 <link rel="stylesheet" href="anik.css?v=1">
+<script src="anik-sync.js?v=1"></script>
 </head>
 <body class="math">
 <nav><button class="nb" id="back">←</button><b id="title">Математика</b><span id="xp"></span></nav>
@@ -275,7 +276,9 @@ function doneView(){
   $('#title').textContent='Итог';
   const bad=cur.res.filter(x=>!x).length;
   const stars=bad===0?3:bad===1?2:1;
+  const sentAuto=autoSend();
   let h='<div class="stars">'+'⭐'.repeat(stars)+'<span style="opacity:.25">'+'⭐'.repeat(3-stars)+'</span></div>';
+  h+=autoNote(sentAuto);
   h+='<div class="card"><div class="task">'+esc(t.t)+'</div></div><ul class="res card">';
   t.st.forEach((st,k)=>{h+='<li>'+(cur.res[k]?'✅':'❌')+' Шаг '+(k+1)+': '+(st.rc===1?'вспомнить правило':st.rc===2?'как это делается':esc(PACK.skills[st.s].name))+'</li>';if(!cur.res[k])failed.push(st)});
   h+='</ul><div class="fb good">Ответ: <b>'+esc(t.f)+'</b>'+(t.st[t.st.length-1].d===2?' (до сотых)':'')+'<br>Получено: +'+cur.gain+' XP</div>';
@@ -284,7 +287,7 @@ function doneView(){
   const sk=failed.length?failed[0].s:t.sk;
   h+='<button class="btn" id="again">'+(failed.length?'🎯 Потренировать то, где споткнулся':'🔁 Ещё такую же')+'</button>';
   h+='<button class="btn sec" id="other">🧩 Другое задание</button>';
-  h+='<button class="btn ok" id="send">📤 Закончить и отправить результаты боту</button>';
+  if(!sentAuto)h+='<button class="btn ok" id="send">📤 Закончить и отправить результаты боту</button>';
   h+='<button class="btn sec" id="menu">⬅️ К разделу</button>';
   app.innerHTML=h;
   $('#again').onclick=()=>start(sk);
@@ -339,10 +342,11 @@ function gameView(){
 function gameDone(){
   const n=gm.rounds.length,stars=gm.ok>=n-1?3:gm.ok>=Math.ceil(n*0.7)?2:1;
   $('#title').textContent='Результат';
-  let h='<div class="stars">'+'⭐'.repeat(stars)+'<span style="opacity:.25">'+'⭐'.repeat(3-stars)+'</span></div>';
+  const sentAuto=autoSend();
+  let h=autoNote(sentAuto)+'<div class="stars">'+'⭐'.repeat(stars)+'<span style="opacity:.25">'+'⭐'.repeat(3-stars)+'</span></div>';
   h+='<div class="fb good" style="text-align:center;font-size:18px">'+gm.ok+' из '+n+' верно<br>+'+gm.gain+' XP</div>';
   h+='<button class="btn" id="again">🔁 Ещё раз</button><button class="btn sec" id="menu">🎮 Другие игры</button>';
-  h+='<button class="btn ok" id="send">📤 Отправить результаты боту</button>';
+  if(!sentAuto)h+='<button class="btn ok" id="send">📤 Отправить результаты боту</button>';
   app.innerHTML=h;
   $('#again').onclick=()=>gameStart(gm.g.id);
   $('#menu').onclick=()=>setView('pack');
@@ -355,6 +359,24 @@ const B62='0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
 function fnv(str){let h=0x811c9dc5;for(let i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,0x01000193)>>>0}return h>>>0}
 function b62(n,w){let o='';for(let i=0;i<w;i++){o=B62[n%62]+o;n=Math.floor(n/62)}return o}
 
+// Короткая строка с результатами занятия: «код навыка + верных + всего», как её читает бот (game_sync.parse_math)
+function sessionPayload(){
+  const agg={};
+  session.forEach(([sk,ok])=>{const a=agg[sk]||(agg[sk]=[0,0]);a[1]=Math.min(9,a[1]+1);a[0]=Math.min(a[1],a[0]+(ok?1:0))});
+  let body='';
+  Object.keys(agg).slice(-15).forEach(sk=>{body+=b62(fnv(sk)%3844,2)+agg[sk][0]+agg[sk][1]});
+  return 'm_'+body;
+}
+// Если подключено облако — результат уходит боту сам, кнопка не нужна. true — отправлено.
+function autoSend(){
+  if(!session.length||!window.AnikSync||!AnikSync.enabled())return false;
+  if(!AnikSync.send(sessionPayload()))return false;
+  session=[];
+  return true;
+}
+function autoNote(sent){
+  return sent?'<div class="fb good">✅ Результат записан в твой прогресс — бот и репетитор его увидят.</div>':'';
+}
 function sendToBot(){
   if(!session.length)return;
   // из кнопки на клавиатуре бота данные уходят напрямую, во всех остальных случаях — ссылкой с результатом
@@ -363,11 +385,7 @@ function sendToBot(){
     TG.sendData(JSON.stringify({v:1,t:'math_stages',r:session.slice(-150)}));
     return;
   }
-  const agg={};
-  session.forEach(([sk,ok])=>{const a=agg[sk]||(agg[sk]=[0,0]);a[1]=Math.min(9,a[1]+1);a[0]=Math.min(a[1],a[0]+(ok?1:0))});
-  let body='';
-  Object.keys(agg).slice(-15).forEach(sk=>{body+=b62(fnv(sk)%3844,2)+agg[sk][0]+agg[sk][1]});
-  const url='https://t.me/'+BOT_USERNAME+'?start=m_'+body;
+  const url='https://t.me/'+BOT_USERNAME+'?start='+sessionPayload();
   session=[];
   if(TG&&TG.openTelegramLink)TG.openTelegramLink(url);else window.open(url,'_blank');
 }

@@ -183,6 +183,8 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:12px 1
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@700;800&family=Golos+Text:wght@400..700&display=swap">
 <link rel="stylesheet" href="anik.css?v=1">
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="anik-sync.js?v=1"></script>
 </head>
 <body class="rus">
 <nav>
@@ -628,6 +630,8 @@ function sendResult(url){
   if(tg&&tg.initData&&tg.openTelegramLink)tg.openTelegramLink(url);else window.open(url,'_blank');
 }
 function resultBlock(link){
+  // с облаком результат уходит боту сам; без него (или вне Telegram) — кнопка, как раньше
+  if(window.AnikSync&&AnikSync.send(link.split('?start=')[1]||''))return `<div class="cg-hint on" style="margin-top:14px">✅ Результат записан в твой прогресс — бот и репетитор его увидят.</div>`;
   return `<div class="cg-hint on" style="margin-top:14px">Чтобы бот учёл игру в твоём прогрессе, а репетитор увидел, где ты споткнулся, отправь результат.</div>
 <button class="btp" style="margin-top:10px" onclick="sendResult('${link}')">📤 Отправить результат боту</button>`;
 }
