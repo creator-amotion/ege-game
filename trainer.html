@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@700;800&family=Golos+Text:wght@400..700&display=swap">
-<link rel="stylesheet" href="anik.css?v=2">
+<link rel="stylesheet" href="anik.css?v=3">
 <script src="anik-sync.js?v=2"></script>
 <script src="anik-nav.js?v=1" defer></script>
 <style>
@@ -79,7 +79,8 @@ table.t td,table.t th{border:2px solid var(--ink);padding:6px 8px;text-align:lef
 table.t tr:first-child td{background:var(--chip);font-weight:600}
 .fig{display:block;max-width:100%;height:auto;margin:10px auto;background:#fff}
 .src{font-size:12px;color:var(--muted);margin-top:10px}
-.inp{width:100%;min-height:54px;padding:0 14px;border:2px solid var(--ink);border-radius:0;background:#fff;color:var(--ink);font-size:20px}
+.inp{width:100%;min-height:54px;padding:0 14px;border:2px solid var(--ink);border-radius:0;background:#fff;color:var(--ink);font-size:20px;font-family:var(--body);font-weight:600;letter-spacing:0}
+.inp::placeholder{font-size:14px;font-weight:400;color:var(--muted)}
 .inp:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-t)}
 .inp.ok{border-color:var(--blue);background:var(--blue-t)}
 .inp.err{border-color:var(--red);background:var(--red-t)}
