@@ -9,9 +9,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@700;800&family=Golos+Text:wght@400..700&display=swap">
-<link rel="stylesheet" href="anik.css?v=3">
+<link rel="stylesheet" href="anik.css?v=4">
 <script src="anik-sync.js?v=2"></script>
-<script src="anik-nav.js?v=1" defer></script>
+<script src="anik-nav.js?v=2" defer></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{min-height:100vh}
@@ -347,7 +347,9 @@ function gameQ(){
   gbox().innerHTML='<div class="ph"><span>'+esc(g.title)+' · <b>'+(R.i+1)+'</b> из '+R.items.length+'</span><button class="back" id="gquit" style="min-height:32px;height:32px;font-size:13px">Закончить</button></div>'+
     '<div class="dots">'+R.items.map(function(_,k){var r=R.res[k];return '<span class="dot '+(r===undefined?(k===R.i?'cur':''):r?'ok':'bad')+'"></span>';}).join('')+'</div>'+
     '<div class="card"><div class="gq">'+x.w+'</div></div>'+
-    '<div class="opts">'+o.map(function(t,k){return '<button class="optb" data-k="'+k+'">'+esc(t)+'</button>';}).join('')+'</div><div id="gfb"></div>';
+    '<div class="opts">'+o.map(function(t,k){return '<button class="optb" data-k="'+k+'">'+esc(t)+'</button>';}).join('')+'</div><div id="gfb"></div>'+
+    '<button class="fblink" id="greport">⚠️ Ошибка в вопросе?</button>';
+  document.getElementById('greport').onclick=function(){window.anikReport&&anikReport('gm-'+(G.set==='oge-rus'?'r':'o')+pad2(G.n)+'-'+(G.gi+1)+'-'+g.items.indexOf(x));};
   document.getElementById('gquit').onclick=function(){if(R.res.length)gameEnd();else gamesList();};
   Array.prototype.forEach.call(gbox().querySelectorAll('.optb'),function(b){b.onclick=function(){gameAnswer(b,x);};});
 }
@@ -416,7 +418,9 @@ function show(){
     '<div class="card"><div class="txt">'+renderText(t.t)+'</div>'+figs+(t.s?'<div class="src">Источник: '+esc(t.s)+'</div>':'')+'</div>'+
     '<input class="inp" id="ans" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" inputmode="'+(t.k==='word'?'text':'text')+'" placeholder="'+esc(ph)+'">'+
     '<div id="fb"></div>'+
-    '<div id="acts"><button class="btn" id="chk">Проверить</button><button class="btn sec" id="skip">Не знаю</button></div>';
+    '<div id="acts"><button class="btn" id="chk">Проверить</button><button class="btn sec" id="skip">Не знаю</button></div>'+
+    '<button class="fblink" id="report">⚠️ Ошибка в задании или в ответе?</button>';
+  document.getElementById('report').onclick=function(){window.anikReport&&anikReport(t.id);};
   var inp=document.getElementById('ans');
   document.getElementById('chk').onclick=check;
   document.getElementById('skip').onclick=function(){reveal(null);};

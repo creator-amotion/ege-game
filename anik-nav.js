@@ -16,6 +16,13 @@
       return '<a href="' + it.href + '"' + (it.id === a ? ' class="on" aria-current="page"' : '') + '><i aria-hidden="true">' + it.icon + '</i><span>' + it.label + '</span></a>';
     }).join('');
   }
+  /* «Сообщить об ошибке»: открывает бота с идентификатором задания; методисты получат обращение (бот: feedback.py) */
+  window.anikReport = function (ref) {
+    var url = 'https://t.me/examzadrotbot?start=fb_' + encodeURIComponent(String(ref || '').slice(0, 56));
+    var tg = window.Telegram && window.Telegram.WebApp;
+    if (tg && tg.initData && tg.openTelegramLink) tg.openTelegramLink(url); else window.open(url, '_blank');
+  };
+
   function mount() {
     if (document.getElementById('anik-tabs')) return;
     var bar = document.createElement('div');

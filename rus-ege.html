@@ -182,10 +182,10 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:12px 1
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@700;800&family=Golos+Text:wght@400..700&display=swap">
-<link rel="stylesheet" href="anik.css?v=3">
+<link rel="stylesheet" href="anik.css?v=4">
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script src="anik-sync.js?v=2"></script>
-<script src="anik-nav.js?v=1" defer></script>
+<script src="anik-nav.js?v=2" defer></script>
 </head>
 <body class="rus">
 <nav>
@@ -489,7 +489,8 @@ function showPTask(num){
 ${ansHTML}
 <div class="res" id="resBox"></div>
 <button class="cbtn" id="chk" onclick="checkAns(${num})">Проверить</button>
-<button class="nbtn2" id="nxt" onclick="nxtTask(${num})">Следующий →</button>`;
+<button class="nbtn2" id="nxt" onclick="nxtTask(${num})">Следующий →</button>
+${task.id?`<button class="fblink" onclick="anikReport('${task.id}')">⚠️ Ошибка в задании или в ответе?</button>`:''}`;
 }
 
 function fmt(t){return t.replace(/\.\./g,'<b style="color:var(--acc)">_</b>').replace(/\n/g,'<br>');}
@@ -620,7 +621,8 @@ function showGTask(){
 <div class="albl" style="margin-top:10px">Ответ:</div>${nb}
 <div class="res" id="gRes"></div>
 <button class="cbtn" onclick="checkG()">Проверить</button>
-<button class="nbtn2" id="gNxt" onclick="nextG()">Следующий →</button>`;
+<button class="nbtn2" id="gNxt" onclick="nextG()">Следующий →</button>
+${task.id?`<button class="fblink" onclick="anikReport('${task.id}')">⚠️ Ошибка в задании или в ответе?</button>`:''}`;
 }
 
 function togG(n,btn){if(answered)return;if(sel.has(n)){sel.delete(n);btn.className='nb';}else{sel.add(n);btn.className='nb sel';}}

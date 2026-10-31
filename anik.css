@@ -253,3 +253,7 @@ body.has-tabs{padding-bottom:calc(64px + env(safe-area-inset-bottom))}
 .anik-tabs a i{font-style:normal;font-size:18px;line-height:1}
 .anik-tabs a.on{background:var(--ink);color:var(--paper)}
 .anik-tabs a.on i{color:var(--yellow)}
+
+/* ссылка «Сообщить об ошибке» под заданием */
+.fblink{display:inline-block;margin-top:14px;padding:8px 0;border:0;background:none;color:var(--muted);font-size:13px;text-decoration:underline;cursor:pointer}
+.fblink:hover{color:var(--ink)}
