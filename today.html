@@ -12,7 +12,7 @@
 <link rel="stylesheet" href="anik.css?v=5">
 <script src="anik-look.js?v=1"></script>
 <script src="anik-sync.js?v=2"></script>
-<script src="anik-nav.js?v=3" defer></script>
+<script src="anik-nav.js?v=4" defer></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{min-height:100vh}
@@ -85,6 +85,24 @@ h1{font-family:var(--display);font-size:38px;font-weight:800;letter-spacing:-1.5
 .sheet p{font-size:15px;line-height:1.45}
 .sheet .rule{margin-top:12px;padding:10px 14px;background:#fff;font-size:14px;line-height:1.4}
 .sheet .rule b{display:block;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px}
+.prof{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:10px 0 2px;font-size:13px;color:var(--muted)}
+.chip{min-height:36px;padding:0 12px;border:2px solid var(--ink);background:transparent;color:var(--ink);font:inherit;font-size:13px;font-weight:600;cursor:pointer}
+.chip.on{background:var(--ink);color:var(--paper)}
+.chip.link{border:0;background:none;color:var(--muted);text-decoration:underline;font-weight:400;padding:0 4px}
+.onb{background:#fff;padding:16px;margin:12px 0}.onb b{display:block;font-family:var(--display);font-size:20px;font-weight:800;margin-bottom:4px}
+.onb .chips{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
+.mix{display:inline-flex;align-items:center;gap:6px;text-transform:none;letter-spacing:0;font-weight:600;font-size:13px;cursor:pointer}
+.mix input{width:18px;height:18px;accent-color:var(--ink)}
+.lead2{font-size:15px;line-height:1.45;margin:0 0 10px}
+.rcard{background:#fff;padding:12px 14px;border-left:6px solid var(--red)}
+.rcard .k{font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--muted)}
+.rcard .v{font-family:var(--display);font-size:20px;font-weight:800;letter-spacing:-.4px;line-height:1.1;margin:2px 0}
+.rcard .s{font-size:13px;color:var(--muted);margin-bottom:8px}
+.rcard a{display:inline-block;min-height:40px;line-height:40px;padding:0 14px;margin:0 6px 0 0;background:var(--ink);color:var(--paper);font-size:14px;font-weight:600;text-decoration:none}
+.rcard a.gh{background:transparent;color:var(--ink);border:2px solid var(--ink);line-height:36px}
+.pick{display:flex;justify-content:space-between;align-items:center;min-height:52px;padding:0 16px;margin-top:6px;background:#fff;color:var(--ink);text-decoration:none;font-weight:600}
+.pick::after{content:"→";color:var(--red);font-weight:700}
+.rep{font-size:13px;color:var(--muted);line-height:1.4;margin-top:2px}
 .banner{background:var(--yellow);padding:14px 16px;margin:12px 0;font-weight:600}
 .banner b{display:block;font-family:var(--display);font-size:20px;font-weight:800;letter-spacing:-.4px}
 </style>
@@ -103,7 +121,22 @@ function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').repl
 function pad(n){return (n<10?'0':'')+n;}
 function iso(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
 function plural(n,a,b,c){var m=n%10,h=n%100;return h>10&&h<15?c:m===1?a:m>1&&m<5?b:c;}
-function snap(){return window.AnikSync&&AnikSync.state()||null;}
+/* Бот открывает приложение со свежим снимком в ссылке (?z=…): так «Сегодня» работает и пока нет облака. Облако, когда есть, свежее. */
+function b64json(z){try{var t=z.replace(/-/g,'+').replace(/_/g,'/');while(t.length%4)t+='=';var bin=atob(t),a=new Uint8Array(bin.length);for(var i=0;i<bin.length;i++)a[i]=bin.charCodeAt(i);return JSON.parse(new TextDecoder('utf-8').decode(a));}catch(e){return null;}}
+var ZSNAP=(function(){
+  var m=/[?&]z=([\w-]+)/.exec(location.search),c=m&&b64json(m[1]);
+  if(!c||c.v!==1||!c.t)return null;
+  var days=[],t0=new Date(c.t+'T12:00:00');
+  String(c.y||'').split('').forEach(function(ch,i){if(ch==='1'){var d=new Date(t0);d.setDate(t0.getDate()-(34-i));days.push(iso(d));}});
+  return {v:1,from:'bot',today:c.t,exam:c.e||'ege',streak:c.s,goal:c.g,done_today:c.d,days:days,stamps:[],skills:{},
+    plan:(c.p||[]).map(function(p){return {skill:p[0],number:p[1],why:p[2],link:p[3],name:p[4],count:10,minutes:5};}),
+    rules:(c.r||[]).map(function(r){return {n:r[0],cat:r[1],name:r[2],tw:r[3],ta:r[4],gw:r[5]};})};
+})();
+function snap(){
+  var st=window.AnikSync&&AnikSync.state()||null;
+  if(st&&(!ZSNAP||st.today>=ZSNAP.today))return st;
+  return ZSNAP||st;
+}
 function daysSet(){
   var s=snap(),set={};
   ((s&&s.days)||[]).forEach(function(d){set[d]=1;});
@@ -129,16 +162,103 @@ function streakFrom(set,todayIso){
   return n;
 }
 
+/* ───────── Профиль: что готовит ученик ───────── */
+var DEFAULT_URL={'ege.rus':'rus-ege.html','ege.math':'math.html','ege.mathb':'trainer.html#ege-mathb','oge.rus':'trainer.html#oge-rus','oge.math':'trainer.html#oge-math'};
+var editingProfile=false,draft=[];
+function getProfile(){try{var p=JSON.parse(localStorage.getItem('anik_profile'));return Array.isArray(p)?p.filter(function(k){return DEFAULT_URL[k];}):[];}catch(e){return [];}}
+function setProfile(p){try{localStorage.setItem('anik_profile',JSON.stringify(p));}catch(e){}}
+function profileSets(){
+  var p=getProfile();if(p.length)return p;
+  try{var c=JSON.parse(localStorage.getItem('anik_choice')||'null');if(c&&DEFAULT_URL[c.exam+'.'+c.subj])return [c.exam+'.'+c.subj];}catch(e){}
+  return [];
+}
+function skipped(){try{return !!localStorage.getItem('anik_profile_skip');}catch(e){return false;}}
+function setName(k){return (SETS.filter(function(x){return x[0]===k;})[0]||['',k])[1];}
+function chipsHTML(sel){return SETS.map(function(x){return '<button class="chip'+(sel.indexOf(x[0])>=0?' on':'')+'" data-k="'+x[0]+'">'+x[1]+'</button>';}).join('');}
+function profileHTML(prof){
+  if(editingProfile||(!prof.length&&!skipped())){
+    var sel=editingProfile?draft:[];
+    return '<div class="onb"><b>Что готовишь?</b><span style="font-size:14px">Выбери экзамены: на «Сегодня» будут только они.</span><div class="chips" id="pchips">'+chipsHTML(sel)+'</div><button class="btn" id="pok" style="margin-top:0">Готово</button></div>';
+  }
+  if(!prof.length)return '';
+  return '<div class="prof"><span>Готовлюсь:</span>'+prof.map(function(k){return '<span class="chip on" style="cursor:default">'+esc(setName(k))+'</span>';}).join('')+'<button class="chip link" id="pedit">изменить</button></div>';
+}
+function bindProfile(){
+  var box=document.getElementById('pchips');
+  if(box){
+    if(!editingProfile)draft=[];
+    Array.prototype.forEach.call(box.querySelectorAll('.chip'),function(b){b.onclick=function(){var k=b.dataset.k,i=draft.indexOf(k);if(i<0)draft.push(k);else draft.splice(i,1);b.classList.toggle('on');};});
+    document.getElementById('pok').onclick=function(){if(!draft.length){try{localStorage.setItem('anik_profile_skip','1');}catch(e){}}else setProfile(draft);editingProfile=false;today();};
+  }
+  var ed=document.getElementById('pedit');
+  if(ed)ed.onclick=function(){editingProfile=true;draft=getProfile().length?getProfile():profileSets();today();};
+}
+
+/* ───────── Что тренировать сегодня ───────── */
+function setOf(id){var p=String(id||'').split('.');return p[0]+'.'+p[1];}
+function mixOn(){try{return localStorage.getItem('anik_mix')==='1';}catch(e){return false;}}
+function ordered(items,mix){
+  var groups={},keys=[];
+  items.forEach(function(it){if(!groups[it.set]){groups[it.set]=[];keys.push(it.set);}groups[it.set].push(it);});
+  if(!mix)return keys.reduce(function(a,k){return a.concat(groups[k]);},[]);
+  var out=[],i=0,more=true;
+  while(more){more=false;keys.forEach(function(k){if(groups[k][i]){out.push(groups[k][i]);more=true;}});i++;}
+  return out;
+}
+function ruleText(r){
+  var p=[];
+  if(r.tw)p.push('в заданиях '+r.tw+(r.ta?' из '+r.ta:''));
+  if(r.gw)p.push('в играх '+r.gw);
+  return p.length?'ошибок: '+p.join(', '):'';
+}
+function trainingHTML(s,prof){
+  var items=[];
+  ((s&&s.plan)||[]).forEach(function(p){if(!prof.length||prof.indexOf(setOf(p.skill))>=0)items.push({kind:'plan',set:setOf(p.skill),p:p});});
+  ((s&&s.rules)||[]).forEach(function(r){if(!prof.length||prof.indexOf('ege.rus')>=0)items.push({kind:'rule',set:'ege.rus',r:r});});
+  var mix=mixOn(),list=ordered(items,mix);
+  var html='<div class="stl"><span>Сегодня тренируем</span><label class="mix"><input type="checkbox" id="mix"'+(mix?' checked':'')+'>вперемешку</label></div>';
+  if(!list.length){
+    if(s){html+='<div class="empty"><b>На сегодня всё.</b> План собран по твоим слабым местам. Если хочешь ещё — выбери предмет ниже.</div>';}
+    else{html+='<div class="empty"><b>План появится после первого занятия.</b> Открой приложение из Telegram-бота и реши несколько заданий или сыграй в игру: бот поймёт, что подтянуть, и соберёт план.</div>';}
+    var base=prof.length?prof:Object.keys(DEFAULT_URL);
+    html+=base.map(function(k){return '<a class="pick" href="'+DEFAULT_URL[k]+'">'+esc(setName(k))+'</a>';}).join('');
+    return html;
+  }
+  var names=list.slice(0,3).map(function(it){return it.kind==='plan'?it.p.name:it.r.name;}),mins=list.reduce(function(a,it){return a+(it.kind==='plan'?(it.p.minutes||5):5);},0);
+  html+='<p class="lead2">Сегодня: <b>'+esc(names.join(' + '))+'</b> · около '+mins+' мин. '+(mix?'Предметы чередуются.':'Сначала один предмет, потом другой.')+'</p>';
+  html+='<div class="plan">'+list.map(function(it,i){
+    if(it.kind==='rule'){
+      var r=it.r,g='rus-ege.html#game='+r.n+'&cat='+encodeURIComponent(r.cat);
+      return '<div class="rcard"><div class="k">'+(i+1)+' · подтяни правило · №'+r.n+'</div><div class="v">'+esc(r.name)+'</div><div class="s">'+esc(ruleText(r))+'</div>'+
+        '<a href="'+esc(g)+'">Игра по правилу</a><a class="gh" href="rus-ege.html#theory='+r.n+'">Теория №'+r.n+'</a></div>';
+    }
+    var p=it.p,sk=REG&&REG.skills.filter(function(x){return x.id===p.skill;})[0],c=sk?skinOf(sk):AnikLook.ramp(1)[0];
+    var href=p.link||(sk?linkFor(sk):'index.html');
+    return '<a class="pitem sgt" style="'+AnikLook.style(c)+'" href="'+esc(href)+'">'+AnikLook.signHTML(sk?signFor(sk):String(p.number))+'<div class="tn">'+(i+1)+' · № '+pad(p.number)+' · '+(WHY[p.why]||'тема').toLowerCase()+'</div><div class="nm">'+esc(p.name)+'</div><div class="s">'+(p.count||10)+' заданий · '+(p.minutes||5)+' мин</div></a>';
+  }).join('')+'</div>';
+  var first=list[0],fh=first.kind==='rule'?'rus-ege.html#game='+first.r.n+'&cat='+encodeURIComponent(first.r.cat):(first.p.link||'index.html');
+  html+='<a class="btn" href="'+esc(fh)+'">Начать с первого</a>';
+  return html;
+}
+function reportsHTML(){
+  var r=(window.anikReports&&anikReports())||[];
+  if(!r.length)return '';
+  return '<div class="stl"><span>Мои обращения</span><span>'+r.length+'</span></div>'+r.slice(0,5).map(function(x){
+    return '<div class="near"><div class="t"><span>Задание '+esc(x.ref||'—')+'</span><small>'+esc(String(x.at||'').replace('T',' '))+'</small></div><div class="rep">Отправлено боту. Ответ методистов придёт в чат с ботом.</div></div>';
+  }).join('');
+}
+
 /* ───────── Сегодня ───────── */
 function today(){
   var s=snap(),now=new Date(),todayIso=(s&&s.today)||iso(now),set=daysSet();
   var streak=s&&typeof s.streak==='number'?s.streak:streakFrom(set,todayIso);
-  var goal=(s&&s.goal)||10,done=(s&&s.done_today)||0;
+  var goal=(s&&s.goal)||10,done=(s&&s.done_today)||0,prof=profileSets();
   var wd=['воскресенье','понедельник','вторник','среда','четверг','пятница','суббота'][now.getDay()];
-  var html='<div class="top"><span class="wm">аник<i>.</i></span><span class="date">'+now.getDate()+' '+['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'][now.getMonth()]+', '+wd+'</span></div>'+
-    '<h1>Сегодня</h1>';
+  var html='<div class="top"><span class="wm">аник<i>.</i></span><span class="date">'+now.getDate()+' '+['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'][now.getMonth()]+' · '+wd+'</span></div>'+
+    '<h1>Сегодня</h1>'+profileHTML(prof);
   html+='<div class="row"><div class="big-n red"><span class="g" aria-hidden="true">'+streak+'</span><div class="l">серия</div><div class="t">'+plural(streak,'день','дня','дней')+'<br>подряд</div></div>'+
     '<div class="big-n blue"><span class="g" aria-hidden="true">'+(s?done:0)+'</span><div class="l">цель дня · '+goal+'</div><div class="t">'+plural(s?done:0,'ответ','ответа','ответов')+'<br>сегодня</div>'+(s?'<div class="goalbar"><i style="width:'+Math.min(100,Math.round(100*done/goal))+'%"></i></div>':'')+'</div></div>';
+  html+=trainingHTML(s,prof);
   // календарь: пять недель, неделя с понедельника
   var end=new Date(todayIso+'T12:00:00'),startMon=new Date(end);
   startMon.setDate(end.getDate()-((end.getDay()+6)%7)-28);
@@ -152,21 +272,6 @@ function today(){
     cells+='<div class="d'+(on?' on':'')+(key===todayIso?' today':'')+(fut?' future':'')+'">'+d.getDate()+'</div>';
   }
   html+='<div class="stl"><span>Календарь занятий</span><span>'+cnt+' '+plural(cnt,'день','дня','дней')+' за 5 недель</span></div><div class="cal">'+cells+'</div>';
-
-  // план
-  html+='<div class="stl">План на сегодня</div>';
-  var plan=(s&&s.plan)||[];
-  if(plan.length){
-    html+='<div class="plan">'+plan.map(function(p){
-      var sk=REG&&REG.skills.filter(function(x){return x.id===p.skill;})[0],c=sk?skinOf(sk):AnikLook.ramp(1)[0];
-      var href=p.link||(sk?linkFor(sk):'index.html');
-      return '<a class="pitem sgt" style="'+AnikLook.style(c)+'" href="'+esc(href)+'">'+AnikLook.signHTML(sk?signFor(sk):String(p.number))+'<div class="tn">№ '+pad(p.number)+' · '+(WHY[p.why]||'тема').toLowerCase()+'</div><div class="nm">'+esc(p.name)+'</div><div class="s">'+p.count+' '+plural(p.count,'вопрос','вопроса','вопросов')+' · ≈ '+p.minutes+' мин</div></a>';
-    }).join('')+'</div>';
-  }else if(s){
-    html+='<div class="empty"><b>На сегодня всё.</b> План собран по твоим слабым местам. Если хочешь ещё — открой любое задание ниже.</div>';
-  }else{
-    html+='<div class="empty"><b>План появится после первого занятия.</b> Открой приложение из Telegram-бота и реши несколько заданий или сыграй в игру. Бот посмотрит, где у тебя слабые места, и каждый день будет предлагать три темы.</div>';
-  }
   // ближайшие марки
   var near=nearStamps(s);
   if(near.length){
@@ -174,8 +279,12 @@ function today(){
       return '<div class="near"><div class="t"><span>'+esc(x.sk.name)+' <small>№ '+x.sk.number+'</small></span><b>'+x.pct+'%</b></div><div class="b"><i style="width:'+x.pct+'%;background:'+skinOf(x.sk)[0]+'"></i></div></div>';
     }).join('');
   }
+  html+=reportsHTML();
   html+='<a class="btn" href="index.html">Выбрать задание</a><a class="btn" href="today.html#stamps">Мои марки</a>';
   app.innerHTML=html;
+  bindProfile();
+  var mx=document.getElementById('mix');
+  if(mx)mx.onchange=function(){try{localStorage.setItem('anik_mix',mx.checked?'1':'0');}catch(e){}today();};
 }
 function nearStamps(s){
   if(!s||!REG)return [];
@@ -213,7 +322,7 @@ function stamps(setKey){
       }
       return '<button class="stamp sgt locked" style="--col:transparent;--ink:#111111" data-id="'+esc(k.id)+'">'+head+'<span class="pb" style="width:'+pct+'%;background:'+c[0]+'"></span></button>';
     }).join('')+'</div>'+
-    (s?'':'<div class="empty" style="margin-top:14px"><b>Пока марок нет.</b> Занимайся через бота — здесь появится прогресс по каждой теме.</div>');
+    (s&&s.from!=='bot'?'':(s?'<div class="empty" style="margin-top:14px"><b>Марки пока приходят в чат с ботом.</b> Здесь они появятся, когда заработает связь приложения с сервером.</div>':'<div class="empty" style="margin-top:14px"><b>Пока марок нет.</b> Занимайся через бота — здесь появится прогресс по каждой теме.</div>'));
   app.innerHTML=html;
   Array.prototype.forEach.call(app.querySelectorAll('.tabs3 button'),function(b){b.onclick=function(){stamps(b.dataset.s);window.scrollTo(0,0);};});
   Array.prototype.forEach.call(app.querySelectorAll('.stamp'),function(b){b.onclick=function(){sheet(b.dataset.id,have[b.dataset.id]);};});
