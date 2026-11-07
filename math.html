@@ -85,7 +85,7 @@ h1{font-size:22px;margin:14px 0 4px;background:linear-gradient(135deg,var(--acc)
 // ── Параметры знания — те же, что в боте (bkt.py) ──
 const P_L0=0.30,P_T=0.09,P_S=0.10,P_G=0.20,MAX_TRIES=2,ROUNDS=10;
 let INDEX=null, PACK=null, packCache={}, prog={}, xp=0, session=[], cur=null, gm=null, view='home', openHelp=null;
-let packTab='theory', pracNum=0, pracCache={}, pr=null;
+let packTab='theory', pracNum=0, pracSkill='', pracCache={}, pr=null;
 const TG=window.Telegram&&window.Telegram.WebApp&&window.Telegram.WebApp.initData?window.Telegram.WebApp:null;
 if(TG){try{TG.ready();TG.expand();TG.setHeaderColor('#F3EEE2');TG.setBackgroundColor('#F3EEE2');}catch(e){}}
 const $=s=>document.querySelector(s);
@@ -187,14 +187,14 @@ function home(){
   const sb=$('#send');if(sb)sb.onclick=sendToBot;
 }
 function openPack(id){loadPack(id).then(p=>{
-  PACK=p;openHelp=null;packTab='theory';pracNum=0;
+  PACK=p;openHelp=null;packTab='theory';pracNum=0;pracSkill='';
   const sk=packSkin(id);['--col','--ink-p','--bigc'].forEach((v,i)=>document.body.style.setProperty(v,sk[i]));
   setView('pack');
 })}
 
 function packView(){
   $('#title').textContent=PACK.title;
-  const T=[['theory','Теория'],['practice','Практика'],['steps','По шагам'],['games','Игры']];
+  const T=[['theory','Теория'],['steps','По шагам'],['practice','Практика'],['games','Игры']];
   let h='<div class="tabs2" role="tablist">'+T.map(([k,t])=>'<button class="tab'+(packTab===k?' on':'')+'" data-tab="'+k+'">'+t+'</button>').join('')+'</div>';
   if(packTab==='theory')h+=theoryTab();
   else if(packTab==='practice')h+=practiceTab();
@@ -255,18 +255,20 @@ function practiceTab(){
   return h+'<div id="pracbox"><div class="card"><div class="sub" style="margin:0">Загружаю задания…</div></div></div>';
 }
 function pracNums(){return pracNum?[pracNum]:PACK.numbers}
+function pracFilter(a){if(!pracSkill)return a;const f=a.filter(t=>t.sk===pracSkill);return f.length>=3?f:a}
 function pracInit(){
   app.querySelectorAll('[data-pn]').forEach(b=>b.onclick=()=>{pracNum=+b.dataset.pn;setView('pack')});
   Promise.all(pracNums().map(loadPractice)).then(lists=>{
     if(view!=='pack'||packTab!=='practice')return;
-    const all=[].concat(...lists),real=all.filter(t=>t.r).length,cnt=Math.min(ROUNDS,all.length);
-    $('#pracbox').innerHTML='<div class="card"><b>'+all.length+' заданий</b><div class="src">из них из экзаменов и сборников: '+real+'</div><button class="btn" id="pstart">Начать: '+cnt+' заданий</button></div>';
+    const all=pracFilter([].concat(...lists)),real=all.filter(t=>t.r).length,cnt=Math.min(ROUNDS,all.length);
+    $('#pracbox').innerHTML='<div class="card">'+(pracSkill&&PACK.skills[pracSkill]?'<div class="src" style="margin:0 0 6px">Только по навыку «'+esc(PACK.skills[pracSkill].name)+'» <button class="nb" id="pall" style="margin-left:8px">все задания раздела</button></div>':'')+'<b>'+all.length+' заданий</b><div class="src">из них из экзаменов и сборников: '+real+'</div><button class="btn" id="pstart">Начать: '+cnt+' заданий</button></div>';
     $('#pstart').onclick=()=>startPractice();
+    const pa=$('#pall');if(pa)pa.onclick=()=>{pracSkill='';setView('pack')};
   }).catch(()=>{const b=$('#pracbox');if(b)b.innerHTML='<div class="card"><div class="sub" style="margin:0">Не получилось загрузить задания. Проверь интернет и зайди ещё раз.</div></div>'});
 }
 function startPractice(){
   Promise.all(pracNums().map(n=>loadPractice(n).then(l=>l.map(t=>Object.assign({n},t))))).then(lists=>{
-    const all=[].concat(...lists),key='math_seen';
+    const all=pracFilter([].concat(...lists)),key='math_seen';
     let seen=[];try{seen=JSON.parse(localStorage.getItem(key)||'[]')}catch(e){}
     const set=new Set(seen);
     let fresh=all.filter(t=>!set.has(t.id));
@@ -304,10 +306,12 @@ function pracView(){
   pr.items.forEach((_,k)=>{h+='<span class="dot '+(k<pr.res.length?(pr.res[k]?'ok':'bad'):(k===pr.i?'cur':''))+'"></span>'});
   h+='</div><div class="tag">Задание '+(pr.i+1)+' из '+pr.items.length+' · №'+t.n+'</div><div class="card task">'+esc(t.t)+'</div><div class="src">'+(t.r?esc(t.s||'Из экзаменов и сборников'):'Задание из банка Аника')+'</div>';
   if(pr.fb)h+='<div class="fb '+pr.fb.cls+'">'+esc(pr.fb.text).replace(/\n/g,'<br>')+'</div>';
+  if(pr.fb&&pr.fb.sk)h+='<button class="btn sec" id="pstep">Разобрать такую задачу по шагам</button>';
   h+=numpadHTML()+'<button class="btn sec" id="pskip">Не знаю, покажи ответ</button>';
   app.innerHTML=h;
   bindNumpad(pracCheck);
   $('#pskip').onclick=()=>pracFinish(false,true);
+  const ps=$('#pstep');if(ps)ps.onclick=()=>start(pr.fb.sk);
   window.scrollTo(0,0);
 }
 function pracCheck(text){
@@ -327,7 +331,7 @@ function pracFinish(ok,skipped){
   const msg=ok?(first?'Верно! +10 XP':'Верно со второй попытки. +5 XP'):'Правильный ответ: '+t.a[0]+(skipped?'':'\nРазбери это задание по шагам во вкладке «По шагам» — там то же правило.');
   pr.i++;pr.tries=0;
   if(pr.i>=pr.items.length){xp+=pr.gain;saveAll();pr.last=msg;return setView('pdone')}
-  pr.fb={cls:ok?'good':'bad',text:msg};
+  pr.fb={cls:ok?'good':'bad',text:msg,sk:ok||!(t.sk&&PACK.tasks.some(x=>x.sk===t.sk))?'':t.sk};
   saveAll();render();
 }
 function pracDone(){
@@ -438,11 +442,13 @@ function doneView(){
   const sk=failed.length?failed[0].s:t.sk;
   h+='<button class="btn" id="again">'+(failed.length?'Потренировать то, где споткнулся':'Ещё такую же')+'</button>';
   h+='<button class="btn sec" id="other">Другое задание</button>';
+  h+='<button class="btn sec" id="solo">Теперь реши сам: практика без шагов</button>';
   if(!sentAuto)h+='<button class="btn ok" id="send">Закончить и отправить результаты боту</button>';
   h+='<button class="btn sec" id="menu">⬅️ К разделу</button>';
   app.innerHTML=h;
   $('#again').onclick=()=>start(sk);
   $('#other').onclick=()=>start(weightedSkill(skillsOfPack(PACK)));
+  $('#solo').onclick=()=>{pracSkill=sk;pracNum=PACK.numbers.indexOf(t.n)>=0&&PACK.numbers.length>1?t.n:0;packTab='practice';setView('pack')};
   $('#menu').onclick=()=>setView('pack');
   const sb=$('#send');if(sb)sb.onclick=sendToBot;
 }
