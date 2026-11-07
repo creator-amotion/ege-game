@@ -57,6 +57,16 @@ h1{font-size:22px;margin:14px 0 4px;background:linear-gradient(135deg,var(--acc)
 .stars{font-size:34px;text-align:center;letter-spacing:6px;margin:6px 0}
 .res li{list-style:none;margin:8px 0;font-size:15px;line-height:1.6}
 .katex{font-size:1.05em}
+.tabs2{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));margin:0 0 14px;border:2px solid var(--ink,#2a2a4e);border-radius:0}
+.tabs2 .tab{min-height:46px;border:0;border-right:2px solid var(--ink,#2a2a4e);background:transparent;color:var(--ink,var(--txt));font-size:12.5px;font-weight:600;cursor:pointer;padding:4px 2px;line-height:1.15}
+.tabs2 .tab:last-child{border-right:0}
+.tabs2 .tab.on{background:var(--ink,var(--b));color:var(--paper,#0a0a14)}
+.rulebox{background:var(--card2);border-radius:10px;padding:11px 12px;margin-top:8px;font-size:14.5px;line-height:1.6;white-space:pre-line}
+.rulebox b{color:var(--y)}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}
+.chip{border:1px solid #3a3a5e;background:none;color:var(--txt);padding:8px 13px;border-radius:18px;font-size:13px;font-weight:600;cursor:pointer}
+.chip.on{background:var(--b);color:#0a0a14;border-color:var(--b)}
+.src{color:var(--m);font-size:12px;margin-top:4px}
 </style>
 <meta name="theme-color" content="#F3EEE2">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -75,6 +85,7 @@ h1{font-size:22px;margin:14px 0 4px;background:linear-gradient(135deg,var(--acc)
 // ── Параметры знания — те же, что в боте (bkt.py) ──
 const P_L0=0.30,P_T=0.09,P_S=0.10,P_G=0.20,MAX_TRIES=2,ROUNDS=10;
 let INDEX=null, PACK=null, packCache={}, prog={}, xp=0, session=[], cur=null, gm=null, view='home', openHelp=null;
+let packTab='theory', pracNum=0, pracCache={}, pr=null;
 const TG=window.Telegram&&window.Telegram.WebApp&&window.Telegram.WebApp.initData?window.Telegram.WebApp:null;
 if(TG){try{TG.ready();TG.expand();TG.setHeaderColor('#F3EEE2');TG.setBackgroundColor('#F3EEE2');}catch(e){}}
 const $=s=>document.querySelector(s);
@@ -151,7 +162,7 @@ function render(){
   showXp();
   document.body.classList.toggle('in-pack',view!=='home');
   if(view==='home')home();else if(view==='pack')packView();else if(view==='task')taskView();
-  else if(view==='done')doneView();else if(view==='game')gameView();else if(view==='gdone')gameDone();
+  else if(view==='done')doneView();else if(view==='game')gameView();else if(view==='gdone')gameDone();else if(view==='prac')pracView();else if(view==='pdone')pracDone();
   mathRender();
 }
 $('#back').onclick=()=>{
@@ -162,7 +173,7 @@ $('#back').onclick=()=>{
 
 function home(){
   $('#title').textContent='Математика (ЕГЭ)';
-  let h='<h1>Разбор по шагам</h1><p class="sub">Выбери раздел. В каждом — быстрые игры, правила простыми словами и задания, которые решаются по шагам: видно, на каком шаге ты запнулся, и начинать сначала не надо.</p>';
+  let h='<h1>Математика</h1><p class="sub">Выбери раздел. В каждом четыре вкладки: теория простыми словами, практика (настоящие задания), разбор по шагам — видно, на каком шаге ты запнулся, — и быстрые игры.</p>';
   INDEX.packs.forEach(p=>{
     const m=packCache[p.id]?Math.round(packMastery(packCache[p.id])*100):null;
     const sk=packSkin(p.id);
@@ -176,33 +187,160 @@ function home(){
   const sb=$('#send');if(sb)sb.onclick=sendToBot;
 }
 function openPack(id){loadPack(id).then(p=>{
-  PACK=p;openHelp=null;
+  PACK=p;openHelp=null;packTab='theory';pracNum=0;
   const sk=packSkin(id);['--col','--ink-p','--bigc'].forEach((v,i)=>document.body.style.setProperty(v,sk[i]));
   setView('pack');
 })}
 
 function packView(){
   $('#title').textContent=PACK.title;
-  let h='';
-  h+='<div class="card"><div class="tag">Быстрые игры</div><b>10 вопросов, очки и звёзды</b>';
-  PACK.games.forEach(g=>{h+='<button class="btn sec" data-g="'+g.id+'" style="text-align:left"><b>'+esc(g.title)+'</b><br><span style="font-weight:400;font-size:13px;color:var(--m)">'+esc(g.desc)+'</span></button>'});
-  h+='</div>';
-  h+='<div class="card"><div class="tag">Задания по шагам</div><b>Решаем задачу маленькими шагами</b><button class="btn" id="steps">Решить задание по шагам</button></div>';
-  h+='<div class="card"><div class="tag">Навыки и правила</div>';
+  const T=[['theory','Теория'],['practice','Практика'],['steps','По шагам'],['games','Игры']];
+  let h='<div class="tabs2" role="tablist">'+T.map(([k,t])=>'<button class="tab'+(packTab===k?' on':'')+'" data-tab="'+k+'">'+t+'</button>').join('')+'</div>';
+  if(packTab==='theory')h+=theoryTab();
+  else if(packTab==='practice')h+=practiceTab();
+  else if(packTab==='steps')h+=stepsTab();
+  else h+=gamesTab();
+  if(session.length)h+='<button class="btn ok" id="send">Отправить результаты боту ('+session.length+' шагов)</button>';
+  app.innerHTML=h;
+  app.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{packTab=b.dataset.tab;setView('pack')});
+  app.querySelectorAll('[data-g]').forEach(b=>b.onclick=()=>gameStart(b.dataset.g));
+  app.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>start(b.dataset.t));
+  const st=$('#steps');if(st)st.onclick=()=>start(weightedSkill(skillsOfPack(PACK)));
+  if(packTab==='practice')pracInit();
+  const sb=$('#send');if(sb)sb.onclick=sendToBot;
+}
+// Теория: правило словами и пример к каждому навыку раздела
+function theoryTab(){
+  let h='<p class="sub">'+esc(PACK.desc)+'. Сначала правило, потом задания.</p>';
+  const nums=PACK.numbers;
+  nums.forEach(n=>{
+    const sk=skillsOfNumber(n);
+    if(!sk.length)return;
+    if(nums.length>1)h+='<div class="tag" style="margin-top:14px">Задание №'+n+'</div>';
+    sk.forEach(s=>{
+      const x=PACK.skills[s],p=pOf(s);
+      h+='<div class="card"><div class="skrow"><span class="lv">'+badge(p)+'</span><div class="nm"><b>'+esc(x.name)+'</b><small>'+badgeText(p)+'</small></div></div>'
+        +'<div class="rulebox"><b>Правило</b>\n'+esc(x.rule)+'\n\n<b>Пример</b>\n'+esc(x.ex)+'</div>'
+        +'<button class="btn sec" data-t="'+s+'">Потренировать по шагам</button></div>';
+    });
+  });
+  return h;
+}
+// По шагам: задача разбирается маленькими шагами; ниже — навыки раздела
+function stepsTab(){
+  let h='<div class="card"><div class="tag">Задания по шагам</div><b>Решаем задачу маленькими шагами</b><p class="sub" style="margin:6px 0 0">Если запнулся — подскажем правило, начинать сначала не нужно.</p><button class="btn" id="steps">Решить задание по шагам</button></div>';
+  h+='<div class="card"><div class="tag">Навыки раздела</div>';
   skillsOfPack(PACK).forEach(s=>{
     const p=pOf(s),a=prog[s]?prog[s].a:0,sk=PACK.skills[s];
     h+='<div class="sk"><div class="skrow"><span class="lv">'+badge(p)+'</span><div class="nm">'+esc(sk.name)+'<small>'+badgeText(p)+' · шагов решено: '+a+'</small></div><div class="bar"><i style="width:'+Math.round(p*100)+'%"></i></div></div>'
-      +'<div class="skrow" style="margin-top:6px"><button class="nb" data-h="'+s+'">Правило</button><button class="nb" data-t="'+s+'" style="margin-left:auto">▶ Тренировать</button></div>';
-    if(openHelp===s)h+='<div class="help"><b>Правило</b>\n'+esc(sk.rule)+'\n\n<b>Пример</b>\n'+esc(sk.ex)+'</div>';
-    h+='</div>';
+      +'<div class="skrow" style="margin-top:6px"><button class="nb" data-t="'+s+'" style="margin-left:auto">▶ Тренировать</button></div></div>';
   });
-  h+='</div>';
-  if(session.length)h+='<button class="btn ok" id="send">Отправить результаты боту ('+session.length+' шагов)</button>';
+  return h+'</div>';
+}
+function gamesTab(){
+  let h='<div class="card"><div class="tag">Быстрые игры</div><b>10 вопросов, очки и звёзды</b>';
+  PACK.games.forEach(g=>{h+='<button class="btn sec" data-g="'+g.id+'" style="text-align:left"><b>'+esc(g.title)+'</b><br><span style="font-weight:400;font-size:13px;color:var(--m)">'+esc(g.desc)+'</span></button>'});
+  return h+'</div>';
+}
+
+// ── Практика: настоящие задания, ответ числом ──
+function loadPractice(n){
+  if(pracCache[n])return Promise.resolve(pracCache[n]);
+  return fetch('trainer/ege-math_'+n+'.json').then(r=>{if(!r.ok)throw new Error(n);return r.json()}).then(d=>pracCache[n]=d.tasks);
+}
+function practiceTab(){
+  const nums=PACK.numbers;
+  let h='<p class="sub">Задания из экзаменов и сборников (и из банка Аника). Ответ — число: можно дробью или десятичной. Подход — до '+ROUNDS+' заданий.</p>';
+  if(nums.length>1)h+='<div class="chips"><button class="chip'+(pracNum===0?' on':'')+'" data-pn="0">Все</button>'+nums.map(n=>'<button class="chip'+(pracNum===n?' on':'')+'" data-pn="'+n+'">№'+n+'</button>').join('')+'</div>';
+  return h+'<div id="pracbox"><div class="card"><div class="sub" style="margin:0">Загружаю задания…</div></div></div>';
+}
+function pracNums(){return pracNum?[pracNum]:PACK.numbers}
+function pracInit(){
+  app.querySelectorAll('[data-pn]').forEach(b=>b.onclick=()=>{pracNum=+b.dataset.pn;setView('pack')});
+  Promise.all(pracNums().map(loadPractice)).then(lists=>{
+    if(view!=='pack'||packTab!=='practice')return;
+    const all=[].concat(...lists),real=all.filter(t=>t.r).length,cnt=Math.min(ROUNDS,all.length);
+    $('#pracbox').innerHTML='<div class="card"><b>'+all.length+' заданий</b><div class="src">из них из экзаменов и сборников: '+real+'</div><button class="btn" id="pstart">Начать: '+cnt+' заданий</button></div>';
+    $('#pstart').onclick=()=>startPractice();
+  }).catch(()=>{const b=$('#pracbox');if(b)b.innerHTML='<div class="card"><div class="sub" style="margin:0">Не получилось загрузить задания. Проверь интернет и зайди ещё раз.</div></div>'});
+}
+function startPractice(){
+  Promise.all(pracNums().map(n=>loadPractice(n).then(l=>l.map(t=>Object.assign({n},t))))).then(lists=>{
+    const all=[].concat(...lists),key='math_seen';
+    let seen=[];try{seen=JSON.parse(localStorage.getItem(key)||'[]')}catch(e){}
+    const set=new Set(seen);
+    let fresh=all.filter(t=>!set.has(t.id));
+    if(fresh.length<Math.min(ROUNDS,all.length)){fresh=all.slice();seen=seen.filter(id=>!all.some(t=>t.id===id))}
+    const real=shuffle(fresh.filter(t=>t.r)),own=shuffle(fresh.filter(t=>!t.r));
+    const items=shuffle(real.slice(0,Math.min(real.length,Math.ceil(ROUNDS*0.6))).concat(own).slice(0,ROUNDS));
+    try{localStorage.setItem(key,JSON.stringify(seen.concat(items.map(t=>t.id)).slice(-1500)))}catch(e){}
+    pr={items,i:0,res:[],tries:0,fb:null,gain:0};
+    setView('prac');
+  });
+}
+function numpadHTML(){
+  const pad=['1','2','3','⌫','4','5','6','−','7','8','9','/',',','0'];
+  return '<input class="inp" id="inp" inputmode="none" placeholder="0" autocomplete="off" aria-label="Ответ числом, например 0,35 или 3/7">'
+    +'<div class="keys pad">'+pad.map(k=>k==='⌫'?'<button data-del="1" aria-label="стереть">⌫</button>':'<button data-ins="'+k+'" aria-label="'+(k==='−'?'минус':k==='/'?'дробная черта':k===','?'запятая':k)+'"'+(/\d/.test(k)?' class="d"':'')+'>'+k+'</button>').join('')
+    +'<button class="chk" id="chk">Проверить</button></div>';
+}
+function bindNumpad(onSubmit){
+  const inp=$('#inp');
+  app.querySelectorAll('.keys button').forEach(b=>{
+    b.onmousedown=e=>e.preventDefault();
+    b.onclick=()=>{
+      const s=inp.selectionStart==null?inp.value.length:inp.selectionStart,e=inp.selectionEnd==null?s:inp.selectionEnd;
+      if(b.dataset.del){const a=s===e?Math.max(0,s-1):s;inp.value=inp.value.slice(0,a)+inp.value.slice(e);inp.setSelectionRange(a,a)}
+      else if(b.dataset.ins){inp.value=inp.value.slice(0,s)+b.dataset.ins+inp.value.slice(e);inp.setSelectionRange(s+1,s+1)}
+      inp.focus();
+    };
+  });
+  $('#chk').onclick=()=>onSubmit(inp.value);inp.onkeydown=e=>{if(e.key==='Enter')onSubmit(inp.value)};inp.focus();
+}
+function pracView(){
+  const t=pr.items[pr.i];
+  $('#title').textContent='Практика №'+t.n;
+  let h='<div class="dots">';
+  pr.items.forEach((_,k)=>{h+='<span class="dot '+(k<pr.res.length?(pr.res[k]?'ok':'bad'):(k===pr.i?'cur':''))+'"></span>'});
+  h+='</div><div class="tag">Задание '+(pr.i+1)+' из '+pr.items.length+' · №'+t.n+'</div><div class="card task">'+esc(t.t)+'</div><div class="src">'+(t.r?esc(t.s||'Из экзаменов и сборников'):'Задание из банка Аника')+'</div>';
+  if(pr.fb)h+='<div class="fb '+pr.fb.cls+'">'+esc(pr.fb.text).replace(/\n/g,'<br>')+'</div>';
+  h+=numpadHTML()+'<button class="btn sec" id="pskip">Не знаю, покажи ответ</button>';
   app.innerHTML=h;
-  app.querySelectorAll('[data-g]').forEach(b=>b.onclick=()=>gameStart(b.dataset.g));
-  $('#steps').onclick=()=>start(weightedSkill(skillsOfPack(PACK)));
-  app.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>start(b.dataset.t));
-  app.querySelectorAll('[data-h]').forEach(b=>b.onclick=()=>{openHelp=openHelp===b.dataset.h?null:b.dataset.h;setView('pack')});
+  bindNumpad(pracCheck);
+  $('#pskip').onclick=()=>pracFinish(false,true);
+  window.scrollTo(0,0);
+}
+function pracCheck(text){
+  const t=pr.items[pr.i],u=parseNum(text);
+  if(!u){pr.fb={cls:'bad',text:'Напиши ответ числом (например 0,35 или 3/7).'};return render()}
+  const ok=t.a.some(a=>{const v=parseNum(a);return v&&u[0]*v[1]===v[0]*u[1]});
+  if(ok)return pracFinish(true,false);
+  pr.tries++;
+  if(pr.tries>=MAX_TRIES)return pracFinish(false,false);
+  pr.fb={cls:'bad',text:'Ответ не сошёлся. Проверь вычисления и попробуй ещё раз.'};
+  render();
+}
+function pracFinish(ok,skipped){
+  const t=pr.items[pr.i],first=ok&&pr.tries===0;
+  pr.res.push(first);pr.gain+=first?10:ok?5:0;
+  if(t.sk&&PACK.skills[t.sk])record(t.sk,first?1:0);
+  const msg=ok?(first?'Верно! +10 XP':'Верно со второй попытки. +5 XP'):'Правильный ответ: '+t.a[0]+(skipped?'':'\nРазбери это задание по шагам во вкладке «По шагам» — там то же правило.');
+  pr.i++;pr.tries=0;
+  if(pr.i>=pr.items.length){xp+=pr.gain;saveAll();pr.last=msg;return setView('pdone')}
+  pr.fb={cls:ok?'good':'bad',text:msg};
+  saveAll();render();
+}
+function pracDone(){
+  $('#title').textContent='Итог';
+  const ok=pr.res.filter(Boolean).length,tot=pr.res.length,sentAuto=autoSend();
+  let h='<div class="stars"><b>'+ok+'</b> из '+tot+'<small>с первой попытки</small></div>'+autoNote(sentAuto);
+  h+='<div class="fb '+(ok>=tot*0.8?'good':'bad')+'">'+(ok>=tot*0.8?'Отлично! Навык закрепляется.':ok>=tot*0.5?'Неплохо. Загляни в теорию и разбери ошибки по шагам.':'Пока трудно — прочитай теорию и потренируйся по шагам.')+'<br>'+esc(pr.last||'').replace(/\n/g,'<br>')+'<br>Получено: +'+pr.gain+' XP</div>';
+  h+='<button class="btn" id="again">Ещё подход</button><button class="btn sec" id="tosteps">Разобрать по шагам</button><button class="btn sec" id="menu">⬅️ К разделу</button>';
+  if(!sentAuto&&session.length)h+='<button class="btn ok" id="send">Закончить и отправить результаты боту</button>';
+  app.innerHTML=h;
+  $('#again').onclick=()=>startPractice();
+  $('#tosteps').onclick=()=>{packTab='steps';setView('pack')};
+  $('#menu').onclick=()=>{packTab='practice';setView('pack')};
   const sb=$('#send');if(sb)sb.onclick=sendToBot;
 }
 
@@ -214,7 +352,7 @@ function pickTask(skill){
 }
 function start(skill){
   cur={t:pickTask(skill),i:0,tries:0,res:[],fb:null,order:null,gain:0};
-  prepare();setView('task');
+  packTab='steps';prepare();setView('task');
 }
 function prepare(){
   const st=cur.t.st[cur.i];cur.tries=0;
@@ -313,7 +451,7 @@ function doneView(){
 function gameStart(id){
   const g=PACK.games.find(x=>x.id===id);
   gm={g,rounds:shuffle(g.items).slice(0,ROUNDS),i:0,ok:0,picked:null,order:null,gain:0};
-  prepareRound();setView('game');
+  packTab='games';prepareRound();setView('game');
 }
 function prepareRound(){
   const it=gm.rounds[gm.i];gm.picked=null;
@@ -409,6 +547,9 @@ fetch('math_packs.json').then(r=>r.json()).then(idx=>{
   const h=location.hash;let m;
   if((m=h.match(/^#pack=(\w+)&game=(\w+)$/))){          // ссылка репетитора: конкретная игра раздела
     return loadPack(m[1]).then(p=>{PACK=p;if(p.games.some(g=>g.id===m[2]))gameStart(m[2]);else setView('pack')}).catch(()=>setView('home'));
+  }
+  if((m=h.match(/^#pack=(\w+)&tab=(theory|practice|steps|games)$/))){
+    return loadPack(m[1]).then(p=>{PACK=p;packTab=m[2];setView('pack')}).catch(()=>setView('home'));
   }
   if((m=h.match(/^#skill=(\w+)$/))){
     return fetch('math_skills.json').then(r=>r.json()).then(sk=>{
