@@ -369,6 +369,7 @@ function init(){
   // (используется кнопкой из Telegram-бота при неверном ответе на задание №4)
   if(location.hash==='#stress'){openSpecial('stress');}
   else if(location.hash==='#paronyms'){openTopic(5);}
+  else if(/^#practice=\d+$/.test(location.hash)){const n=+location.hash.slice(10);if(TOPICS.some(t=>t.num===n)){openTopic(n);sTab(1);}}   // шаг «задания из экзамена» в плане дня
   else if(/^#theory=\d+$/.test(location.hash)){const n=+location.hash.slice(8);if(TOPICS.some(t=>t.num===n)){openTopic(n);sTab(0);}}   // кнопка «Теория» на экране «Сегодня»: тема открывается на вкладке теории
   else{
     // Ссылка вида index.html#game=17 — открыть задание сразу на вкладке «Игра»
@@ -569,15 +570,13 @@ function renderGameTab(num){
   const cg=typeof CUSTOM_GAMES!=='undefined'&&CUSTOM_GAMES[num];
   if(cg&&cg.categories&&cg.categories.length){
     const chips=cg.categories.map(c=>`<button class="cat-chip" onclick="startCustomGame(${num},'${c.id}')">${c.name}</button>`).join('');
-    document.getElementById('tb2').innerHTML=`<div class="game-hero"><div class="gi"></div><h3>${cg.title}</h3><p style="color:var(--m);font-size:13px;margin:8px 0 14px">${cg.instruction} &middot; +10 очков за верный</p><p style="color:var(--m);font-size:12px;margin-bottom:8px">Выбери тему или смешай всё:</p><div class="cat-chips">${chips}<button class="cat-chip mix" onclick="startCustomGame(${num},'__mix__')">Смешать всё</button></div></div>`;
+    document.getElementById('tb2').innerHTML=`<div class="game-hero"><div class="gi"></div><h3>${cg.title}</h3><p style="color:var(--m);font-size:13px;margin:8px 0 14px">${cg.instruction} &middot; +10 очков за верный</p>${roundPicker(num)}<p style="color:var(--m);font-size:12px;margin-bottom:8px">Выбери тему или смешай всё:</p><div class="cat-chips">${chips}<button class="cat-chip mix" onclick="startCustomGame(${num},'__mix__')">Смешать всё</button></div></div>`;
   } else if(cg){
-    document.getElementById('tb2').innerHTML=`<div class="game-hero"><div class="gi"></div><h3>${cg.title}</h3><p style="color:var(--m);font-size:13px;margin:8px 0 18px">${cg.instruction} &middot; +10 очков за верный</p><button class="btp" onclick="startCustomGame(${num})" style="max-width:240px;margin:0 auto;display:block">Начать</button></div>`;
-  } else if(EX_NUMS.indexOf(num)<0){
-    document.getElementById('tb2').innerHTML=`<div class="game-hero"><div class="gi"></div><h3>Игры и упражнения готовим</h3><p style="color:var(--m);font-size:13px;margin:8px 0 0">К этому заданию пока нет игр. Тренируйся в «Практике» — там настоящие задания из экзаменов.</p></div>`;
+    document.getElementById('tb2').innerHTML=`<div class="game-hero"><div class="gi"></div><h3>${cg.title}</h3><p style="color:var(--m);font-size:13px;margin:8px 0 18px">${cg.instruction} &middot; +10 очков за верный</p>${roundPicker(num)}<button class="btp" onclick="startCustomGame(${num})" style="max-width:240px;margin:0 auto;display:block">Начать</button></div>`;
+  } else {
+    document.getElementById('tb2').innerHTML=`<div class="game-hero"><div class="gi"></div><h3>Игры готовим</h3><p style="color:var(--m);font-size:13px;margin:8px 0 0">К этому заданию пока нет игр. Тренируйся в «Практике» — там настоящие задания из экзаменов.</p></div>`;
   }
-  if(EX_NUMS.indexOf(num)>=0){
-    document.getElementById('tb2').insertAdjacentHTML('beforeend',`<div class="game-hero" style="margin-top:22px"><div class="gi"></div><h3>Упражнения</h3><p style="color:var(--m);font-size:13px;margin:8px 0 14px">Подводят к заданию №${num} &middot; 10 задач &middot; +10 очков за верный</p><button class="btp" onclick="startGame(${num})" style="max-width:240px;margin:0 auto;display:block">Начать упражнения</button></div>`);
-  }
+
 }
 
 function startGame(num){
@@ -683,6 +682,15 @@ function resultBlock(link){
 <button class="btp" style="margin-top:10px" onclick="sendResult('${link}')">Отправить результат боту</button>`;
 }
 
+/* сколько вопросов в раунде — выбирает ученик (запоминаем); «все» — вся тема */
+const ROUND_SIZES=[10,20,40,0];
+function roundSize(cg){let v=null;try{v=localStorage.getItem('ege_round');}catch(e){}return v===null?(cg.roundSize||20):(+v||100000);}
+function roundPicker(num){
+  const cur=roundSize(CUSTOM_GAMES[num]);
+  return `<p style="color:var(--m);font-size:12px;margin:0 0 6px">Вопросов в раунде:</p><div class="cat-chips" style="margin-bottom:14px">${ROUND_SIZES.map(n=>`<button class="cat-chip${(n||100000)===cur?' mix':''}" onclick="setRound(${n},${num})">${n||'все'}</button>`).join('')}</div>`;
+}
+function setRound(n,num){try{localStorage.setItem('ege_round',String(n));}catch(e){}renderGameTab(num);}
+
 /* раунд из вопросов, которых ученик ещё не видел; когда тема пройдена — по кругу, сначала давно виденные */
 function freshItems(num,items,n){
   const key='ege_cgseen_'+num;let seen=[];
@@ -702,7 +710,7 @@ function startCustomGame(num,category){
   window._cg=cg;window._cgNum=num;window._cgCategory=category;
   let items=cg.items;
   if(category&&category!=='__mix__')items=items.filter(it=>it.category===category);
-  window._cgItems=freshItems(num,items,cg.roundSize||20);
+  window._cgItems=freshItems(num,items,roundSize(cg));
   window._cgIdx=0;window._cgOk=0;window._cgAnswered=false;window._cgWrong=[];
   showCustomItem();
 }
@@ -714,7 +722,7 @@ function showCustomItem(){
     const ok=window._cgOk,tot=items.length,pts=ok*10;
     score+=pts;sv();
     const catBtn=(cg.categories&&cg.categories.length)?`<button class="bts" onclick="renderGameTab(${num})">К темам</button>`:'';
-    c.innerHTML=`<div class="game-hero"><div class="gi">${ok/tot>=.8?'':ok/tot>=.5?'':''}</div><div class="fs ${ok/tot>=.8?'g':ok/tot>=.5?'y':'r'}" style="font-size:44px">${ok}/${tot}</div><p style="color:var(--m)">+${pts} очков</p>${resultBlock(resultLink(num,ok,tot,window._cgWrong||[],catIndex(num,window._cgCategory)))}<div class="acts" style="margin-top:16px"><button class="btp" onclick="startCustomGame(${num},window._cgCategory)">Ещё раз</button>${catBtn}<button class="bts" onclick="sTab(0)">Теория</button></div></div>`;
+    c.innerHTML=`<div class="game-hero"><div class="gi">${ok/tot>=.8?'':ok/tot>=.5?'':''}</div><div class="fs ${ok/tot>=.8?'g':ok/tot>=.5?'y':'r'}" style="font-size:44px">${ok}/${tot}</div><p style="color:var(--m)">+${pts} очков</p>${resultBlock(resultLink(num,ok,tot,window._cgWrong||[],catIndex(num,window._cgCategory)))}<div class="cg-hint on" style="margin-top:14px">Теперь закрепи на заданиях №${num} из экзамена.</div><button class="btp" style="margin-top:10px" onclick="sTab(1)">Задания №${num} из экзамена</button><div class="acts" style="margin-top:12px"><button class="bts" onclick="startCustomGame(${num},window._cgCategory)">Ещё раунд</button>${catBtn}<button class="bts" onclick="sTab(0)">Теория</button></div></div>`;
     return;
   }
   const item=items[window._cgIdx];

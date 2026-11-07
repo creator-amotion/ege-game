@@ -45,6 +45,11 @@ h1{font-family:var(--display);font-size:38px;font-weight:800;letter-spacing:-1.5
 .pitem .s{position:relative;font-size:12px;margin-top:3px}
 .pitem .big{font-size:120px;bottom:-26px;right:8px}
 .pitem .big.wide{font-size:96px}
+.steps{position:relative;display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+/* цвета кнопок свои: карточка темы перекрашивает --ink под свой фон, а кнопки должны читаться на любом */
+.steps a{display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:0 12px;background:#fff;color:#111;font-size:14px;font-weight:600;text-decoration:none;border:2px solid #111}
+.steps a i{font-style:normal;font-family:var(--display);font-weight:800}
+.steps a:first-child{background:#111;color:#fff}
 .near{display:flex;flex-direction:column;gap:6px;padding:10px 0;border-bottom:1px solid var(--line)}
 .near .t{display:flex;justify-content:space-between;align-items:baseline;font-size:15px;font-weight:600}
 .near .t small{color:var(--muted);font-weight:400}
@@ -195,6 +200,13 @@ function bindProfile(){
 }
 
 /* ───────── Что тренировать сегодня ───────── */
+/* ЕГЭ русский: тема дня — три шага: теория → игра (по правилу, которое западает, иначе смешанная) → задания из экзамена.
+   Так же считает бот (progress_state.rus_steps), поэтому план в боте и здесь один. */
+function rusSteps(p,rules){
+  if(String(p.skill||'').indexOf('ege.rus.')!==0)return null;
+  var n=p.number,r=(rules||[]).filter(function(x){return x.n===n;})[0];
+  return {theory:'rus-ege.html#theory='+n,game:n===4?'rus-ege.html#stress':'rus-ege.html#game='+n+'&cat='+encodeURIComponent(r?r.cat:'__mix__'),tasks:'rus-ege.html#practice='+n};
+}
 function setOf(id){var p=String(id||'').split('.');return p[0]+'.'+p[1];}
 function mixOn(){try{return localStorage.getItem('anik_mix')==='1';}catch(e){return false;}}
 function ordered(items,mix){
@@ -225,7 +237,7 @@ function trainingHTML(s,prof){
     return html;
   }
   var names=list.slice(0,3).map(function(it){return it.kind==='plan'?it.p.name:it.r.name;}),mins=list.reduce(function(a,it){return a+(it.kind==='plan'?(it.p.minutes||5):5);},0);
-  html+='<p class="lead2">Сегодня: <b>'+esc(names.join(' + '))+'</b> · около '+mins+' мин. '+(mix?'Предметы чередуются.':'Сначала один предмет, потом другой.')+'</p>';
+  html+='<p class="lead2">Сегодня: <b>'+esc(names.join(' + '))+'</b> · около '+mins+' мин. По каждой теме: прочитай теорию, сыграй в игру, реши задания из экзамена. '+(mix?'Предметы чередуются.':'Сначала один предмет, потом другой.')+'</p>';
   html+='<div class="plan">'+list.map(function(it,i){
     if(it.kind==='rule'){
       var r=it.r,g='rus-ege.html#game='+r.n+'&cat='+encodeURIComponent(r.cat);
@@ -233,10 +245,12 @@ function trainingHTML(s,prof){
         '<a href="'+esc(g)+'">Игра по правилу</a><a class="gh" href="rus-ege.html#theory='+r.n+'">Теория №'+r.n+'</a></div>';
     }
     var p=it.p,sk=REG&&REG.skills.filter(function(x){return x.id===p.skill;})[0],c=sk?skinOf(sk):AnikLook.ramp(1)[0];
-    var href=p.link||(sk?linkFor(sk):'index.html');
+    var href=p.link||(sk?linkFor(sk):'index.html'),st=rusSteps(p,s&&s.rules);
+    if(st)return '<div class="pitem sgt" style="'+AnikLook.style(c)+'">'+AnikLook.signHTML(sk?signFor(sk):String(p.number))+'<div class="tn">'+(i+1)+' · № '+pad(p.number)+' · '+(WHY[p.why]||'тема').toLowerCase()+'</div><div class="nm">'+esc(p.name)+'</div>'+
+      '<div class="steps"><a href="'+esc(st.theory)+'"><i>1</i>Теория</a><a href="'+esc(st.game)+'"><i>2</i>Игра</a><a href="'+esc(st.tasks)+'"><i>3</i>Задания</a></div></div>';
     return '<a class="pitem sgt" style="'+AnikLook.style(c)+'" href="'+esc(href)+'">'+AnikLook.signHTML(sk?signFor(sk):String(p.number))+'<div class="tn">'+(i+1)+' · № '+pad(p.number)+' · '+(WHY[p.why]||'тема').toLowerCase()+'</div><div class="nm">'+esc(p.name)+'</div><div class="s">'+(p.count||10)+' заданий · '+(p.minutes||5)+' мин</div></a>';
   }).join('')+'</div>';
-  var first=list[0],fh=first.kind==='rule'?'rus-ege.html#game='+first.r.n+'&cat='+encodeURIComponent(first.r.cat):(first.p.link||'index.html');
+  var first=list[0],fst=first.kind==='plan'&&rusSteps(first.p,s&&s.rules),fh=first.kind==='rule'?'rus-ege.html#theory='+first.r.n:(fst?fst.theory:(first.p.link||'index.html'));
   html+='<a class="btn" href="'+esc(fh)+'">Начать с первого</a>';
   return html;
 }
