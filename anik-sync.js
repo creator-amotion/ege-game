@@ -3,7 +3,7 @@
    (знание, дни занятий, серия, марки, план на сегодня), который игра показывает.
    Пока API пуст или приложение открыто не из Telegram, ничего не происходит, и игры отправляют результат кнопкой, как раньше. */
 (function () {
-  var API = '';                                   // адрес Worker, например https://anik-sync.<аккаунт>.workers.dev
+  var API = 'https://2-29-119-233.sslip.io';    // почтовый ящик бота на сервере (deploy/server/enable_app_link.sh)
   var QUEUE = 'anik_q', STATE = 'anik_state';
   var tg = window.Telegram && window.Telegram.WebApp;
   var initData = (tg && tg.initData) || '';       // из кнопки на клавиатуре бота подписи нет — там остаётся старый путь
