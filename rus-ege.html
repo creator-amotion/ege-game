@@ -171,6 +171,21 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:12px 1
 .cg-opt:hover:not([disabled]){border-color:var(--b);transform:translateY(-1px)}
 .cg-opt.ok{border-color:var(--g);background:rgba(78,204,163,.15);color:var(--g)}
 .cg-opt.err{border-color:var(--acc);background:rgba(233,69,96,.1);color:var(--acc)}
+.cg-ropt{padding:12px 10px;border:2px solid #3a3a5e;border-radius:11px;background:none;color:var(--txt);font-size:14px;font-weight:700;cursor:pointer;transition:all .2s;text-align:center;width:100%}
+.cg-ropt:hover:not([disabled]){border-color:var(--b)}
+.cg-ropt.ok{border-color:var(--g);background:rgba(78,204,163,.15);color:var(--g)}
+.cg-ropt.err{border-color:var(--acc);background:rgba(233,69,96,.1);color:var(--acc)}
+.cg-q{color:var(--m);font-size:12px;margin:14px 0 2px;text-align:center}
+.cg-rule{font-size:12px;color:var(--m);text-align:center;margin-top:8px}
+.cg-taps{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;letter-spacing:0}
+.cg-tok{padding:8px 12px;border:2px solid #3a3a5e;border-radius:10px;background:none;color:var(--y);font-size:19px;font-weight:800;cursor:pointer}
+.cg-tok:hover:not([disabled]){border-color:var(--b)}
+.cg-tok.ok{border-color:var(--g);background:rgba(78,204,163,.15);color:var(--g)}
+.cg-tok.err{border-color:var(--acc);background:rgba(233,69,96,.1);color:var(--acc)}
+.st-vow{padding:2px 6px;margin:0 1px;border:2px dashed #3a3a5e;border-radius:8px;background:none;color:inherit;font:inherit;cursor:pointer}
+.st-vow:hover:not([disabled]){border-color:var(--b)}
+.st-vow.ok{border:2px solid var(--g);background:rgba(78,204,163,.15);color:var(--g)}
+.st-vow.err{border:2px solid var(--acc);background:rgba(233,69,96,.1);color:var(--acc)}
 .cg-hint{background:rgba(255,215,0,.07);border:1px solid var(--y);border-radius:9px;padding:10px 14px;font-size:13px;color:var(--y);margin-top:10px;display:none}
 .cg-hint.on{display:block}
 
@@ -726,7 +741,17 @@ function showCustomItem(){
     return;
   }
   const item=items[window._cgIdx];
-  window._cgAnswered=false;
+  window._cgAnswered=false;window._cgRuleOk=true;window._cgRuleDone=-1;
+  const head=`<div class="ph"><span class="pi">${window._cgIdx+1}/${items.length}</span><span class="ps">${window._cgOk*10} очков</span></div>`;
+  const tail=`<button class="nbtn2" id="cgNxt" onclick="nextCustomItem()">Следующий →</button>`;
+  const rule=RULE_FIRST[num]&&item.category?ruleLabel(num,item.category):'';
+  const hintHTML=`<div class="cg-hint" id="cgHint">${rule?`<b>Правило:</b> ${rule}<br>`:''}${item.hint}</div>`;
+  if((TAP_CATS[num]||[]).includes(item.category)){          // «ткни в лишнее слово»
+    const toks=item.word.split(/\s+/).filter(Boolean);
+    c.innerHTML=`${head}<p class="cg-q" style="margin-top:6px">Коснись лишнего слова — того, без которого можно обойтись, или повторяющего другое</p>
+<div class="cg-word cg-taps">${toks.map(t=>`<button class="cg-tok" onclick="tapToken(this)">${t}</button>`).join('')}</div>${hintHTML}${tail}`;
+    return;
+  }
   const nc=item.options.length;
   // короткие варианты (буквы, «н/нн») — крупными плитками, чтобы ответ был виден целиком
   const colsClass=(nc===2?'two':nc===3?'three':'')+(item.options.every(o=>o.length<=3)?' short':'');
@@ -735,26 +760,81 @@ function showCustomItem(){
     const safeO=o.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
     return `<button class="cg-opt" onclick="checkCustomAns(this,'${safeO}','${safeAns}')">${o}</button>`;
   }).join('');
-  c.innerHTML=`<div class="ph"><span class="pi">${window._cgIdx+1}/${items.length}</span><span class="ps">${window._cgOk*10} очков</span></div>
+  const answerBlock=`<div class="cg-opts ${colsClass}">${opts}</div>`;
+  if(rule){                                                  // сначала правило, потом ответ
+    const ro=ruleOptions(num,item.category);
+    const safeR=ro.right.replace(/'/g,"\\'");
+    const rbtn=ro.opts.map(o=>`<button class="cg-ropt" onclick="pickRule(this,'${o.replace(/'/g,"\\'")}','${safeR}')">${o}</button>`).join('');
+    c.innerHTML=`${head}<div class="cg-word">${item.word}</div>
+<div id="cgRule"><p class="cg-q">Какое правило здесь работает?</p><div class="cg-opts">${rbtn}</div></div>
+<div id="cgStep2" style="display:none"><p class="cg-q">Теперь ответ:</p>${answerBlock}</div>${hintHTML}${tail}`;
+    return;
+  }
+  c.innerHTML=`${head}
 <div class="cg-word">${item.word}</div>
-<div class="cg-opts ${colsClass}">${opts}</div>
-<div class="cg-hint" id="cgHint">${item.hint}</div>
-<button class="nbtn2" id="cgNxt" onclick="nextCustomItem()">Следующий →</button>`;
+${answerBlock}
+${hintHTML}
+${tail}`;
+}
+
+/* ───── как играть ─────
+   RULE_FIRST — сначала выбираем правило (на что смотреть), потом отвечаем: так ученик видит, ПОЧЕМУ именно такая буква или запятая.
+   TAP_CATS — вместо вариантов ответа нужно коснуться слова с ошибкой. */
+const RULE_FIRST={9:1,10:1,11:1,12:1,13:1,14:1,15:1,16:1,17:1,20:1};
+const TAP_CATS={6:['pleo','tavt']};
+const FAM9=[['check','Проверяемая безударная гласная: подбираю проверочное слово'],
+            ['dict','Непроверяемая гласная: словарное слово, запомнить'],
+            ['alt','Чередующийся корень: смотрю на суффикс, ударение или значение'],
+            ['exc','Исключение из правила']];
+function famOf9(cat){return /^check_/.test(cat)?0:/^dict_|^etym$/.test(cat)?1:cat==='exceptions'?3:2;}
+function ruleLabel(num,cat){
+  if(num===9)return FAM9[famOf9(cat)][1];
+  const c=((CUSTOM_GAMES[num]||{}).categories||[]).find(x=>x.id===cat);return c?c.name:'';
+}
+function ruleOptions(num,cat){
+  const right=ruleLabel(num,cat);
+  const all=num===9?FAM9.map(f=>f[1]):[...new Set(((CUSTOM_GAMES[num]||{}).categories||[]).map(c=>c.name))];
+  const others=all.filter(l=>l!==right).sort(()=>Math.random()-.5).slice(0,3);
+  return {right,opts:others.concat([right]).sort(()=>Math.random()-.5)};
+}
+function pickRule(btn,chosen,right){
+  if(window._cgRuleDone===window._cgIdx)return;
+  window._cgRuleDone=window._cgIdx;
+  window._cgRuleOk=chosen===right;
+  btn.className='cg-ropt '+(window._cgRuleOk?'ok':'err');
+  document.querySelectorAll('.cg-ropt').forEach(b=>{if(!window._cgRuleOk&&b.textContent.trim()===right)b.className='cg-ropt ok';b.disabled=true;});
+  document.getElementById('cgStep2').style.display='block';
+}
+function cgDone(ok){
+  window._cgAnswered=true;
+  if(ok)window._cgOk++;
+  else{const cur=(window._cgItems||[])[window._cgIdx];if(cur)(window._cgWrong=window._cgWrong||[]).push(cur.word);}
+  document.getElementById('cgHint').className='cg-hint on';
+  document.getElementById('cgNxt').className='nbtn2 on';
+}
+function tapToken(btn){
+  if(window._cgAnswered)return;
+  const cur=window._cgItems[window._cgIdx];
+  const right=cur.answer.split(/\s+/);
+  const ok=right.includes(btn.textContent.trim());
+  btn.className='cg-tok '+(ok?'ok':'err');
+  if(!ok)document.querySelectorAll('.cg-tok').forEach(b=>{if(right.includes(b.textContent.trim()))b.className='cg-tok ok';});
+  document.querySelectorAll('.cg-tok').forEach(b=>b.disabled=true);
+  cgDone(ok);
 }
 
 function checkCustomAns(btn,chosen,correct){
   if(window._cgAnswered)return;
-  window._cgAnswered=true;
+  const rf=document.getElementById('cgRule');
+  if(rf&&window._cgRuleDone!==window._cgIdx)return;          // правило ещё не выбрано
   const ok=chosen===correct;
-  if(ok){window._cgOk++;btn.className='cg-opt ok';}
+  if(ok)btn.className='cg-opt ok';
   else{
     btn.className='cg-opt err';
-    const cur=(window._cgItems||[])[window._cgIdx];if(cur)(window._cgWrong=window._cgWrong||[]).push(cur.word);
     document.querySelectorAll('.cg-opt').forEach(b=>{if(b.textContent.trim()===correct)b.className='cg-opt ok';});
   }
   document.querySelectorAll('.cg-opt').forEach(b=>b.disabled=true);
-  document.getElementById('cgHint').className='cg-hint on';
-  document.getElementById('cgNxt').className='nbtn2 on';
+  cgDone(ok&&window._cgRuleOk!==false);
 }
 
 function nextCustomItem(){window._cgIdx++;showCustomItem();}
@@ -793,9 +873,45 @@ function renderStressCards(){
 
 function renderStressGame(){
   const c=document.getElementById('st2');
-  const shuffled=[...STRESS_TRAPS].sort(()=>Math.random()-.5).slice(0,20);
-  window._sw=shuffled;window._swIdx=0;window._swOk=0;window._swBad=0;window._swWrong=[];
+  const m=window._smode||'mix';
+  const chip=(v,t)=>`<button class="cat-chip${m===v?' mix':''}" onclick="window._smode='${v}';renderStressGame()">${t}</button>`;
+  const cur=roundSize({});
+  const rc=ROUND_SIZES.map(n=>`<button class="cat-chip${(n||100000)===cur?' mix':''}" onclick="setStressRound(${n})">${n||'все'}</button>`).join('');
+  c.innerHTML=`<div class="game-hero"><div class="gi"></div><h3>Ударение</h3>
+<p style="color:var(--m);font-size:13px;margin:8px 0 14px">Верно ли поставлено ударение — или поставь его сам, коснувшись гласной &middot; +3 очка за верный</p>
+<p style="color:var(--m);font-size:12px;margin:0 0 6px">Как играем:</p><div class="cat-chips" style="margin-bottom:14px">${chip('yn','Верно / неверно')}${chip('tap','Поставь ударение')}${chip('mix','Вперемешку')}</div>
+<p style="color:var(--m);font-size:12px;margin:0 0 6px">Слов в раунде:</p><div class="cat-chips" style="margin-bottom:14px">${rc}</div>
+<button class="btp" onclick="startStress()" style="max-width:240px;margin:0 auto;display:block">Начать</button></div>`;
+}
+function setStressRound(n){try{localStorage.setItem('ege_round',String(n));}catch(e){}renderStressGame();}
+function startStress(){
+  const m=window._smode||'mix',n=roundSize({});
+  const shuf=a=>a.slice().sort(()=>Math.random()-.5);
+  const good=shuf(STRESS_TRAPS.filter(([w,ok])=>ok&&(w.match(/[аеёиоуыэюяАЕЁИОУЫЭЮЯ]/g)||[]).length>1));
+  let list;
+  if(m==='tap')list=good.map(([w,ok])=>[w,ok,'tap']);
+  else if(m==='yn')list=shuf(STRESS_TRAPS).map(([w,ok])=>[w,ok,'yn']);
+  else{
+    const yn=shuf(STRESS_TRAPS).map(([w,ok])=>[w,ok,'yn']),tp=good.map(([w,ok])=>[w,ok,'tap']);
+    list=[];for(let i=0;i<Math.max(yn.length,tp.length);i++){if(yn[i])list.push(yn[i]);if(tp[i])list.push(tp[i]);}
+    list=shuf(list.slice(0,Math.max(n===100000?0:n*2,40)));
+  }
+  window._sw=list.slice(0,n===100000?400:n);window._swIdx=0;window._swOk=0;window._swBad=0;window._swWrong=[];window._swDone=-1;
   showStressQ();
+}
+function tapStress(btn,i){
+  if(window._swDone===window._swIdx)return;
+  window._swDone=window._swIdx;
+  const [word]=window._sw[window._swIdx];
+  const right=word.search(/[А-ЯЁ]/);
+  const ok=i===right;
+  if(ok)window._swOk++;else{window._swBad++;window._swWrong.push(word);}
+  btn.className='st-vow '+(ok?'ok':'err');
+  document.querySelectorAll('.st-vow').forEach(b=>{if(+b.dataset.i===right)b.className='st-vow ok';b.disabled=true;});
+  const info=document.getElementById('sInfo');
+  info.className='stress-info on '+(ok?'ok':'err');
+  info.innerHTML=ok?'Верно!':'Ударение здесь: '+word.replace(/([А-ЯЁ])/,'<b>$1</b>');
+  document.getElementById('sNext').style.display='block';
 }
 
 function showStressQ(){
@@ -807,8 +923,20 @@ function showStressQ(){
     c.innerHTML=`<div class="game-hero"><div class="gi">${ok/tot>=.8?'':ok/tot>=.5?'':''}</div><div class="fs ${ok/tot>=.8?'g':ok/tot>=.5?'y':'r'}" style="font-size:44px">${ok}/${tot}</div><p style="color:var(--m)">+${pts} очков</p>${resultBlock(resultLink(0,ok,tot,window._swWrong||[]))}<button class="btp" style="margin-top:16px" onclick="renderStressGame()">Ещё раз</button></div>`;
     return;
   }
-  const [word,isOk]=words[window._swIdx];
+  const [word,isOk,smode]=words[window._swIdx];
   const tot=words.length;
+  if(smode==='tap'){
+    const low=word.toLowerCase();
+    const letters=[...low].map((ch,i)=>/[аеёиоуыэюя]/.test(ch)?`<button class="st-vow" data-i="${i}" onclick="tapStress(this,${i})">${ch}</button>`:ch).join('');
+    c.innerHTML=`<div class="stress-game">
+<div class="stress-counter"><span style="color:var(--g)">${window._swOk}</span><span style="color:var(--acc)">${window._swBad}</span><span>${window._swIdx+1}/${tot}</span></div>
+<div class="stress-word">${letters}</div>
+<p style="color:var(--m);font-size:13px;text-align:center">Коснись гласной, на которую падает ударение</p>
+<div class="stress-info" id="sInfo"></div>
+<button class="nbtn2 on" id="sNext" onclick="nextStress()" style="max-width:360px;display:none">Следующее →</button>
+</div>`;
+    return;
+  }
   c.innerHTML=`<div class="stress-game">
 <div class="stress-counter"><span style="color:var(--g)">${window._swOk}</span><span style="color:var(--acc)">${window._swBad}</span><span>${window._swIdx+1}/${tot}</span></div>
 <div class="stress-word">${word.replace(/([А-ЯЁ])([а-яё])/,(m,cap,low)=>`<span class="stressed">${cap}</span>${low}`)}</div>
