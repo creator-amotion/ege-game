@@ -67,6 +67,14 @@ h1{font-size:22px;margin:14px 0 4px;background:linear-gradient(135deg,var(--acc)
 .chip{border:1px solid #3a3a5e;background:none;color:var(--txt);padding:8px 13px;border-radius:18px;font-size:13px;font-weight:600;cursor:pointer}
 .chip.on{background:var(--b);color:#0a0a14;border-color:var(--b)}
 .src{color:var(--m);font-size:12px;margin-top:4px}
+.cues,.alg,.traps{margin:6px 0 0;padding:0}
+.cues li{list-style:none;margin:9px 0;font-size:14.5px;line-height:1.5}
+.cues .if{display:block;font-weight:700}
+.cues .do{display:block;color:var(--m);margin-top:2px}
+.alg{padding-left:22px}.alg li{margin:5px 0;font-size:14.5px;line-height:1.5}
+.traps li{list-style:none;margin:5px 0;font-size:14px;line-height:1.5}
+.traps li:before{content:'⚠ ';color:var(--acc)}
+.fm{display:inline-block;background:var(--card2);border-radius:8px;padding:4px 9px;margin:3px 4px 0 0;font-size:13.5px}
 </style>
 <meta name="theme-color" content="#F3EEE2">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -85,7 +93,7 @@ h1{font-size:22px;margin:14px 0 4px;background:linear-gradient(135deg,var(--acc)
 // ── Параметры знания — те же, что в боте (bkt.py) ──
 const P_L0=0.30,P_T=0.09,P_S=0.10,P_G=0.20,MAX_TRIES=2,ROUNDS=10;
 let INDEX=null, PACK=null, packCache={}, prog={}, xp=0, session=[], cur=null, gm=null, view='home', openHelp=null;
-let packTab='theory', pracNum=0, pracSkill='', pracCache={}, pr=null;
+let packTab='theory', pracNum=0, pracSkill='', pracCache={}, pr=null, ANALYSIS=null;
 const TG=window.Telegram&&window.Telegram.WebApp&&window.Telegram.WebApp.initData?window.Telegram.WebApp:null;
 if(TG){try{TG.ready();TG.expand();TG.setHeaderColor('#F3EEE2');TG.setBackgroundColor('#F3EEE2');}catch(e){}}
 const $=s=>document.querySelector(s);
@@ -210,13 +218,25 @@ function packView(){
   const sb=$('#send');if(sb)sb.onclick=sendToBot;
 }
 // Теория: правило словами и пример к каждому навыку раздела
+// Разбор задания: что заметить в условии → алгоритм → ловушки → формулы
+function analysisHTML(n){
+  const a=ANALYSIS&&ANALYSIS[n];if(!a)return '';
+  let h='<div class="card"><div class="tag">Задание №'+n+'</div><b>'+esc(a.title)+'</b><p class="sub" style="margin:6px 0 0">'+esc(a.what)+'</p>';
+  if(a.cues.length)h+='<div class="tag" style="margin-top:14px">Что заметить в условии</div><ul class="cues">'+a.cues.map(c=>'<li><span class="if">'+esc(c.if)+'</span><span class="do">→ '+esc(c.do)+'</span></li>').join('')+'</ul>';
+  h+='<div class="tag" style="margin-top:14px">Алгоритм</div><ol class="alg">'+a.steps.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ol>';
+  if(a.traps.length)h+='<div class="tag" style="margin-top:14px">Частые ловушки</div><ul class="traps">'+a.traps.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul>';
+  if(a.formulas.length)h+='<div class="tag" style="margin-top:14px">Формулы</div><div>'+a.formulas.map(x=>'<span class="fm">'+esc(x)+'</span>').join('')+'</div>';
+  if(a.themes.length)h+='<div class="src" style="margin-top:12px">Чаще всего в заданиях: '+a.themes.map(x=>esc(x.name)+' — '+x.share+'%').join('; ')+'</div>';
+  return h+'</div>';
+}
 function theoryTab(){
-  let h='<p class="sub">'+esc(PACK.desc)+'. Сначала правило, потом задания.</p>';
+  let h='<p class="sub">'+esc(PACK.desc)+'. Сначала разбор задания, потом правила навыков.</p>';
   const nums=PACK.numbers;
   nums.forEach(n=>{
     const sk=skillsOfNumber(n);
+    h+=analysisHTML(n);
     if(!sk.length)return;
-    if(nums.length>1)h+='<div class="tag" style="margin-top:14px">Задание №'+n+'</div>';
+    h+='<div class="tag" style="margin-top:14px">Навыки и правила'+(nums.length>1?' · задание №'+n:'')+'</div>';
     sk.forEach(s=>{
       const x=PACK.skills[s],p=pOf(s);
       h+='<div class="card"><div class="skrow"><span class="lv">'+badge(p)+'</span><div class="nm"><b>'+esc(x.name)+'</b><small>'+badgeText(p)+'</small></div></div>'
@@ -548,6 +568,7 @@ function sendToBot(){
 
 // ── Запуск ──
 loadAll();
+fetch('math_analysis.json').then(r=>r.json()).then(d=>{ANALYSIS=d.numbers;if(view==='pack'&&packTab==='theory')render()}).catch(()=>{});
 fetch('math_packs.json').then(r=>r.json()).then(idx=>{
   INDEX=idx;
   const h=location.hash;let m;
