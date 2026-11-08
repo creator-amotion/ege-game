@@ -205,7 +205,7 @@ function openPack(id){loadPack(id).then(p=>{
 
 function packView(){
   $('#title').textContent=PACK.title;
-  const T=[['theory','Теория'],['steps','По шагам'],['practice','Темы'],['games','Игры']];
+  const T=[['theory','Теория'],['steps','По шагам'],['practice','Практика'],['games','Игры']];
   let h='<div class="tabs2" role="tablist">'+T.map(([k,t])=>'<button class="tab'+(packTab===k?' on':'')+'" data-tab="'+k+'">'+t+'</button>').join('')+'</div>';
   if(packTab==='theory')h+=theoryTab();
   else if(packTab==='practice')h+=practiceTab();
@@ -295,14 +295,14 @@ function pracInit(){
         +'<div class="tag" style="margin-top:12px">1. Теория</div><ul class="cues">'+tp.theory.map(x=>'<li><span class="if" style="font-weight:500">'+esc(x)+'</span></li>').join('')+'</ul>'
         +'<div class="tag" style="margin-top:12px">2. Алгоритм</div><ol class="alg">'+tp.algo.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ol>'
         +'<div class="tag" style="margin-top:12px">3. Разбор по шагам</div>'
-        +(tp.skills.length?'<p class="src" style="margin:0">Задача решается маленькими шагами: видно, на каком ты запнулся.</p><button class="btn sec" id="tsteps">Разобрать по шагам</button>':'<p class="src" style="margin:0">Шагов по этой теме пока нет — переходи к самостоятельным заданиям.</p>')
+        +(topicSteps(pracGroup).length?'<p class="src" style="margin:0">Задача решается маленькими шагами: видно, на каком ты запнулся. Задач по шагам в этой теме: '+topicSteps(pracGroup).length+'.</p><button class="btn sec" id="tsteps">Разобрать по шагам</button>':'<p class="src" style="margin:0">Шагов по этой теме пока нет — переходи к самостоятельным заданиям.</p>')
         +'</div>';
     }
     $('#pracbox').innerHTML=chips+topic+'<div class="card">'+(tp?'<div class="tag">4. Самостоятельно</div>':'')+(pracSkill&&PACK.skills[pracSkill]?'<div class="src" style="margin:0 0 6px">Только по навыку «'+esc(PACK.skills[pracSkill].name)+'» <button class="nb" id="pall" style="margin-left:8px">все задания раздела</button></div>':'')+'<b>'+all.length+' заданий</b><div class="src">из них из экзаменов и сборников: '+real+'</div><button class="btn" id="pstart">Начать: '+cnt+' заданий</button></div>';
     $('#pstart').onclick=()=>startPractice();
     const pa=$('#pall');if(pa)pa.onclick=()=>{pracSkill='';pracGroup='';setView('pack')};
     app.querySelectorAll('[data-pg]').forEach(b=>b.onclick=()=>{pracGroup=b.dataset.pg;pracSkill='';setView('pack')});
-    const ts=$('#tsteps');if(ts)ts.onclick=()=>{const sk=tp.skills.filter(x=>PACK.tasks.some(t=>t.sk===x));start(weightedSkill(sk.length?sk:tp.skills),true)};
+    const ts=$('#tsteps');if(ts)ts.onclick=()=>startTopic(pracGroup);
   }).catch(()=>{const b=$('#pracbox');if(b)b.innerHTML='<div class="card"><div class="sub" style="margin:0">Не получилось загрузить задания. Проверь интернет и зайди ещё раз.</div></div>'});
 }
 function startPractice(){
@@ -345,12 +345,12 @@ function pracView(){
   pr.items.forEach((_,k)=>{h+='<span class="dot '+(k<pr.res.length?(pr.res[k]?'ok':'bad'):(k===pr.i?'cur':''))+'"></span>'});
   h+='</div><div class="tag">Задание '+(pr.i+1)+' из '+pr.items.length+' · №'+t.n+'</div><div class="card task">'+esc(t.t)+(t.f||[]).map(f=>'<img class="fig" src="'+f+'" alt="Рисунок к заданию">').join('')+'</div><div class="src">'+(t.r?esc(t.s||'Из экзаменов и сборников'):'Задание из банка Аника')+'</div>';
   if(pr.fb)h+='<div class="fb '+pr.fb.cls+'">'+esc(pr.fb.text).replace(/\n/g,'<br>')+'</div>';
-  if(pr.fb&&pr.fb.sk)h+='<button class="btn sec" id="pstep">Разобрать такую задачу по шагам</button>';
+  if(pr.fb&&(pr.fb.g||pr.fb.sk))h+='<button class="btn sec" id="pstep">Разобрать такую задачу по шагам</button>';
   h+=numpadHTML()+'<button class="btn sec" id="pskip">Не знаю, покажи ответ</button>';
   app.innerHTML=h;
   bindNumpad(pracCheck);
   $('#pskip').onclick=()=>pracFinish(false,true);
-  const ps=$('#pstep');if(ps)ps.onclick=()=>start(pr.fb.sk);
+  const ps=$('#pstep');if(ps)ps.onclick=()=>pr.fb.g?startTopic(pr.fb.g):start(pr.fb.sk);
   window.scrollTo(0,0);
 }
 function pracCheck(text){
@@ -370,7 +370,7 @@ function pracFinish(ok,skipped){
   const msg=ok?(first?'Верно! +10 XP':'Верно со второй попытки. +5 XP'):'Правильный ответ: '+t.a[0]+(skipped?'':'\nРазбери это задание по шагам во вкладке «По шагам» — там то же правило.');
   pr.i++;pr.tries=0;
   if(pr.i>=pr.items.length){xp+=pr.gain;saveAll();pr.last=msg;return setView('pdone')}
-  pr.fb={cls:ok?'good':'bad',text:msg,sk:ok||!(t.sk&&PACK.tasks.some(x=>x.sk===t.sk))?'':t.sk};
+  pr.fb={cls:ok?'good':'bad',text:msg,sk:ok||!(t.sk&&PACK.tasks.some(x=>x.sk===t.sk))?'':t.sk,g:ok||!(t.g&&topicSteps(t.g).length)?'':t.g};
   saveAll();render();
 }
 function pracDone(){
@@ -397,8 +397,18 @@ function start(skill,keepTab){
   if(!PACK.tasks.some(t=>t.sk===skill)){                   // шагов по этому навыку ещё нет — ведём в практику по нему, а не в чужую тему
     packTab='practice';pracSkill=skill;pracNum=0;setView('pack');return;
   }
-  cur={t:pickTask(skill),i:0,tries:0,res:[],fb:null,order:null,gain:0};
+  startTask(pickTask(skill),keepTab);
+}
+// Задача по шагам. Из темы (keepTab) разбираем только задачи этой темы и после — тренируем тоже эту тему
+function startTask(t,keepTab){
+  cur={t,i:0,tries:0,res:[],fb:null,order:null,gain:0,topicG:keepTab?(t.g||''):''};
   packTab=keepTab?'practice':'steps';prepare();setView('task');
+}
+function topicSteps(gid){return PACK.tasks.filter(t=>t.g===gid)}
+function startTopic(gid){
+  const pool=topicSteps(gid);if(!pool.length)return;
+  pracGroup=gid;pracSkill='';
+  startTask(pool[Math.floor(Math.random()*pool.length)],true);
 }
 function prepare(){
   const st=cur.t.st[cur.i];cur.tries=0;
@@ -488,9 +498,9 @@ function doneView(){
   if(!sentAuto)h+='<button class="btn ok" id="send">Закончить и отправить результаты боту</button>';
   h+='<button class="btn sec" id="menu">⬅️ К разделу</button>';
   app.innerHTML=h;
-  $('#again').onclick=()=>start(sk);
-  $('#other').onclick=()=>start(weightedSkill(skillsOfPack(PACK)));
-  $('#solo').onclick=()=>{pracSkill=sk;pracNum=PACK.numbers.indexOf(t.n)>=0&&PACK.numbers.length>1?t.n:0;packTab='practice';setView('pack')};
+  $('#again').onclick=()=>cur.topicG?startTopic(cur.topicG):start(sk);
+  $('#other').onclick=()=>cur.topicG?startTopic(cur.topicG):start(weightedSkill(skillsOfPack(PACK)));
+  $('#solo').onclick=()=>{if(t.g){pracGroup=t.g;pracSkill=''}else{pracSkill=sk;pracGroup=''}pracNum=PACK.numbers.indexOf(t.n)>=0&&PACK.numbers.length>1?t.n:0;packTab='practice';setView('pack')};
   $('#menu').onclick=()=>setView('pack');
   const sb=$('#send');if(sb)sb.onclick=sendToBot;
 }
