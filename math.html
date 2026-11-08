@@ -94,7 +94,7 @@ h1{font-size:22px;margin:14px 0 4px;background:linear-gradient(135deg,var(--acc)
 // ── Параметры знания — те же, что в боте (bkt.py) ──
 const P_L0=0.30,P_T=0.09,P_S=0.10,P_G=0.20,MAX_TRIES=2,ROUNDS=10;
 let INDEX=null, PACK=null, packCache={}, prog={}, xp=0, session=[], cur=null, gm=null, view='home', openHelp=null;
-let packTab='theory', pracNum=0, pracSkill='', pracCache={}, pr=null, ANALYSIS=null, GROUPS_META=null, pracGroup='';
+let packTab='theory', pracNum=0, pracSkill='', pracCache={}, pr=null, ANALYSIS=null, GROUPS_META=null, TOPICS_META=null, pracGroup='';
 const TG=window.Telegram&&window.Telegram.WebApp&&window.Telegram.WebApp.initData?window.Telegram.WebApp:null;
 if(TG){try{TG.ready();TG.expand();TG.setHeaderColor('#F3EEE2');TG.setBackgroundColor('#F3EEE2');}catch(e){}}
 const $=s=>document.querySelector(s);
@@ -205,7 +205,7 @@ function openPack(id){loadPack(id).then(p=>{
 
 function packView(){
   $('#title').textContent=PACK.title;
-  const T=[['theory','Теория'],['steps','По шагам'],['practice','Практика'],['games','Игры']];
+  const T=[['theory','Теория'],['steps','По шагам'],['practice','Темы'],['games','Игры']];
   let h='<div class="tabs2" role="tablist">'+T.map(([k,t])=>'<button class="tab'+(packTab===k?' on':'')+'" data-tab="'+k+'">'+t+'</button>').join('')+'</div>';
   if(packTab==='theory')h+=theoryTab();
   else if(packTab==='practice')h+=practiceTab();
@@ -273,7 +273,7 @@ function loadPractice(n){
 }
 function practiceTab(){
   const nums=PACK.numbers;
-  let h='<p class="sub">Задания из экзаменов и сборников (и из банка Аника). Ответ — число: можно дробью или десятичной. Подход — до '+ROUNDS+' заданий.</p>';
+  let h='<p class="sub">Выбери тему: сначала теория и алгоритм, потом разбор по шагам, потом решаешь сам. Ответ — число (дробью или десятичной). Подход — до '+ROUNDS+' заданий.</p>';
   if(nums.length>1)h+='<div class="chips"><button class="chip'+(pracNum===0?' on':'')+'" data-pn="0">Все</button>'+nums.map(n=>'<button class="chip'+(pracNum===n?' on':'')+'" data-pn="'+n+'">№'+n+'</button>').join('')+'</div>';
   return h+'<div id="pracbox"><div class="card"><div class="sub" style="margin:0">Загружаю задания…</div></div></div>';
 }
@@ -288,10 +288,21 @@ function pracInit(){
     const have={};base.forEach(t=>{have[t.g]=(have[t.g]||0)+1});
     const gl=[];pracNums().forEach(n=>((GROUPS_META&&GROUPS_META[n])||[]).forEach(g=>{if(have[g.id])gl.push(g)}));
     const chips=gl.length>1?'<div class="tag" style="margin-top:6px">Тема</div><div class="chips"><button class="chip'+(pracGroup===''?' on':'')+'" data-pg="">Все темы · '+base.length+'</button>'+gl.map(g=>'<button class="chip'+(pracGroup===g.id?' on':'')+'" data-pg="'+g.id+'">'+esc(g.name)+' · '+have[g.id]+'</button>').join('')+'</div>':'';
-    $('#pracbox').innerHTML=chips+'<div class="card">'+(pracSkill&&PACK.skills[pracSkill]?'<div class="src" style="margin:0 0 6px">Только по навыку «'+esc(PACK.skills[pracSkill].name)+'» <button class="nb" id="pall" style="margin-left:8px">все задания раздела</button></div>':'')+'<b>'+all.length+' заданий</b><div class="src">из них из экзаменов и сборников: '+real+'</div><button class="btn" id="pstart">Начать: '+cnt+' заданий</button></div>';
+    const tp=pracGroup&&TOPICS_META&&TOPICS_META[pracGroup];
+    let topic='';
+    if(tp){
+      topic='<div class="card"><div class="tag">Тема</div><b>'+esc(tp.name)+'</b>'
+        +'<div class="tag" style="margin-top:12px">1. Теория</div><ul class="cues">'+tp.theory.map(x=>'<li><span class="if" style="font-weight:500">'+esc(x)+'</span></li>').join('')+'</ul>'
+        +'<div class="tag" style="margin-top:12px">2. Алгоритм</div><ol class="alg">'+tp.algo.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ol>'
+        +'<div class="tag" style="margin-top:12px">3. Разбор по шагам</div>'
+        +(tp.skills.length?'<p class="src" style="margin:0">Задача решается маленькими шагами: видно, на каком ты запнулся.</p><button class="btn sec" id="tsteps">Разобрать по шагам</button>':'<p class="src" style="margin:0">Шагов по этой теме пока нет — переходи к самостоятельным заданиям.</p>')
+        +'</div>';
+    }
+    $('#pracbox').innerHTML=chips+topic+'<div class="card">'+(tp?'<div class="tag">4. Самостоятельно</div>':'')+(pracSkill&&PACK.skills[pracSkill]?'<div class="src" style="margin:0 0 6px">Только по навыку «'+esc(PACK.skills[pracSkill].name)+'» <button class="nb" id="pall" style="margin-left:8px">все задания раздела</button></div>':'')+'<b>'+all.length+' заданий</b><div class="src">из них из экзаменов и сборников: '+real+'</div><button class="btn" id="pstart">Начать: '+cnt+' заданий</button></div>';
     $('#pstart').onclick=()=>startPractice();
     const pa=$('#pall');if(pa)pa.onclick=()=>{pracSkill='';pracGroup='';setView('pack')};
     app.querySelectorAll('[data-pg]').forEach(b=>b.onclick=()=>{pracGroup=b.dataset.pg;pracSkill='';setView('pack')});
+    const ts=$('#tsteps');if(ts)ts.onclick=()=>{const sk=tp.skills.filter(x=>PACK.tasks.some(t=>t.sk===x));start(weightedSkill(sk.length?sk:tp.skills),true)};
   }).catch(()=>{const b=$('#pracbox');if(b)b.innerHTML='<div class="card"><div class="sub" style="margin:0">Не получилось загрузить задания. Проверь интернет и зайди ещё раз.</div></div>'});
 }
 function startPractice(){
@@ -382,12 +393,12 @@ function pickTask(skill){
   if(!pool.length)pool=PACK.tasks;
   return pool[Math.floor(Math.random()*pool.length)];
 }
-function start(skill){
+function start(skill,keepTab){
   if(!PACK.tasks.some(t=>t.sk===skill)){                   // шагов по этому навыку ещё нет — ведём в практику по нему, а не в чужую тему
     packTab='practice';pracSkill=skill;pracNum=0;setView('pack');return;
   }
   cur={t:pickTask(skill),i:0,tries:0,res:[],fb:null,order:null,gain:0};
-  packTab='steps';prepare();setView('task');
+  packTab=keepTab?'practice':'steps';prepare();setView('task');
 }
 function prepare(){
   const st=cur.t.st[cur.i];cur.tries=0;
@@ -579,6 +590,7 @@ function sendToBot(){
 
 // ── Запуск ──
 loadAll();
+fetch('math_topics.json').then(r=>r.json()).then(d=>{TOPICS_META=d.topics}).catch(()=>{});
 fetch('math_groups.json').then(r=>r.json()).then(d=>{GROUPS_META=d.numbers}).catch(()=>{});
 fetch('math_analysis.json').then(r=>r.json()).then(d=>{ANALYSIS=d.numbers;if(view==='pack'&&packTab==='theory')render()}).catch(()=>{});
 fetch('math_packs.json').then(r=>r.json()).then(idx=>{
