@@ -293,7 +293,7 @@ function pracInit(){
     if(tp){
       topic='<div class="card"><div class="tag">Тема</div><b>'+esc(tp.name)+'</b>'
         +'<div class="tag" style="margin-top:12px">1. Теория</div><ul class="cues">'+tp.theory.map(x=>'<li><span class="if" style="font-weight:500">'+esc(x)+'</span></li>').join('')+'</ul>'
-        +'<div class="tag" style="margin-top:12px">2. Алгоритм</div><ol class="alg">'+tp.algo.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ol>'
+        +'<div class="tag" style="margin-top:12px">2. Алгоритм</div>'+((tp.cues&&tp.cues.length)?'<div class="src" style="margin:4px 0">Что заметить в условии:</div><ul class="cues">'+tp.cues.map(c=>'<li><span class="if">'+esc(c.if)+'</span><span class="do">→ '+esc(c.do)+'</span></li>').join('')+'</ul><div class="src" style="margin:8px 0 2px">Шаги:</div>':'')+'<ol class="alg">'+tp.algo.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ol>'
         +'<div class="tag" style="margin-top:12px">3. Разбор по шагам</div>'
         +(topicSteps(pracGroup).length?'<p class="src" style="margin:0">Задача решается маленькими шагами: видно, на каком ты запнулся. Задач по шагам в этой теме: '+topicSteps(pracGroup).length+'.</p><button class="btn sec" id="tsteps">Разобрать по шагам</button>':'<p class="src" style="margin:0">Шагов по этой теме пока нет — переходи к самостоятельным заданиям.</p>')
         +'</div>';
