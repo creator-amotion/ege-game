@@ -84,7 +84,7 @@ h1{font-size:22px;margin:14px 0 4px;background:linear-gradient(135deg,var(--acc)
 <link rel="stylesheet" href="anik.css?v=5">
 <script src="anik-look.js?v=1"></script>
 <script src="anik-sync.js?v=3"></script>
-<script src="anik-nav.js?v=5" defer></script>
+<script src="anik-nav.js?v=6" defer></script>
 </head>
 <body class="math">
 <nav><button class="nb" id="back">←</button><b id="title">Математика</b><span id="xp"></span></nav>
@@ -344,13 +344,21 @@ function pracView(){
   let h='<div class="dots">';
   pr.items.forEach((_,k)=>{h+='<span class="dot '+(k<pr.res.length?(pr.res[k]?'ok':'bad'):(k===pr.i?'cur':''))+'"></span>'});
   h+='</div><div class="tag">Задание '+(pr.i+1)+' из '+pr.items.length+' · №'+t.n+'</div><div class="card task">'+esc(t.t)+(t.f||[]).map(f=>'<img class="fig" src="'+f+'" alt="Рисунок к заданию">').join('')+'</div><div class="src">'+(t.r?esc(t.s||'Из экзаменов и сборников'):'Задание из банка Аника')+'</div>';
+  const rv=pr.reveal;                                           // ответ показан: остаёмся на ЭТОЙ задаче, к следующей — только по «Дальше»
+  if(rv){
+    h+='<div class="fb '+rv.cls+'">'+esc(rv.text).replace(/\n/g,'<br>')+'</div>';
+    if(rv.k)h+='<button class="btn sec" id="pstep">Разобрать похожую задачу по шагам</button>';
+    h+='<button class="btn" id="pnext">'+(pr.i+1>=pr.items.length?'Итог':'Дальше')+'</button>';
+    app.innerHTML=h;
+    $('#pnext').onclick=pracNext;
+    const ps0=$('#pstep');if(ps0)ps0.onclick=()=>startKind(rv.k);
+    window.scrollTo(0,0);return;
+  }
   if(pr.fb)h+='<div class="fb '+pr.fb.cls+'">'+esc(pr.fb.text).replace(/\n/g,'<br>')+'</div>';
-  if(pr.fb&&pr.fb.k)h+='<button class="btn sec" id="pstep">Разобрать похожую задачу по шагам</button>';
   h+=numpadHTML()+'<button class="btn sec" id="pskip">Не знаю, покажи ответ</button>';
   app.innerHTML=h;
   bindNumpad(pracCheck);
   $('#pskip').onclick=()=>pracFinish(false,true);
-  const ps=$('#pstep');if(ps)ps.onclick=()=>startKind(pr.fb.k);
   window.scrollTo(0,0);
 }
 function pracCheck(text){
@@ -368,10 +376,14 @@ function pracFinish(ok,skipped){
   pr.res.push(first);pr.gain+=first?10:ok?5:0;
   if(t.sk&&PACK.skills[t.sk])record(t.sk,first?1:0);
   const msg=ok?(first?'Верно! +10 XP':'Верно со второй попытки. +5 XP'):'Правильный ответ: '+t.a[0]+(kindSteps(t.k).length?'':'\nРазбора по шагам для задач такого типа пока нет — повтори теорию темы и реши ещё несколько таких.');
-  pr.i++;pr.tries=0;
-  if(pr.i>=pr.items.length){xp+=pr.gain;saveAll();pr.last=msg;return setView('pdone')}
-  pr.fb={cls:ok?'good':'bad',text:msg,sk:ok||!(t.sk&&PACK.tasks.some(x=>x.sk===t.sk))?'':t.sk,k:ok||!kindSteps(t.k).length?'':t.k};
+  pr.reveal={cls:ok?'good':'bad',text:msg,k:ok||!kindSteps(t.k).length?'':t.k};
+  pr.last=msg;
   saveAll();render();
+}
+function pracNext(){
+  pr.reveal=null;pr.fb=null;pr.i++;pr.tries=0;
+  if(pr.i>=pr.items.length){xp+=pr.gain;saveAll();return setView('pdone')}
+  render();
 }
 function pracDone(){
   setTimeout(function(){window.anikPlanDone&&anikPlanDone();},700);

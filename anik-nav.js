@@ -74,13 +74,13 @@
       b = document.createElement('div');
       b.id = 'anik-plan';
       b.setAttribute('role', 'status');
-      b.style.cssText = 'position:fixed;left:8px;right:8px;bottom:74px;max-width:504px;margin:0 auto;z-index:55;padding:10px 12px;background:#111;color:#F3EEE2;font:600 14px/1.35 "Golos Text",system-ui,sans-serif;box-shadow:0 2px 0 #FFD400';
+      b.style.cssText = 'position:fixed;left:8px;right:8px;bottom:74px;max-width:504px;margin:0 auto;z-index:55;padding:8px 12px 10px;background:#111;color:#F3EEE2;font:600 13px/1.3 "Golos Text",system-ui,sans-serif;box-shadow:0 2px 0 #FFD400';
       document.body.appendChild(b);
     }
     return b;
   }
   function btn(id, text, primary) {
-    return '<button id="' + id + '" style="min-height:40px;padding:0 14px;margin:8px 8px 0 0;border:0;font:700 14px \'Golos Text\',system-ui,sans-serif;cursor:pointer;' +
+    return '<button id="' + id + '" style="min-height:36px;padding:0 12px;margin:6px 8px 0 0;border:0;font:700 14px \'Golos Text\',system-ui,sans-serif;cursor:pointer;' +
       (primary ? 'background:#FFD400;color:#111' : 'background:#F3EEE2;color:#111') + '">' + text + '</button>';
   }
   function planNext() {
@@ -98,7 +98,14 @@
     planWrite(p);
     go(p.urls[p.i]);
   }
-  function planExit() { clearInterval(timer); curState = ''; planWrite(null); var b = document.getElementById('anik-plan'); if (b) b.remove(); }
+  function reserve() {
+    var b = document.getElementById('anik-plan'), pad = document.getElementById('anik-plan-pad');
+    if (!b) { if (pad) pad.remove(); return; }
+    if (!pad) { pad = document.createElement('div'); pad.id = 'anik-plan-pad'; document.body.appendChild(pad); }
+    pad.style.height = (b.offsetHeight + 24) + 'px';      // пустое место под полоской: страницу можно прокрутить так, чтобы кнопки были выше неё
+  }
+  window.addEventListener('resize', reserve);
+  function planExit() { clearInterval(timer); curState = ''; planWrite(null); var b = document.getElementById('anik-plan'); if (b) b.remove(); reserve(); }
   function planBar(state) {                                // state: 'work' — шаг идёт; 'done' — шаг выполнен, идёт отсчёт
     var p = planRead();
     if (!p || stepKey(p.urls[p.i]) !== here()) return;
@@ -124,6 +131,7 @@
       document.getElementById('anik-plan-go').onclick = planNext;
       document.getElementById('anik-plan-stop').onclick = planExit;
     }
+    reserve();
   }
   window.anikPlan = {
     start: function (urls, names) { planWrite({ urls: urls, names: names || [], i: 0, t: Date.now() }); go(urls[0]); },
