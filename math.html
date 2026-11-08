@@ -84,7 +84,7 @@ h1{font-size:22px;margin:14px 0 4px;background:linear-gradient(135deg,var(--acc)
 <link rel="stylesheet" href="anik.css?v=5">
 <script src="anik-look.js?v=1"></script>
 <script src="anik-sync.js?v=3"></script>
-<script src="anik-nav.js?v=4" defer></script>
+<script src="anik-nav.js?v=5" defer></script>
 </head>
 <body class="math">
 <nav><button class="nb" id="back">←</button><b id="title">Математика</b><span id="xp"></span></nav>
@@ -345,12 +345,12 @@ function pracView(){
   pr.items.forEach((_,k)=>{h+='<span class="dot '+(k<pr.res.length?(pr.res[k]?'ok':'bad'):(k===pr.i?'cur':''))+'"></span>'});
   h+='</div><div class="tag">Задание '+(pr.i+1)+' из '+pr.items.length+' · №'+t.n+'</div><div class="card task">'+esc(t.t)+(t.f||[]).map(f=>'<img class="fig" src="'+f+'" alt="Рисунок к заданию">').join('')+'</div><div class="src">'+(t.r?esc(t.s||'Из экзаменов и сборников'):'Задание из банка Аника')+'</div>';
   if(pr.fb)h+='<div class="fb '+pr.fb.cls+'">'+esc(pr.fb.text).replace(/\n/g,'<br>')+'</div>';
-  if(pr.fb&&(pr.fb.g||pr.fb.sk))h+='<button class="btn sec" id="pstep">Разобрать такую задачу по шагам</button>';
+  if(pr.fb&&pr.fb.k)h+='<button class="btn sec" id="pstep">Разобрать похожую задачу по шагам</button>';
   h+=numpadHTML()+'<button class="btn sec" id="pskip">Не знаю, покажи ответ</button>';
   app.innerHTML=h;
   bindNumpad(pracCheck);
   $('#pskip').onclick=()=>pracFinish(false,true);
-  const ps=$('#pstep');if(ps)ps.onclick=()=>pr.fb.g?startTopic(pr.fb.g):start(pr.fb.sk);
+  const ps=$('#pstep');if(ps)ps.onclick=()=>startKind(pr.fb.k);
   window.scrollTo(0,0);
 }
 function pracCheck(text){
@@ -367,13 +367,14 @@ function pracFinish(ok,skipped){
   const t=pr.items[pr.i],first=ok&&pr.tries===0;
   pr.res.push(first);pr.gain+=first?10:ok?5:0;
   if(t.sk&&PACK.skills[t.sk])record(t.sk,first?1:0);
-  const msg=ok?(first?'Верно! +10 XP':'Верно со второй попытки. +5 XP'):'Правильный ответ: '+t.a[0]+(skipped?'':'\nРазбери это задание по шагам во вкладке «По шагам» — там то же правило.');
+  const msg=ok?(first?'Верно! +10 XP':'Верно со второй попытки. +5 XP'):'Правильный ответ: '+t.a[0]+(kindSteps(t.k).length?'':'\nРазбора по шагам для задач такого типа пока нет — повтори теорию темы и реши ещё несколько таких.');
   pr.i++;pr.tries=0;
   if(pr.i>=pr.items.length){xp+=pr.gain;saveAll();pr.last=msg;return setView('pdone')}
-  pr.fb={cls:ok?'good':'bad',text:msg,sk:ok||!(t.sk&&PACK.tasks.some(x=>x.sk===t.sk))?'':t.sk,g:ok||!(t.g&&topicSteps(t.g).length)?'':t.g};
+  pr.fb={cls:ok?'good':'bad',text:msg,sk:ok||!(t.sk&&PACK.tasks.some(x=>x.sk===t.sk))?'':t.sk,k:ok||!kindSteps(t.k).length?'':t.k};
   saveAll();render();
 }
 function pracDone(){
+  setTimeout(function(){window.anikPlanDone&&anikPlanDone();},700);
   $('#title').textContent='Итог';
   const ok=pr.res.filter(Boolean).length,tot=pr.res.length,sentAuto=autoSend();
   let h='<div class="stars"><b>'+ok+'</b> из '+tot+'<small>с первой попытки</small></div>'+autoNote(sentAuto);
@@ -401,10 +402,17 @@ function start(skill,keepTab){
 }
 // Задача по шагам. Из темы (keepTab) разбираем только задачи этой темы и после — тренируем тоже эту тему
 function startTask(t,keepTab){
-  cur={t,i:0,tries:0,res:[],fb:null,order:null,gain:0,topicG:keepTab?(t.g||''):''};
+  cur={t,i:0,tries:0,res:[],fb:null,order:null,gain:0,topicG:keepTab?(t.g||''):'',kind:keepTab?(t.k||''):''};
   packTab=keepTab?'practice':'steps';prepare();setView('task');
 }
 function topicSteps(gid){return PACK.tasks.filter(t=>t.g===gid)}
+function kindSteps(k){return k?PACK.tasks.filter(t=>t.k===k):[]}
+function startKind(k){
+  const pool=kindSteps(k);if(!pool.length)return;
+  const t=pool[Math.floor(Math.random()*pool.length)];
+  pracGroup=t.g||pracGroup;pracSkill='';
+  startTask(t,true);
+}
 function startTopic(gid){
   const pool=topicSteps(gid);if(!pool.length)return;
   pracGroup=gid;pracSkill='';
@@ -479,6 +487,7 @@ function next(msg){
   render();
 }
 function doneView(){
+  setTimeout(function(){window.anikPlanDone&&anikPlanDone();},700);
   const t=cur.t,failed=[];
   $('#title').textContent='Итог';
   const bad=cur.res.filter(x=>!x).length;
@@ -498,7 +507,7 @@ function doneView(){
   if(!sentAuto)h+='<button class="btn ok" id="send">Закончить и отправить результаты боту</button>';
   h+='<button class="btn sec" id="menu">⬅️ К разделу</button>';
   app.innerHTML=h;
-  $('#again').onclick=()=>cur.topicG?startTopic(cur.topicG):start(sk);
+  $('#again').onclick=()=>cur.kind&&kindSteps(cur.kind).length?startKind(cur.kind):cur.topicG?startTopic(cur.topicG):start(sk);
   $('#other').onclick=()=>cur.topicG?startTopic(cur.topicG):start(weightedSkill(skillsOfPack(PACK)));
   $('#solo').onclick=()=>{if(t.g){pracGroup=t.g;pracSkill=''}else{pracSkill=sk;pracGroup=''}pracNum=PACK.numbers.indexOf(t.n)>=0&&PACK.numbers.length>1?t.n:0;packTab='practice';setView('pack')};
   $('#menu').onclick=()=>setView('pack');
@@ -549,6 +558,7 @@ function gameView(){
   window.scrollTo(0,0);
 }
 function gameDone(){
+  setTimeout(function(){window.anikPlanDone&&anikPlanDone();},700);
   const n=gm.rounds.length,stars=gm.ok>=n-1?3:gm.ok>=Math.ceil(n*0.7)?2:1;
   $('#title').textContent='Результат';
   const sentAuto=autoSend();

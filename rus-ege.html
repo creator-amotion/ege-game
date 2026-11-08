@@ -204,7 +204,7 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:12px 1
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script src="anik-look.js?v=1"></script>
 <script src="anik-sync.js?v=3"></script>
-<script src="anik-nav.js?v=4" defer></script>
+<script src="anik-nav.js?v=5" defer></script>
 </head>
 <body class="rus">
 <nav>
@@ -572,6 +572,7 @@ function sendNumbered(num,ok,tot){
   return `<div class="cg-hint on" style="margin-top:14px">Чтобы бот учёл подход в твоём прогрессе, отправь результат.</div><button class="btp" style="margin-top:10px" onclick="sendResult('https://t.me/'+BOT_USERNAME+'?start=${payload}')">📤 Отправить результат боту</button>`;
 }
 function showResults(correct,total,num){
+  setTimeout(function(){window.anikPlanDone&&anikPlanDone();},700);
   const pct=Math.round(correct/total*100);lastNum=num;
   document.getElementById('fS').textContent=correct+'/'+total;
   document.getElementById('fS').className='fs '+(pct>=80?'g':pct>=50?'y':'r');
@@ -740,6 +741,7 @@ function showCustomItem(){
   const c=document.getElementById('tb2');
   const items=window._cgItems,num=window._cgNum,cg=window._cg;
   if(window._cgIdx>=items.length){
+    setTimeout(function(){window.anikPlanDone&&anikPlanDone();},700);
     const ok=window._cgOk,tot=items.length,pts=ok*10;
     score+=pts;sv();
     const catBtn=(cg.categories&&cg.categories.length)?`<button class="bts" onclick="renderGameTab(${num})">К темам</button>`:'';
@@ -998,6 +1000,7 @@ function showStressQ(){
   const c=document.getElementById('st2');
   const words=window._sw||[];
   if(window._swIdx>=words.length){
+    setTimeout(function(){window.anikPlanDone&&anikPlanDone();},700);
     const ok=window._swOk,bad=window._swBad,tot=ok+bad;
     const pts=ok*3;score+=pts;sv();
     c.innerHTML=`<div class="game-hero"><div class="gi">${ok/tot>=.8?'':ok/tot>=.5?'':''}</div><div class="fs ${ok/tot>=.8?'g':ok/tot>=.5?'y':'r'}" style="font-size:44px">${ok}/${tot}</div><p style="color:var(--m)">+${pts} очков</p>${resultBlock(resultLink(0,ok,tot,window._swWrong||[]))}<button class="btp" style="margin-top:16px" onclick="renderStressGame()">Ещё раз</button></div>`;

@@ -12,7 +12,7 @@
 <link rel="stylesheet" href="anik.css?v=5">
 <script src="anik-look.js?v=1"></script>
 <script src="anik-sync.js?v=3"></script>
-<script src="anik-nav.js?v=4" defer></script>
+<script src="anik-nav.js?v=5" defer></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{min-height:100vh}
@@ -385,6 +385,7 @@ function gameAnswer(btn,x){
 function gameEnd(){
   var R=G.round,tot=R.res.length;
   if(!tot)return gamesList();
+  setTimeout(function(){window.anikPlanDone&&anikPlanDone();},700);
   var ok=R.ok,ratio=ok/tot,cls=ratio>=.8?'g':ratio>=.5?'y':'r';
   var payload='n_'+GAME_KIND[G.set]+pad2(G.n)+pad2(ok)+pad2(tot);
   var sent=window.AnikSync&&AnikSync.send(payload),link='https://t.me/'+BOT_USERNAME+'?start='+payload;
@@ -501,6 +502,7 @@ function payloadOf(){
 }
 
 function finish(){
+  setTimeout(function(){window.anikPlanDone&&anikPlanDone();},700);
   var tot=run.res.length;
   if(!tot){go(run.set+'&n='+run.n);return;}
   var ok=run.res.filter(Boolean).length,ratio=ok/tot,cls=ratio>=.8?'g':ratio>=.5?'y':'r';

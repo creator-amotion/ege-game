@@ -12,7 +12,7 @@
 <link rel="stylesheet" href="anik.css?v=5">
 <script src="anik-look.js?v=1"></script>
 <script src="anik-sync.js?v=3"></script>
-<script src="anik-nav.js?v=4" defer></script>
+<script src="anik-nav.js?v=5" defer></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{min-height:100vh}
@@ -251,7 +251,15 @@ function trainingHTML(s,prof){
     return '<a class="pitem sgt" style="'+AnikLook.style(c)+'" href="'+esc(href)+'">'+AnikLook.signHTML(sk?signFor(sk):String(p.number))+'<div class="tn">'+(i+1)+' · № '+pad(p.number)+' · '+(WHY[p.why]||'тема').toLowerCase()+'</div><div class="nm">'+esc(p.name)+'</div><div class="s">'+(p.count||10)+' заданий · '+(p.minutes||5)+' мин</div></a>';
   }).join('')+'</div>';
   var first=list[0],fst=first.kind==='plan'&&rusSteps(first.p,s&&s.rules),fh=first.kind==='rule'?'rus-ege.html#theory='+first.r.n:(fst?fst.theory:(first.p.link||'index.html'));
-  html+='<a class="btn" href="'+esc(fh)+'">Начать с первого</a>';
+  var run={urls:[],names:[]};                                 // весь план подряд: теория → игра → задания по каждой теме
+  list.forEach(function(it){
+    if(it.kind==='rule'){run.urls.push('rus-ege.html#theory='+it.r.n,'rus-ege.html#game='+it.r.n+'&cat='+encodeURIComponent(it.r.cat));run.names.push('Теория №'+it.r.n,'Игра №'+it.r.n);return;}
+    var st=rusSteps(it.p,s&&s.rules);
+    if(st){run.urls.push(st.theory,st.game,st.tasks);run.names.push('Теория №'+it.p.number,'Игра №'+it.p.number,'Задания №'+it.p.number);}
+    else{run.urls.push(it.p.link||'index.html');run.names.push(it.p.name);}
+  });
+  window.PLAN_RUN=run;
+  html+='<a class="btn" id="runplan" href="'+esc(fh)+'">Пройти весь план подряд</a><p class="lead2" style="margin-top:8px">'+run.urls.length+' '+(run.urls.length%10===1&&run.urls.length%100!==11?'шаг':(run.urls.length%10>=2&&run.urls.length%10<=4&&(run.urls.length%100<10||run.urls.length%100>=20)?'шага':'шагов'))+' без остановок: закончишь один — сразу откроется следующий, в конце вернёшься сюда.</p>';
   return html;
 }
 function reportsHTML(){
@@ -366,6 +374,7 @@ function route(){
 fetch('skills_registry.json').then(function(r){return r.json();}).then(function(r){REG=r;route();}).catch(function(){app.innerHTML='<div class="empty">Не получилось загрузить. Проверь интернет и обнови страницу.</div>';});
 window.addEventListener('hashchange',function(){var o=document.querySelector('.sheet');if(o)o.remove();route();window.scrollTo(0,0);});
 if(window.AnikSync)AnikSync.onState(function(){if(REG&&!document.querySelector('.sheet'))route();});
+document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('#runplan');if(a&&window.PLAN_RUN&&window.anikPlan){e.preventDefault();anikPlan.start(PLAN_RUN.urls,PLAN_RUN.names);}});
 </script>
 </body>
 </html>
