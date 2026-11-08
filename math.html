@@ -67,6 +67,7 @@ h1{font-size:22px;margin:14px 0 4px;background:linear-gradient(135deg,var(--acc)
 .chip{border:1px solid #3a3a5e;background:none;color:var(--txt);padding:8px 13px;border-radius:18px;font-size:13px;font-weight:600;cursor:pointer}
 .chip.on{background:var(--b);color:#0a0a14;border-color:var(--b)}
 .src{color:var(--m);font-size:12px;margin-top:4px}
+.fig{display:block;max-width:100%;margin:8px auto;background:#fff;border-radius:8px;padding:6px}
 .cues,.alg,.traps{margin:6px 0 0;padding:0}
 .cues li{list-style:none;margin:9px 0;font-size:14.5px;line-height:1.5}
 .cues .if{display:block;font-weight:700}
@@ -154,6 +155,8 @@ function loadPack(id){
 function skillsOfPack(p){return Object.keys(p.skills)}
 function skillsOfNumber(n){return skillsOfPack(PACK).filter(s=>PACK.skills[s].n===n)}
 function weightedSkill(skills){
+  const withSteps=skills.filter(s=>PACK.tasks.some(t=>t.sk===s));
+  if(withSteps.length)skills=withSteps;
   const w=skills.map(s=>Math.pow(1-pOf(s),2)+0.05);
   let r=Math.random()*w.reduce((a,b)=>a+b,0);
   for(let i=0;i<skills.length;i++){r-=w[i];if(r<=0)return skills[i]}
@@ -324,7 +327,7 @@ function pracView(){
   $('#title').textContent='Практика №'+t.n;
   let h='<div class="dots">';
   pr.items.forEach((_,k)=>{h+='<span class="dot '+(k<pr.res.length?(pr.res[k]?'ok':'bad'):(k===pr.i?'cur':''))+'"></span>'});
-  h+='</div><div class="tag">Задание '+(pr.i+1)+' из '+pr.items.length+' · №'+t.n+'</div><div class="card task">'+esc(t.t)+'</div><div class="src">'+(t.r?esc(t.s||'Из экзаменов и сборников'):'Задание из банка Аника')+'</div>';
+  h+='</div><div class="tag">Задание '+(pr.i+1)+' из '+pr.items.length+' · №'+t.n+'</div><div class="card task">'+esc(t.t)+(t.f||[]).map(f=>'<img class="fig" src="'+f+'" alt="Рисунок к заданию">').join('')+'</div><div class="src">'+(t.r?esc(t.s||'Из экзаменов и сборников'):'Задание из банка Аника')+'</div>';
   if(pr.fb)h+='<div class="fb '+pr.fb.cls+'">'+esc(pr.fb.text).replace(/\n/g,'<br>')+'</div>';
   if(pr.fb&&pr.fb.sk)h+='<button class="btn sec" id="pstep">Разобрать такую задачу по шагам</button>';
   h+=numpadHTML()+'<button class="btn sec" id="pskip">Не знаю, покажи ответ</button>';
@@ -375,6 +378,9 @@ function pickTask(skill){
   return pool[Math.floor(Math.random()*pool.length)];
 }
 function start(skill){
+  if(!PACK.tasks.some(t=>t.sk===skill)){                   // шагов по этому навыку ещё нет — ведём в практику по нему, а не в чужую тему
+    packTab='practice';pracSkill=skill;pracNum=0;setView('pack');return;
+  }
   cur={t:pickTask(skill),i:0,tries:0,res:[],fb:null,order:null,gain:0};
   packTab='steps';prepare();setView('task');
 }
