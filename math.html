@@ -94,7 +94,7 @@ h1{font-size:22px;margin:14px 0 4px;background:linear-gradient(135deg,var(--acc)
 // ── Параметры знания — те же, что в боте (bkt.py) ──
 const P_L0=0.30,P_T=0.09,P_S=0.10,P_G=0.20,MAX_TRIES=2,ROUNDS=10;
 let INDEX=null, PACK=null, packCache={}, prog={}, xp=0, session=[], cur=null, gm=null, view='home', openHelp=null;
-let packTab='theory', pracNum=0, pracSkill='', pracCache={}, pr=null, ANALYSIS=null;
+let packTab='theory', pracNum=0, pracSkill='', pracCache={}, pr=null, ANALYSIS=null, GROUPS_META=null, pracGroup='';
 const TG=window.Telegram&&window.Telegram.WebApp&&window.Telegram.WebApp.initData?window.Telegram.WebApp:null;
 if(TG){try{TG.ready();TG.expand();TG.setHeaderColor('#F3EEE2');TG.setBackgroundColor('#F3EEE2');}catch(e){}}
 const $=s=>document.querySelector(s);
@@ -198,7 +198,7 @@ function home(){
   const sb=$('#send');if(sb)sb.onclick=sendToBot;
 }
 function openPack(id){loadPack(id).then(p=>{
-  PACK=p;openHelp=null;packTab='theory';pracNum=0;pracSkill='';
+  PACK=p;openHelp=null;packTab='theory';pracNum=0;pracSkill='';pracGroup='';
   const sk=packSkin(id);['--col','--ink-p','--bigc'].forEach((v,i)=>document.body.style.setProperty(v,sk[i]));
   setView('pack');
 })}
@@ -278,15 +278,20 @@ function practiceTab(){
   return h+'<div id="pracbox"><div class="card"><div class="sub" style="margin:0">Загружаю задания…</div></div></div>';
 }
 function pracNums(){return pracNum?[pracNum]:PACK.numbers}
-function pracFilter(a){if(!pracSkill)return a;const f=a.filter(t=>t.sk===pracSkill);return f.length>=3?f:a}
+function pracFilter(a){if(pracGroup)a=a.filter(t=>t.g===pracGroup);if(!pracSkill)return a;const f=a.filter(t=>t.sk===pracSkill);return f.length>=3?f:a}
 function pracInit(){
-  app.querySelectorAll('[data-pn]').forEach(b=>b.onclick=()=>{pracNum=+b.dataset.pn;setView('pack')});
+  app.querySelectorAll('[data-pn]').forEach(b=>b.onclick=()=>{pracNum=+b.dataset.pn;pracGroup='';setView('pack')});
   Promise.all(pracNums().map(loadPractice)).then(lists=>{
     if(view!=='pack'||packTab!=='practice')return;
-    const all=pracFilter([].concat(...lists)),real=all.filter(t=>t.r).length,cnt=Math.min(ROUNDS,all.length);
-    $('#pracbox').innerHTML='<div class="card">'+(pracSkill&&PACK.skills[pracSkill]?'<div class="src" style="margin:0 0 6px">Только по навыку «'+esc(PACK.skills[pracSkill].name)+'» <button class="nb" id="pall" style="margin-left:8px">все задания раздела</button></div>':'')+'<b>'+all.length+' заданий</b><div class="src">из них из экзаменов и сборников: '+real+'</div><button class="btn" id="pstart">Начать: '+cnt+' заданий</button></div>';
+    const base=[].concat(...lists),all=pracFilter(base),real=all.filter(t=>t.r).length,cnt=Math.min(ROUNDS,all.length);
+    // темы раздела — как в каталоге: сначала группа, внутри неё навыки
+    const have={};base.forEach(t=>{have[t.g]=(have[t.g]||0)+1});
+    const gl=[];pracNums().forEach(n=>((GROUPS_META&&GROUPS_META[n])||[]).forEach(g=>{if(have[g.id])gl.push(g)}));
+    const chips=gl.length>1?'<div class="tag" style="margin-top:6px">Тема</div><div class="chips"><button class="chip'+(pracGroup===''?' on':'')+'" data-pg="">Все темы · '+base.length+'</button>'+gl.map(g=>'<button class="chip'+(pracGroup===g.id?' on':'')+'" data-pg="'+g.id+'">'+esc(g.name)+' · '+have[g.id]+'</button>').join('')+'</div>':'';
+    $('#pracbox').innerHTML=chips+'<div class="card">'+(pracSkill&&PACK.skills[pracSkill]?'<div class="src" style="margin:0 0 6px">Только по навыку «'+esc(PACK.skills[pracSkill].name)+'» <button class="nb" id="pall" style="margin-left:8px">все задания раздела</button></div>':'')+'<b>'+all.length+' заданий</b><div class="src">из них из экзаменов и сборников: '+real+'</div><button class="btn" id="pstart">Начать: '+cnt+' заданий</button></div>';
     $('#pstart').onclick=()=>startPractice();
-    const pa=$('#pall');if(pa)pa.onclick=()=>{pracSkill='';setView('pack')};
+    const pa=$('#pall');if(pa)pa.onclick=()=>{pracSkill='';pracGroup='';setView('pack')};
+    app.querySelectorAll('[data-pg]').forEach(b=>b.onclick=()=>{pracGroup=b.dataset.pg;pracSkill='';setView('pack')});
   }).catch(()=>{const b=$('#pracbox');if(b)b.innerHTML='<div class="card"><div class="sub" style="margin:0">Не получилось загрузить задания. Проверь интернет и зайди ещё раз.</div></div>'});
 }
 function startPractice(){
@@ -574,6 +579,7 @@ function sendToBot(){
 
 // ── Запуск ──
 loadAll();
+fetch('math_groups.json').then(r=>r.json()).then(d=>{GROUPS_META=d.numbers}).catch(()=>{});
 fetch('math_analysis.json').then(r=>r.json()).then(d=>{ANALYSIS=d.numbers;if(view==='pack'&&packTab==='theory')render()}).catch(()=>{});
 fetch('math_packs.json').then(r=>r.json()).then(idx=>{
   INDEX=idx;
