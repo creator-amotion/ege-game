@@ -320,9 +320,13 @@ function pracInit(){
 // «Приёмы темы»: по каждому типу задач — теория и кнопка разбора именно этого типа
 function topicKinds(gid){
   if(!KINDS)return '';
-  const ks=Object.keys(KINDS).filter(k=>KINDS[k].g===gid&&kindSteps(k).length);
+  const ks=Object.keys(KINDS).filter(k=>(KINDS[k].gs||[KINDS[k].g]).includes(gid)).sort((x,y)=>(kindSteps(y).length>0)-(kindSteps(x).length>0)||(KINDS[y].pr||0)-(KINDS[x].pr||0));
   if(!ks.length)return '';
-  return '<div class="tag" style="margin-top:12px">Приёмы этой темы · '+ks.length+'</div>'+ks.map(k=>'<details class="kth"><summary>'+esc(KINDS[k].t)+'</summary><ul>'+KINDS[k].th.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul><button class="btn sec" data-kind="'+k+'">Разобрать этот тип по шагам</button></details>').join('');
+  return '<div class="tag" style="margin-top:12px">Приёмы этой темы · '+ks.length+'</div>'+ks.map(k=>{
+    const hs=kindSteps(k).length>0;
+    return '<details class="kth"><summary>'+esc(KINDS[k].t)+(hs?'':' <span class="src">· без разбора по шагам</span>')+'</summary><ul>'+KINDS[k].th.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul>'
+      +(hs?'<button class="btn sec" data-kind="'+k+'">Разобрать этот тип по шагам</button>':'<div class="src" style="margin-top:6px">Разбора по шагам этого типа пока нет — повтори теорию и реши задания в блоке «Самостоятельно».</div>')+'</details>';
+  }).join('');
 }
 function startPractice(){
   Promise.all(pracNums().map(n=>loadPractice(n).then(l=>l.map(t=>Object.assign({n},t))))).then(lists=>{
