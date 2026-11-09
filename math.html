@@ -57,6 +57,10 @@ h1{font-size:22px;margin:14px 0 4px;background:linear-gradient(135deg,var(--acc)
 .stars{font-size:34px;text-align:center;letter-spacing:6px;margin:6px 0}
 .res li{list-style:none;margin:8px 0;font-size:15px;line-height:1.6}
 .katex{font-size:1.05em}
+.kth{background:var(--card2);border-radius:10px;padding:10px 12px;margin:10px 0}
+.kth summary{cursor:pointer;font-weight:700;font-size:14.5px;line-height:1.4}
+.kth ul{margin:6px 0 0;padding-left:20px}.kth li{margin:7px 0;font-size:14.5px;line-height:1.55}
+.kth .btn{margin-top:8px}
 .tabs2{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));margin:0 0 14px;border:2px solid var(--ink,#2a2a4e);border-radius:0}
 .tabs2 .tab{min-height:46px;border:0;border-right:2px solid var(--ink,#2a2a4e);background:transparent;color:var(--ink,var(--txt));font-size:12.5px;font-weight:600;cursor:pointer;padding:4px 2px;line-height:1.15}
 .tabs2 .tab:last-child{border-right:0}
@@ -94,7 +98,7 @@ h1{font-size:22px;margin:14px 0 4px;background:linear-gradient(135deg,var(--acc)
 // ── Параметры знания — те же, что в боте (bkt.py) ──
 const P_L0=0.30,P_T=0.09,P_S=0.10,P_G=0.20,MAX_TRIES=2,ROUNDS=10;
 let INDEX=null, PACK=null, packCache={}, prog={}, xp=0, session=[], cur=null, gm=null, view='home', openHelp=null;
-let packTab='theory', pracNum=0, pracSkill='', pracCache={}, pr=null, ANALYSIS=null, GROUPS_META=null, TOPICS_META=null, pracGroup='';
+let packTab='theory', pracNum=0, pracSkill='', pracCache={}, pr=null, ANALYSIS=null, GROUPS_META=null, TOPICS_META=null, pracGroup='', KINDS=null;
 const TG=window.Telegram&&window.Telegram.WebApp&&window.Telegram.WebApp.initData?window.Telegram.WebApp:null;
 if(TG){try{TG.ready();TG.expand();TG.setHeaderColor('#F3EEE2');TG.setBackgroundColor('#F3EEE2');}catch(e){}}
 const $=s=>document.querySelector(s);
@@ -122,6 +126,12 @@ function mathRender(){
   if(window.renderMathInElement){
     try{renderMathInElement(app,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false})}catch(e){}
   }else{setTimeout(()=>{if(window.renderMathInElement)mathRender()},400)}
+}
+
+// Теория по типу задачи (math_kinds.json): свойства, формулы, порядок действий и пример
+function kindTheory(k,open,label){
+  const d=KINDS&&KINDS[k];if(!d||!d.th||!d.th.length)return '';
+  return '<details class="kth"'+(open?' open':'')+'><summary>'+esc(label||'Что нужно знать')+': '+esc(d.t)+'</summary><ul>'+d.th.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul></details>';
 }
 
 // ── Числа: дроби и десятичные без погрешностей ──
@@ -294,6 +304,7 @@ function pracInit(){
       topic='<div class="card"><div class="tag">Тема</div><b>'+esc(tp.name)+'</b>'
         +'<div class="tag" style="margin-top:12px">1. Теория</div><ul class="cues">'+tp.theory.map(x=>'<li><span class="if" style="font-weight:500">'+esc(x)+'</span></li>').join('')+'</ul>'
         +'<div class="tag" style="margin-top:12px">2. Алгоритм</div>'+((tp.cues&&tp.cues.length)?'<div class="src" style="margin:4px 0">Что заметить в условии:</div><ul class="cues">'+tp.cues.map(c=>'<li><span class="if">'+esc(c.if)+'</span><span class="do">→ '+esc(c.do)+'</span></li>').join('')+'</ul><div class="src" style="margin:8px 0 2px">Шаги:</div>':'')+'<ol class="alg">'+tp.algo.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ol>'
+        +topicKinds(pracGroup)
         +'<div class="tag" style="margin-top:12px">3. Разбор по шагам</div>'
         +(topicSteps(pracGroup).length?'<p class="src" style="margin:0">Задача решается маленькими шагами: видно, на каком ты запнулся. Задач по шагам в этой теме: '+topicSteps(pracGroup).length+'.</p><button class="btn sec" id="tsteps">Разобрать по шагам</button>':'<p class="src" style="margin:0">Шагов по этой теме пока нет — переходи к самостоятельным заданиям.</p>')
         +'</div>';
@@ -303,7 +314,15 @@ function pracInit(){
     const pa=$('#pall');if(pa)pa.onclick=()=>{pracSkill='';pracGroup='';setView('pack')};
     app.querySelectorAll('[data-pg]').forEach(b=>b.onclick=()=>{pracGroup=b.dataset.pg;pracSkill='';setView('pack')});
     const ts=$('#tsteps');if(ts)ts.onclick=()=>startTopic(pracGroup);
+    app.querySelectorAll('[data-kind]').forEach(b=>b.onclick=()=>startKind(b.dataset.kind));
   }).catch(()=>{const b=$('#pracbox');if(b)b.innerHTML='<div class="card"><div class="sub" style="margin:0">Не получилось загрузить задания. Проверь интернет и зайди ещё раз.</div></div>'});
+}
+// «Приёмы темы»: по каждому типу задач — теория и кнопка разбора именно этого типа
+function topicKinds(gid){
+  if(!KINDS)return '';
+  const ks=Object.keys(KINDS).filter(k=>KINDS[k].g===gid&&kindSteps(k).length);
+  if(!ks.length)return '';
+  return '<div class="tag" style="margin-top:12px">Приёмы этой темы · '+ks.length+'</div>'+ks.map(k=>'<details class="kth"><summary>'+esc(KINDS[k].t)+'</summary><ul>'+KINDS[k].th.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul><button class="btn sec" data-kind="'+k+'">Разобрать этот тип по шагам</button></details>').join('');
 }
 function startPractice(){
   Promise.all(pracNums().map(n=>loadPractice(n).then(l=>l.map(t=>Object.assign({n},t))))).then(lists=>{
@@ -347,6 +366,7 @@ function pracView(){
   const rv=pr.reveal;                                           // ответ показан: остаёмся на ЭТОЙ задаче, к следующей — только по «Дальше»
   if(rv){
     h+='<div class="fb '+rv.cls+'">'+esc(rv.text).replace(/\n/g,'<br>')+'</div>';
+    h+=kindTheory(t.k,rv.cls==='bad','Теория этого типа');
     if(rv.k)h+='<button class="btn sec" id="pstep">Разобрать похожую задачу по шагам</button>';
     h+='<button class="btn" id="pnext">'+(pr.i+1>=pr.items.length?'Итог':'Дальше')+'</button>';
     app.innerHTML=h;
@@ -437,7 +457,7 @@ function prepare(){
 function taskView(){
   const t=cur.t,st=t.st[cur.i];
   $('#title').textContent='Задание №'+t.n;
-  let h='<div class="card task">'+esc(t.t)+'</div><div class="dots">';
+  let h='<div class="card task">'+esc(t.t)+'</div>'+kindTheory(t.k,cur.i===0)+'<div class="dots">';
   t.st.forEach((_,k)=>{h+='<span class="dot '+(k<cur.res.length?(cur.res[k]?'ok':'bad'):(k===cur.i?'cur':''))+'"></span>'});
   h+='</div><div class="tag'+(st.rc?' think':'')+'">Шаг '+(cur.i+1)+' из '+t.st.length+(st.rc?' · сначала думаем':'')+'</div><div class="q">'+esc(st.q)+'</div>';
   if(cur.fb)h+='<div class="fb '+cur.fb.cls+'">'+esc(cur.fb.text).replace(/\n/g,'<br>')+'</div>';
@@ -622,6 +642,7 @@ function sendToBot(){
 
 // ── Запуск ──
 loadAll();
+fetch('math_kinds.json').then(r=>r.json()).then(d=>{KINDS=d.kinds;if(view==='task'||view==='prac'||(view==='pack'&&packTab==='practice'))render()}).catch(()=>{});
 fetch('math_topics.json').then(r=>r.json()).then(d=>{TOPICS_META=d.topics}).catch(()=>{});
 fetch('math_groups.json').then(r=>r.json()).then(d=>{GROUPS_META=d.numbers}).catch(()=>{});
 fetch('math_analysis.json').then(r=>r.json()).then(d=>{ANALYSIS=d.numbers;if(view==='pack'&&packTab==='theory')render()}).catch(()=>{});
