@@ -183,7 +183,7 @@ function render(){
   showXp();
   document.body.classList.toggle('in-pack',view!=='home');
   if(view==='home')home();else if(view==='pack')packView();else if(view==='task')taskView();
-  else if(view==='done')doneView();else if(view==='game')gameView();else if(view==='gdone')gameDone();else if(view==='prac')pracView();else if(view==='pdone')pracDone();
+  else if(view==='done')doneView();else if(view==='game')gameView();else if(view==='gdone')gameDone();else if(view==='prac')pracView();else if(view==='pdone')pracDone();else if(view==='ltheory')ltheoryView();else if(view==='ltest')ltestView();
   mathRender();
 }
 $('#back').onclick=()=>{
@@ -194,7 +194,7 @@ $('#back').onclick=()=>{
 
 function home(){
   $('#title').textContent='Математика (ЕГЭ)';
-  let h='<h1>Математика</h1><p class="sub">Выбери раздел. В каждом четыре вкладки: теория простыми словами, практика (настоящие задания), разбор по шагам — видно, на каком шаге ты запнулся, — и быстрые игры.</p>';
+  let h='<h1>Математика</h1><p class="sub">Выбери раздел. В каждом три вкладки: теория простыми словами, практика (настоящие задания; тему можно изучить по аспектам: теория → тест → разбор по шагам → самостоятельно) и быстрые игры.</p>';
   INDEX.packs.forEach(p=>{
     const m=packCache[p.id]?Math.round(packMastery(packCache[p.id])*100):null;
     const sk=packSkin(p.id);
@@ -298,7 +298,7 @@ function pracInit(){
       topic='<div class="card"><div class="tag">Тема</div><b>'+esc(tp.name)+'</b>'
         +'<div class="tag" style="margin-top:12px">1. Теория</div><ul class="cues">'+tp.theory.map(x=>'<li><span class="if" style="font-weight:500">'+esc(x)+'</span></li>').join('')+'</ul>'
         +'<div class="tag" style="margin-top:12px">2. Алгоритм</div>'+((tp.cues&&tp.cues.length)?'<div class="src" style="margin:4px 0">Что заметить в условии:</div><ul class="cues">'+tp.cues.map(c=>'<li><span class="if">'+esc(c.if)+'</span><span class="do">→ '+esc(c.do)+'</span></li>').join('')+'</ul><div class="src" style="margin:8px 0 2px">Шаги:</div>':'')+'<ol class="alg">'+tp.algo.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ol>'
-        +topicKinds(pracGroup)
+        +learnSummary(pracGroup)+topicKinds(pracGroup)
         +'<div class="tag" style="margin-top:12px">3. Разбор по шагам</div>'
         +(topicSteps(pracGroup).length?'<p class="src" style="margin:0">Задача решается маленькими шагами: видно, на каком ты запнулся. Задач по шагам в этой теме: '+topicSteps(pracGroup).length+'.</p><button class="btn sec" id="tsteps">Разобрать по шагам</button>':'<p class="src" style="margin:0">Шагов по этой теме пока нет — переходи к самостоятельным заданиям.</p>')
         +'</div>';
@@ -309,6 +309,7 @@ function pracInit(){
     app.querySelectorAll('[data-pg]').forEach(b=>b.onclick=()=>{pracGroup=b.dataset.pg;pracSkill='';setView('pack')});
     const ts=$('#tsteps');if(ts)ts.onclick=()=>startTopic(pracGroup);
     app.querySelectorAll('[data-kind]').forEach(b=>b.onclick=()=>startKind(b.dataset.kind));
+    app.querySelectorAll('[data-learn]').forEach(b=>b.onclick=()=>startLearn(b.dataset.learn));
   }).catch(()=>{const b=$('#pracbox');if(b)b.innerHTML='<div class="card"><div class="sub" style="margin:0">Не получилось загрузить задания. Проверь интернет и зайди ещё раз.</div></div>'});
 }
 // «Приёмы темы»: по каждому типу задач — теория и кнопка разбора именно этого типа
@@ -318,10 +319,144 @@ function topicKinds(gid){
   if(!ks.length)return '';
   return '<div class="tag" style="margin-top:12px">Приёмы этой темы · '+ks.length+'</div>'+ks.map(k=>{
     const hs=kindSteps(k).length>0;
-    return '<details class="kth"><summary>'+esc(KINDS[k].t)+(hs?'':' <span class="src">· без разбора по шагам</span>')+'</summary><ul>'+KINDS[k].th.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul>'
+    const as=aspectState(k);
+    return '<details class="kth"><summary>'+esc(KINDS[k].t)+' <span class="src" style="color:'+ST_COLOR[as]+'">· '+ST_LABEL[as]+(hs?'':' · без разбора по шагам')+'</span></summary><ul>'+KINDS[k].th.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul>'
+      +'<button class="btn" data-learn="'+k+'">Изучить этот аспект</button>'
       +(hs?'<button class="btn sec" data-kind="'+k+'">Разобрать этот тип по шагам</button>':'<div class="src" style="margin-top:6px">Разбора по шагам этого типа пока нет — повтори теорию и реши задания в блоке «Самостоятельно».</div>')+'</details>';
   }).join('');
 }
+// ── Режим «Изучить тему»: аспект (тип задач) → теория → короткий тест → разбор по шагам → самостоятельно ──
+let L=null, lprog={};
+function loadLearn(){try{lprog=JSON.parse(localStorage.getItem('math_learn')||'{}')}catch(e){lprog={}}}
+function saveLearn(){try{localStorage.setItem('math_learn',JSON.stringify(lprog))}catch(e){}}
+function lk(k){return lprog[k]||(lprog[k]={})}
+function aspectsOf(gid){
+  if(!KINDS)return [];
+  return Object.keys(KINDS).filter(k=>(KINDS[k].gs||[KINDS[k].g]).includes(gid)).sort((a,b)=>(KINDS[b].pr||0)-(KINDS[a].pr||0)||KINDS[a].t.localeCompare(KINDS[b].t));
+}
+// статус аспекта: new — не начат, going — идёт, done — изучен, weak — западает (много ошибок в практике)
+function aspectState(k){
+  const s=lprog[k]||{},p=s.pr||[0,0],tst=s.test;
+  if(p[1]>=3&&p[0]/p[1]<0.5)return 'weak';
+  if(tst&&tst[0]/tst[1]>=0.67&&s.solo&&s.solo[0]>=Math.min(2,s.solo[1]))return 'done';
+  if(s.th||tst)return 'going';
+  return 'new';
+}
+const ST_LABEL={new:'не начат',going:'в процессе',done:'изучен ✓',weak:'западает'};
+const ST_COLOR={new:'var(--m)',going:'var(--y,#f5c542)',done:'var(--g,#38d39f)',weak:'var(--r,#ff6b81)'};
+function nextAspect(gid){const a=aspectsOf(gid);return a.find(k=>aspectState(k)==='weak')||a.find(k=>aspectState(k)!=='done')||a[0]}
+function learnSummary(gid){
+  const a=aspectsOf(gid);if(!a.length)return '';
+  const cnt={new:0,going:0,done:0,weak:0};a.forEach(k=>cnt[aspectState(k)]++);
+  const weak=a.filter(k=>aspectState(k)==='weak').map(k=>KINDS[k].t);
+  const nx=nextAspect(gid);
+  return '<div class="tag" style="margin-top:12px">Изучение темы по аспектам</div>'
+    +'<p class="src" style="margin:0">Изучено: <b>'+cnt.done+'</b> из '+a.length+(cnt.going?' · в процессе: '+cnt.going:'')+'. '+(weak.length?'<b style="color:var(--r,#ff6b81)">Западает:</b> '+weak.map(esc).join('; ')+'.':'Каждый аспект — отдельный приём из заданий: теория, короткий тест, разбор по шагам, самостоятельная задача.')+'</p>'
+    +(nx?'<button class="btn" id="learnnext" data-learn="'+nx+'">'+(cnt.done+cnt.going+cnt.weak===0?'Изучить тему: начать':'Изучать дальше')+' — '+esc(KINDS[nx].t)+'</button>':'');
+}
+function startLearn(k){L={k,stage:'theory',tq:null};lk(k).th=1;saveLearn();setView('ltheory')}
+function stageBar(){
+  const S=[['theory','Теория'],['test','Тест'],['steps','Разбор'],['solo','Сам']];
+  const i=S.findIndex(x=>x[0]===L.stage);
+  return '<div class="dots" style="gap:6px;margin-bottom:10px">'+S.map((s,j)=>'<span class="tag" style="padding:3px 9px;border-radius:12px;'+(j===i?'background:var(--b);color:#0a0a14':j<i?'opacity:.9':'opacity:.5')+'">'+(j<i?'✓ ':'')+s[1]+'</span>').join('')+'</div>';
+}
+function ltheoryView(){
+  const d=KINDS[L.k];
+  $('#title').textContent='Изучаем аспект';
+  let h=stageBar()+'<div class="card"><div class="tag">Аспект</div><b>'+esc(d.t)+'</b><ul class="cues" style="margin-top:8px">'+d.th.map(x=>'<li><span class="if" style="font-weight:500">'+esc(x)+'</span></li>').join('')+'</ul></div>';
+  if(d.ex&&d.ex.t){
+    h+='<div class="card"><div class="tag">Разобранный пример</div><div class="task">'+esc(d.ex.t)+'</div>'
+      +(d.ex.s&&d.ex.s.length?'<ol class="alg">'+d.ex.s.map(s=>'<li>'+esc(s[0])+' <b>'+esc(s[1])+'</b></li>').join('')+'</ol>':'')
+      +'<div class="fb good" style="margin-top:8px">Ответ: <b>'+esc(d.ex.a)+'</b></div></div>';
+  }
+  h+='<button class="btn" id="ltotest">Я прочитал(а): к тесту</button>';
+  app.innerHTML=h;
+  $('#ltotest').onclick=()=>{L.stage='test';L.tq=buildTest(L.k);L.ti=0;L.tok=0;L.tpick=null;if(L.tq.length<3){L.stage='steps';return learnToSteps()}setView('ltest')};
+  window.scrollTo(0,0);
+}
+// вопросы теста — «выбор» из шагов этого аспекта: общие (без чисел конкретной задачи)
+function buildTest(k){
+  const gen=t=>t.st.filter(s=>s.k==='choice'&&!s.rc);
+  const okQ=s=>[s.q].concat(s.opts).every(x=>!/\d{2,}|\d[,.]\d/.test(String(x).replace(/\d+\^\\circ/g,'').replace(/\d+\^\{\\circ\}/g,'')));
+  const seen=new Set(),out=[];
+  const pool=shuffle(PACK.tasks.filter(t=>t.k===k));
+  pool.forEach(t=>gen(t).forEach(s=>{if(out.length>=6)return;if(seen.has(s.q)||!okQ(s))return;seen.add(s.q);out.push({q:s.q,opts:s.opts,r:s.r})}));
+  if(out.length<5){   // добираем вопросы из соседних аспектов той же темы
+    const g=(KINDS[k].gs||[KINDS[k].g])[0];
+    shuffle(PACK.tasks.filter(t=>t.g===g&&t.k!==k)).forEach(t=>gen(t).forEach(s=>{if(out.length>=6)return;if(seen.has(s.q)||!okQ(s))return;seen.add(s.q);out.push({q:s.q,opts:s.opts,r:s.r})}));
+  }
+  return out.slice(0,6);
+}
+function ltestView(){
+  const q=L.tq[L.ti];
+  $('#title').textContent='Тест по теории';
+  if(!L.order)L.order=shuffle(q.opts);
+  let h=stageBar()+'<div class="tag">Вопрос '+(L.ti+1)+' из '+L.tq.length+'</div><div class="q">'+esc(q.q)+'</div>';
+  if(L.tpick!==null){
+    const right=L.order[L.tpick]===q.opts[0];
+    h+='<div class="fb '+(right?'good':'bad')+'">'+(right?'Верно!':'Не совсем. Правильно: <b>'+esc(q.opts[0])+'</b>')+(q.r?'<br>'+esc(q.r):'')+'</div>';
+    h+='<button class="btn" id="ltnext">'+(L.ti+1>=L.tq.length?'Результат':'Дальше')+'</button>';
+  }else{
+    h+=L.order.map((o,i)=>'<button class="opt" data-k="'+i+'">'+esc(o)+'</button>').join('');
+  }
+  app.innerHTML=h;
+  app.querySelectorAll('.opt').forEach(b=>b.onclick=()=>{L.tpick=+b.dataset.k;if(L.order[L.tpick]===q.opts[0])L.tok++;render()});
+  const nx=$('#ltnext');if(nx)nx.onclick=()=>{L.ti++;L.tpick=null;L.order=null;if(L.ti>=L.tq.length){ltestDone()}else render()};
+  window.scrollTo(0,0);
+}
+function ltestDone(){
+  const n=L.tq.length,ok=L.tok,s=lk(L.k),best=s.test;
+  if(!best||ok/n>=best[0]/best[1])s.test=[ok,n];
+  xp+=ok*2;saveAll();saveLearn();
+  const pass=ok/n>=0.67;
+  $('#title').textContent='Итог теста';
+  let h=stageBar()+'<div class="stars"><b>'+ok+'</b> из '+n+'<small>правильных ответов</small></div>'
+    +'<div class="fb '+(pass?'good':'bad')+'">'+(pass?'Теория усвоена — переходим к решению.':'Пока шатко. Перечитай теорию и пройди тест ещё раз — или иди дальше, а к теории вернись позже.')+'</div>'
+    +'<button class="btn" id="lgo">'+(pass?'Дальше: разбор по шагам':'Всё равно дальше')+'</button>'
+    +(pass?'':'<button class="btn sec" id="lre">Перечитать теорию</button>')
+    +'<button class="btn sec" id="lmenu">⬅️ К аспектам темы</button>';
+  app.innerHTML=h;
+  $('#lgo').onclick=()=>{L.stage='steps';learnToSteps()};
+  const re=$('#lre');if(re)re.onclick=()=>{L.stage='theory';setView('ltheory')};
+  $('#lmenu').onclick=()=>{packTab='practice';setView('pack')};
+  window.scrollTo(0,0);
+}
+function learnToSteps(){
+  L.stage='steps';
+  const pool=kindSteps(L.k);
+  if(!pool.length)return learnToSolo();
+  startTask(pool[Math.floor(Math.random()*pool.length)],true);
+  cur.learn=true;
+}
+function learnToSolo(){
+  L.stage='solo';
+  const k=L.k,n=(KINDS[k]&&KINDS[k].n)||PACK.numbers[0];
+  loadPractice(n).then(list=>{
+    let pool=list.filter(t=>t.k===k);
+    if(!pool.length){const g=(KINDS[k].gs||[KINDS[k].g])[0];pool=list.filter(t=>t.g===g)}
+    const real=shuffle(pool.filter(t=>t.r)),own=shuffle(pool.filter(t=>!t.r));
+    const items=real.concat(own).slice(0,3).map(t=>Object.assign({n},t));
+    if(!items.length){packTab='practice';return setView('pack')}
+    pr={items,i:0,res:[],tries:0,fb:null,gain:0,learn:true};
+    setView('prac');
+  });
+}
+function learnSoloDone(){
+  const ok=pr.res.filter(Boolean).length,tot=pr.res.length,s=lk(L.k);
+  s.solo=[Math.max(ok,(s.solo&&s.solo[0])||0),tot];saveLearn();
+  const st=aspectState(L.k),gid=(KINDS[L.k].gs||[KINDS[L.k].g])[0],nx=aspectsOf(gid).find(k=>k!==L.k&&aspectState(k)!=='done');
+  $('#title').textContent='Аспект пройден';
+  let h='<div class="stars"><b>'+ok+'</b> из '+tot+'<small>с первой попытки</small></div>'
+    +'<div class="fb '+(st==='done'?'good':'bad')+'">'+esc(KINDS[L.k].t)+': '+(st==='done'?'аспект изучен ✓':ok<tot/2?'много ошибок — вернись к теории и разбору, потом попробуй ещё раз':'почти получилось — ещё одна попытка закрепит')+'</div>';
+  h+='<button class="btn" id="lagain">Ещё три задания по этому аспекту</button>';
+  if(nx)h+='<button class="btn sec" id="lnx" data-learn="'+nx+'">Следующий аспект: '+esc(KINDS[nx].t)+'</button>';
+  h+='<button class="btn sec" id="lmenu">⬅️ К аспектам темы</button>';
+  app.innerHTML=h;
+  $('#lagain').onclick=()=>learnToSolo();
+  const b=$('#lnx');if(b)b.onclick=()=>startLearn(nx);
+  $('#lmenu').onclick=()=>{packTab='practice';setView('pack')};
+}
+
 function startPractice(){
   Promise.all(pracNums().map(n=>loadPractice(n).then(l=>l.map(t=>Object.assign({n},t))))).then(lists=>{
     const all=pracFilter([].concat(...lists)),key='math_seen';
@@ -392,6 +527,7 @@ function pracCheck(text){
 function pracFinish(ok,skipped){
   const t=pr.items[pr.i],first=ok&&pr.tries===0;
   pr.res.push(first);pr.gain+=first?10:ok?5:0;
+  if(t.k){const s=lk(t.k),p=s.pr||(s.pr=[0,0]);p[1]++;if(first)p[0]++;saveLearn()}
   if(t.sk&&PACK.skills[t.sk])record(t.sk,first?1:0);
   const msg=ok?(first?'Верно! +10 XP':'Верно со второй попытки. +5 XP'):'Правильный ответ: '+t.a[0]+(kindSteps(t.k).length?'':'\nРазбора по шагам для задач такого типа пока нет — повтори теорию темы и реши ещё несколько таких.');
   pr.reveal={cls:ok?'good':'bad',text:msg,k:ok||!kindSteps(t.k).length?'':t.k};
@@ -404,6 +540,7 @@ function pracNext(){
   render();
 }
 function pracDone(){
+  if(pr.learn&&L)return learnSoloDone();
   setTimeout(function(){window.anikPlanDone&&anikPlanDone();},700);
   $('#title').textContent='Итог';
   const ok=pr.res.filter(Boolean).length,tot=pr.res.length,sentAuto=autoSend();
@@ -518,6 +655,7 @@ function next(msg){
 function doneView(){
   setTimeout(function(){window.anikPlanDone&&anikPlanDone();},700);
   const t=cur.t,failed=[];
+  if(cur.learn&&L&&!cur.counted){cur.counted=1;const s=lk(L.k);s.steps=(s.steps||0)+1;saveLearn()}
   $('#title').textContent='Итог';
   const bad=cur.res.filter(x=>!x).length;
   const stars=bad===0?3:bad===1?2:1;
@@ -530,12 +668,14 @@ function doneView(){
   if(failed.length)h+='<div class="fb bad"><b>Где споткнулся:</b><br>'+failed.map(s=>'• '+(s.rc?'не вспомнил правило: ':'')+esc(PACK.skills[s.s].name)+'<br>&nbsp;&nbsp;'+esc(s.r)).join('<br>')+'</div>';
   else h+='<div class="fb good">Все шаги с первой попытки!</div>';
   const sk=failed.length?failed[0].s:t.sk;
-  h+='<button class="btn" id="again">'+(failed.length?'Потренировать то, где споткнулся':'Ещё такую же')+'</button>';
+  if(cur.learn&&L)h+='<button class="btn" id="learnsolo">Дальше: реши сам (3 задания)</button>';
+  h+='<button class="btn'+(cur.learn&&L?' sec':'')+'" id="again">'+(failed.length?'Потренировать то, где споткнулся':'Ещё такую же')+'</button>';
   h+='<button class="btn sec" id="other">Другое задание</button>';
   h+='<button class="btn sec" id="solo">Теперь реши сам: практика без шагов</button>';
   if(!sentAuto)h+='<button class="btn ok" id="send">Закончить и отправить результаты боту</button>';
   h+='<button class="btn sec" id="menu">⬅️ К разделу</button>';
   app.innerHTML=h;
+  const ls=$('#learnsolo');if(ls)ls.onclick=()=>learnToSolo();
   $('#again').onclick=()=>cur.kind&&kindSteps(cur.kind).length?startKind(cur.kind):cur.topicG?startTopic(cur.topicG):start(sk);
   $('#other').onclick=()=>cur.topicG?startTopic(cur.topicG):start(weightedSkill(skillsOfPack(PACK)));
   $('#solo').onclick=()=>{if(t.g){pracGroup=t.g;pracSkill=''}else{pracSkill=sk;pracGroup=''}pracNum=PACK.numbers.indexOf(t.n)>=0&&PACK.numbers.length>1?t.n:0;packTab='practice';setView('pack')};
@@ -638,7 +778,7 @@ function sendToBot(){
 }
 
 // ── Запуск ──
-loadAll();
+loadAll();loadLearn();
 fetch('math_kinds.json').then(r=>r.json()).then(d=>{KINDS=d.kinds;if(view==='task'||view==='prac'||(view==='pack'&&packTab==='practice'))render()}).catch(()=>{});
 fetch('math_topics.json').then(r=>r.json()).then(d=>{TOPICS_META=d.topics}).catch(()=>{});
 fetch('math_groups.json').then(r=>r.json()).then(d=>{GROUPS_META=d.numbers}).catch(()=>{});
