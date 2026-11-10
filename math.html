@@ -129,9 +129,13 @@ function mathRender(){
 }
 
 // Теория по типу задачи (math_kinds.json): свойства, формулы, порядок действий и пример
+function kindFig(k,cap){
+  const d=KINDS&&KINDS[k];if(!d||!d.fig)return '';
+  return '<img class="fig" src="'+d.fig+'" alt="Схема к типу задачи" loading="lazy"><div class="src" style="text-align:center;margin:-2px 0 8px">'+esc(cap||'Схема: так выглядит этот тип задач (буквы — как в условии)')+'</div>';
+}
 function kindTheory(k,open,label){
   const d=KINDS&&KINDS[k];if(!d||!d.th||!d.th.length)return '';
-  return '<details class="kth"'+(open?' open':'')+'><summary>'+esc(label||'Что нужно знать')+': '+esc(d.t)+'</summary><ul>'+d.th.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul></details>';
+  return '<details class="kth"'+(open?' open':'')+'><summary>'+esc(label||'Что нужно знать')+': '+esc(d.t)+'</summary>'+kindFig(k)+'<ul>'+d.th.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul></details>';
 }
 
 // ── Числа: дроби и десятичные без погрешностей ──
@@ -320,7 +324,7 @@ function topicKinds(gid){
   return '<div class="tag" style="margin-top:12px">Приёмы этой темы · '+ks.length+'</div>'+ks.map(k=>{
     const hs=kindSteps(k).length>0;
     const as=aspectState(k);
-    return '<details class="kth"><summary>'+esc(KINDS[k].t)+' <span class="src" style="color:'+ST_COLOR[as]+'">· '+ST_LABEL[as]+(hs?'':' · без разбора по шагам')+'</span></summary><ul>'+KINDS[k].th.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul>'
+    return '<details class="kth"><summary>'+esc(KINDS[k].t)+' <span class="src" style="color:'+ST_COLOR[as]+'">· '+ST_LABEL[as]+(hs?'':' · без разбора по шагам')+'</span></summary>'+kindFig(k)+'<ul>'+KINDS[k].th.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul>'
       +'<button class="btn" data-learn="'+k+'">Изучить этот аспект</button>'
       +(hs?'<button class="btn sec" data-kind="'+k+'">Разобрать этот тип по шагам</button>':'<div class="src" style="margin-top:6px">Разбора по шагам этого типа пока нет — повтори теорию и реши задания в блоке «Самостоятельно».</div>')+'</details>';
   }).join('');
@@ -363,7 +367,7 @@ function stageBar(){
 function ltheoryView(){
   const d=KINDS[L.k];
   $('#title').textContent='Изучаем аспект';
-  let h=stageBar()+'<div class="card"><div class="tag">Аспект</div><b>'+esc(d.t)+'</b><ul class="cues" style="margin-top:8px">'+d.th.map(x=>'<li><span class="if" style="font-weight:500">'+esc(x)+'</span></li>').join('')+'</ul></div>';
+  let h=stageBar()+'<div class="card"><div class="tag">Аспект</div><b>'+esc(d.t)+'</b>'+kindFig(L.k)+'<ul class="cues" style="margin-top:8px">'+d.th.map(x=>'<li><span class="if" style="font-weight:500">'+esc(x)+'</span></li>').join('')+'</ul></div>';
   if(d.ex&&d.ex.t){
     h+='<div class="card"><div class="tag">Разобранный пример</div><div class="task">'+esc(d.ex.t)+'</div>'
       +(d.ex.s&&d.ex.s.length?'<ol class="alg">'+d.ex.s.map(s=>'<li>'+esc(s[0])+' <b>'+esc(s[1])+'</b></li>').join('')+'</ol>':'')
@@ -495,7 +499,7 @@ function pracView(){
   $('#title').textContent='Практика №'+t.n;
   let h='<div class="dots">';
   pr.items.forEach((_,k)=>{h+='<span class="dot '+(k<pr.res.length?(pr.res[k]?'ok':'bad'):(k===pr.i?'cur':''))+'"></span>'});
-  h+='</div><div class="tag">Задание '+(pr.i+1)+' из '+pr.items.length+' · №'+t.n+'</div><div class="card task">'+esc(t.t)+(t.f||[]).map(f=>'<img class="fig" src="'+f+'" alt="Рисунок к заданию">').join('')+'</div><div class="src">'+(t.r?esc(t.s||'Из экзаменов и сборников'):'Задание из банка Аника')+'</div>';
+  h+='</div><div class="tag">Задание '+(pr.i+1)+' из '+pr.items.length+' · №'+t.n+'</div><div class="card task">'+esc(t.t)+(t.f&&t.f.length?t.f.map(f=>'<img class="fig" src="'+f+'" alt="Рисунок к заданию">').join(''):kindFig(t.k,'Схема типа задачи (общий вид; числа — из условия)'))+'</div><div class="src">'+(t.r?esc(t.s||'Из экзаменов и сборников'):'Задание из банка Аника')+'</div>';
   const rv=pr.reveal;                                           // ответ показан: остаёмся на ЭТОЙ задаче, к следующей — только по «Дальше»
   if(rv){
     h+='<div class="fb '+rv.cls+'">'+esc(rv.text).replace(/\n/g,'<br>')+'</div>';
@@ -591,7 +595,7 @@ function prepare(){
 function taskView(){
   const t=cur.t,st=t.st[cur.i];
   $('#title').textContent='Задание №'+t.n;
-  let h='<div class="card task">'+esc(t.t)+'</div>'+kindTheory(t.k,cur.i===0)+'<div class="dots">';
+  let h='<div class="card task">'+esc(t.t)+kindFig(t.k,'Схема к типу задачи (буквы — как в условии)')+'</div>'+kindTheory(t.k,cur.i===0)+'<div class="dots">';
   t.st.forEach((_,k)=>{h+='<span class="dot '+(k<cur.res.length?(cur.res[k]?'ok':'bad'):(k===cur.i?'cur':''))+'"></span>'});
   h+='</div><div class="tag'+(st.rc?' think':'')+'">Шаг '+(cur.i+1)+' из '+t.st.length+(st.rc?' · сначала думаем':'')+'</div><div class="q">'+esc(st.q)+'</div>';
   if(cur.fb)h+='<div class="fb '+cur.fb.cls+'">'+esc(cur.fb.text).replace(/\n/g,'<br>')+'</div>';
