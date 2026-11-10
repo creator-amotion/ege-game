@@ -133,9 +133,13 @@ function kindFig(k,cap){
   const d=KINDS&&KINDS[k];if(!d||!d.fig)return '';
   return '<img class="fig" src="'+d.fig+'" alt="Схема к типу задачи" loading="lazy"><div class="src" style="text-align:center;margin:-2px 0 8px">'+esc(cap||'Схема: так выглядит этот тип задач (буквы — как в условии)')+'</div>';
 }
+function kindErrs(k){
+  const d=KINDS&&KINDS[k];if(!d||!d.err||!d.err.length)return '';
+  return '<div class="tag" style="margin-top:10px">Частые ошибки</div><ul class="cues">'+d.err.map(e=>'<li><span class="if" style="font-weight:500">'+esc(e[0])+'</span><span class="do" style="color:var(--r,#ff6b81)">✗ '+esc(e[1])+'</span><span class="do">✓ '+esc(e[2])+'</span></li>').join('')+'</ul>';
+}
 function kindTheory(k,open,label){
   const d=KINDS&&KINDS[k];if(!d||!d.th||!d.th.length)return '';
-  return '<details class="kth"'+(open?' open':'')+'><summary>'+esc(label||'Что нужно знать')+': '+esc(d.t)+'</summary>'+kindFig(k)+'<ul>'+d.th.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul></details>';
+  return '<details class="kth"'+(open?' open':'')+'><summary>'+esc(label||'Что нужно знать')+': '+esc(d.t)+'</summary>'+kindFig(k)+'<ul>'+d.th.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul>'+kindErrs(k)+'</details>';
 }
 
 // ── Числа: дроби и десятичные без погрешностей ──
@@ -196,9 +200,53 @@ $('#back').onclick=()=>{
   else setView('pack');
 };
 
+
+// ── «Путь к максимальному баллу»: по каждому номеру — сколько аспектов изучено; главные аспекты (самые частые в заданиях) — «ядро» номера ──
+function pathRows(){
+  const rows={};
+  Object.keys(KINDS).forEach(k=>{
+    const v=KINDS[k];if(v.n===undefined)return;
+    (rows[v.n]||(rows[v.n]={n:v.n,ks:[]})).ks.push(k);
+  });
+  Object.values(rows).forEach(r=>{
+    r.ks.sort((a,b)=>(KINDS[b].pr||0)-(KINDS[a].pr||0));
+    r.core=r.ks.slice(0,Math.max(3,Math.min(12,Math.ceil(r.ks.length*0.3))));
+    const st=r.ks.map(aspectState);
+    r.done=st.filter(s=>s==='done').length;r.weak=st.filter(s=>s==='weak').length;r.going=st.filter(s=>s==='going').length;
+    r.coreDone=r.core.filter(k=>aspectState(k)==='done').length;
+    r.closed=r.coreDone>=Math.ceil(r.core.length*0.7);
+  });
+  return Object.values(rows).sort((a,b)=>a.n-b.n);
+}
+function pathCard(){
+  if(!KINDS||!INDEX)return '';
+  const rows=pathRows();if(!rows.length)return '';
+  const closed=rows.filter(r=>r.closed).length;
+  // что делать дальше: сначала западающие, потом главные аспекты номера, в котором закрыто меньше всего
+  let next=null;
+  for(const r of rows){const w=r.ks.find(k=>aspectState(k)==='weak');if(w){next=w;break}}
+  if(!next){
+    const open=rows.filter(r=>!r.closed).sort((a,b)=>a.coreDone/a.core.length-b.coreDone/b.core.length||a.n-b.n);
+    if(open.length)next=open[0].core.find(k=>aspectState(k)!=='done')||open[0].ks.find(k=>aspectState(k)!=='done');
+  }
+  let h='<div class="card"><div class="tag">Путь к максимальному баллу</div><b>Закрыто номеров первой части: '+closed+' из '+rows.length+'</b>'
+    +'<p class="src" style="margin:4px 0 8px">Номер закрыт, когда изучено 70% его главных приёмов — тех, что чаще всего встречаются в заданиях. Каждый номер даёт балл на экзамене.</p>';
+  h+=rows.map(r=>'<div class="skrow" style="margin:5px 0"><span class="nm" style="min-width:34px;font-weight:700">№'+r.n+'</span><div class="bar" style="flex:1"><i style="width:'+Math.round(100*r.coreDone/r.core.length)+'%"></i></div><small style="min-width:78px;text-align:right;color:'+(r.weak?'var(--r,#ff6b81)':r.closed?'var(--g,#38d39f)':'var(--m)')+'">'+(r.closed?'закрыт ✓':r.coreDone+' из '+r.core.length+' главных')+(r.weak?' · западает '+r.weak:'')+'</small></div>').join('');
+  if(next)h+='<button class="btn" id="pathnext" data-go="'+next+'" style="margin-top:8px">Дальше: №'+KINDS[next].n+' — '+esc(KINDS[next].t)+'</button>';
+  return h+'</div>';
+}
+function goAspect(k){
+  const n=KINDS[k].n,meta=INDEX.packs.find(p=>p.numbers.includes(n));if(!meta)return;
+  loadPack(meta.id).then(p=>{
+    PACK=p;openHelp=null;pracNum=PACK.numbers.length>1?n:0;pracSkill='';pracGroup=(KINDS[k].gs||[KINDS[k].g])[0];
+    const sk=packSkin(meta.id);['--col','--ink-p','--bigc'].forEach((v,i)=>document.body.style.setProperty(v,sk[i]));
+    packTab='practice';startLearn(k);
+  });
+}
 function home(){
   $('#title').textContent='Математика (ЕГЭ)';
   let h='<h1>Математика</h1><p class="sub">Выбери раздел. В каждом три вкладки: теория простыми словами, практика (настоящие задания; тему можно изучить по аспектам: теория → тест → разбор по шагам → самостоятельно) и быстрые игры.</p>';
+  h+=pathCard();
   INDEX.packs.forEach(p=>{
     const m=packCache[p.id]?Math.round(packMastery(packCache[p.id])*100):null;
     const sk=packSkin(p.id);
@@ -209,6 +257,7 @@ function home(){
   h+='<p class="sub" style="text-align:center;margin-top:14px">'+(TG?'Результаты уходят боту по кнопке выше.':'Прогресс хранится на этом устройстве.')+'</p>';
   app.innerHTML=h;
   app.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>openPack(b.dataset.p));
+  const pn=$('#pathnext');if(pn)pn.onclick=()=>goAspect(pn.dataset.go);
   const sb=$('#send');if(sb)sb.onclick=sendToBot;
 }
 function openPack(id){loadPack(id).then(p=>{
@@ -324,7 +373,7 @@ function topicKinds(gid){
   return '<div class="tag" style="margin-top:12px">Приёмы этой темы · '+ks.length+'</div>'+ks.map(k=>{
     const hs=kindSteps(k).length>0;
     const as=aspectState(k);
-    return '<details class="kth"><summary>'+esc(KINDS[k].t)+' <span class="src" style="color:'+ST_COLOR[as]+'">· '+ST_LABEL[as]+(hs?'':' · без разбора по шагам')+'</span></summary>'+kindFig(k)+'<ul>'+KINDS[k].th.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul>'
+    return '<details class="kth"><summary>'+esc(KINDS[k].t)+' <span class="src" style="color:'+ST_COLOR[as]+'">· '+ST_LABEL[as]+(hs?'':' · без разбора по шагам')+'</span></summary>'+kindFig(k)+'<ul>'+KINDS[k].th.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul>'+kindErrs(k)
       +'<button class="btn" data-learn="'+k+'">Изучить этот аспект</button>'
       +(hs?'<button class="btn sec" data-kind="'+k+'">Разобрать этот тип по шагам</button>':'<div class="src" style="margin-top:6px">Разбора по шагам этого типа пока нет — повтори теорию и реши задания в блоке «Самостоятельно».</div>')+'</details>';
   }).join('');
@@ -373,7 +422,7 @@ function stageBar(){
 function ltheoryView(){
   const d=KINDS[L.k];
   $('#title').textContent='Изучаем аспект';
-  let h=stageBar()+'<div class="card"><div class="tag">Аспект</div><b>'+esc(d.t)+'</b>'+kindFig(L.k)+'<ul class="cues" style="margin-top:8px">'+d.th.map(x=>'<li><span class="if" style="font-weight:500">'+esc(x)+'</span></li>').join('')+'</ul></div>';
+  let h=stageBar()+'<div class="card"><div class="tag">Аспект</div><b>'+esc(d.t)+'</b>'+kindFig(L.k)+'<ul class="cues" style="margin-top:8px">'+d.th.map(x=>'<li><span class="if" style="font-weight:500">'+esc(x)+'</span></li>').join('')+'</ul>'+kindErrs(L.k)+'</div>';
   if(d.ex&&d.ex.t){
     h+='<div class="card"><div class="tag">Разобранный пример</div><div class="task">'+esc(d.ex.t)+'</div>'
       +(d.ex.s&&d.ex.s.length?'<ol class="alg">'+d.ex.s.map(s=>'<li>'+esc(s[0])+' <b>'+esc(s[1])+'</b></li>').join('')+'</ol>':'')
@@ -790,7 +839,7 @@ function sendToBot(){
 
 // ── Запуск ──
 loadAll();loadLearn();
-fetch('math_kinds.json').then(r=>r.json()).then(d=>{KINDS=d.kinds;if(view==='task'||view==='prac'||(view==='pack'&&packTab==='practice'))render()}).catch(()=>{});
+fetch('math_kinds.json').then(r=>r.json()).then(d=>{KINDS=d.kinds;if(view==='home')render();if(view==='task'||view==='prac'||(view==='pack'&&packTab==='practice'))render()}).catch(()=>{});
 fetch('math_topics.json').then(r=>r.json()).then(d=>{TOPICS_META=d.topics}).catch(()=>{});
 fetch('math_groups.json').then(r=>r.json()).then(d=>{GROUPS_META=d.numbers}).catch(()=>{});
 fetch('math_analysis.json').then(r=>r.json()).then(d=>{ANALYSIS=d.numbers;if(view==='pack'&&packTab==='theory')render()}).catch(()=>{});
