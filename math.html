@@ -331,6 +331,12 @@ function topicKinds(gid){
 }
 // ── Режим «Изучить тему»: аспект (тип задач) → теория → короткий тест → разбор по шагам → самостоятельно ──
 let L=null, lprog={};
+// Этап изучения (или практика по типу) уходит боту строкой l_<тип>-<t|s|p><верно><всего>: репетитор видит всю активность, а не только домашнее задание
+function sendLearn(k,stage,ok,tot){
+  if(!k||!/^[a-z0-9_]{3,44}$/.test(k)||!(tot>=1&&tot<=99&&ok>=0&&ok<=tot))return;
+  const p='l_'+k+'-'+stage+String(ok).padStart(2,'0')+String(tot).padStart(2,'0');
+  try{window.AnikSync&&AnikSync.send(p)}catch(e){}
+}
 function loadLearn(){try{lprog=JSON.parse(localStorage.getItem('math_learn')||'{}')}catch(e){lprog={}}}
 function saveLearn(){try{localStorage.setItem('math_learn',JSON.stringify(lprog))}catch(e){}}
 function lk(k){return lprog[k]||(lprog[k]={})}
@@ -411,7 +417,7 @@ function ltestView(){
 function ltestDone(){
   const n=L.tq.length,ok=L.tok,s=lk(L.k),best=s.test;
   if(!best||ok/n>=best[0]/best[1])s.test=[ok,n];
-  xp+=ok*2;saveAll();saveLearn();
+  xp+=ok*2;saveAll();saveLearn();sendLearn(L.k,'t',ok,n);
   const pass=ok/n>=0.67;
   $('#title').textContent='Итог теста';
   let h=stageBar()+'<div class="stars"><b>'+ok+'</b> из '+n+'<small>правильных ответов</small></div>'
@@ -447,7 +453,7 @@ function learnToSolo(){
 }
 function learnSoloDone(){
   const ok=pr.res.filter(Boolean).length,tot=pr.res.length,s=lk(L.k);
-  s.solo=[Math.max(ok,(s.solo&&s.solo[0])||0),tot];saveLearn();
+  s.solo=[Math.max(ok,(s.solo&&s.solo[0])||0),tot];saveLearn();sendLearn(L.k,'p',ok,tot);
   const st=aspectState(L.k),gid=(KINDS[L.k].gs||[KINDS[L.k].g])[0],nx=aspectsOf(gid).find(k=>k!==L.k&&aspectState(k)!=='done');
   $('#title').textContent='Аспект пройден';
   let h='<div class="stars"><b>'+ok+'</b> из '+tot+'<small>с первой попытки</small></div>'
@@ -545,6 +551,7 @@ function pracNext(){
 }
 function pracDone(){
   if(pr.learn&&L)return learnSoloDone();
+  if(!pr.kindsSent){pr.kindsSent=1;const by={};pr.items.forEach((it,i)=>{if(it.k&&pr.res[i]!==undefined){const b=by[it.k]||(by[it.k]=[0,0]);b[1]++;if(pr.res[i])b[0]++}});Object.keys(by).slice(0,6).forEach(k=>sendLearn(k,'p',by[k][0],by[k][1]))}
   setTimeout(function(){window.anikPlanDone&&anikPlanDone();},700);
   $('#title').textContent='Итог';
   const ok=pr.res.filter(Boolean).length,tot=pr.res.length,sentAuto=autoSend();
@@ -659,7 +666,7 @@ function next(msg){
 function doneView(){
   setTimeout(function(){window.anikPlanDone&&anikPlanDone();},700);
   const t=cur.t,failed=[];
-  if(cur.learn&&L&&!cur.counted){cur.counted=1;const s=lk(L.k);s.steps=(s.steps||0)+1;saveLearn()}
+  if(cur.learn&&L&&!cur.counted){cur.counted=1;const s=lk(L.k);s.steps=(s.steps||0)+1;saveLearn();sendLearn(L.k,'s',cur.res.filter(Boolean).length,cur.res.length)}
   $('#title').textContent='Итог';
   const bad=cur.res.filter(x=>!x).length;
   const stars=bad===0?3:bad===1?2:1;
