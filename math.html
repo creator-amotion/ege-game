@@ -215,18 +215,17 @@ function openPack(id){loadPack(id).then(p=>{
 
 function packView(){
   $('#title').textContent=PACK.title;
-  const T=[['theory','Теория'],['steps','По шагам'],['practice','Практика'],['games','Игры']];
+  if(packTab==='steps')packTab='practice';   // раздела «По шагам» нет: разбор открывается из практики
+  const T=[['theory','Теория'],['practice','Практика'],['games','Игры']];
   let h='<div class="tabs2" role="tablist">'+T.map(([k,t])=>'<button class="tab'+(packTab===k?' on':'')+'" data-tab="'+k+'">'+t+'</button>').join('')+'</div>';
   if(packTab==='theory')h+=theoryTab();
   else if(packTab==='practice')h+=practiceTab();
-  else if(packTab==='steps')h+=stepsTab();
   else h+=gamesTab();
   if(session.length)h+='<button class="btn ok" id="send">Отправить результаты боту ('+session.length+' шагов)</button>';
   app.innerHTML=h;
   app.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{packTab=b.dataset.tab;setView('pack')});
   app.querySelectorAll('[data-g]').forEach(b=>b.onclick=()=>gameStart(b.dataset.g));
   app.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>start(b.dataset.t));
-  const st=$('#steps');if(st)st.onclick=()=>start(weightedSkill(skillsOfPack(PACK)));
   if(packTab==='practice')pracInit();
   const sb=$('#send');if(sb)sb.onclick=sendToBot;
 }
@@ -243,7 +242,7 @@ function analysisHTML(n){
   return h+'</div>';
 }
 function theoryTab(){
-  let h='<p class="sub">'+esc(PACK.desc)+'. Сначала разбор задания, потом правила навыков.</p>';
+  let h='<p class="sub">'+esc(PACK.desc)+'. Сначала разбор задания, потом правила навыков. Задачи решаем во вкладке «Практика»: там у каждой темы есть разбор по шагам.</p>'+theoryGames();
   const nums=PACK.numbers;
   nums.forEach(n=>{
     const sk=skillsOfNumber(n);
@@ -254,21 +253,16 @@ function theoryTab(){
       const x=PACK.skills[s],p=pOf(s);
       h+='<div class="card"><div class="skrow"><span class="lv">'+badge(p)+'</span><div class="nm"><b>'+esc(x.name)+'</b><small>'+badgeText(p)+'</small></div></div>'
         +'<div class="rulebox"><b>Правило</b>\n'+esc(x.rule)+'\n\n<b>Пример</b>\n'+esc(x.ex)+'</div>'
-        +'<button class="btn sec" data-t="'+s+'">Потренировать по шагам</button></div>';
+        +'</div>';
     });
   });
   return h;
 }
-// По шагам: задача разбирается маленькими шагами; ниже — навыки раздела
-function stepsTab(){
-  let h='<div class="card"><div class="tag">Задания по шагам</div><b>Решаем задачу маленькими шагами</b><p class="sub" style="margin:6px 0 0">Если запнулся — подскажем правило, начинать сначала не нужно.</p><button class="btn" id="steps">Решить задание по шагам</button></div>';
-  h+='<div class="card"><div class="tag">Навыки раздела</div>';
-  skillsOfPack(PACK).forEach(s=>{
-    const p=pOf(s),a=prog[s]?prog[s].a:0,sk=PACK.skills[s];
-    h+='<div class="sk"><div class="skrow"><span class="lv">'+badge(p)+'</span><div class="nm">'+esc(sk.name)+'<small>'+badgeText(p)+' · шагов решено: '+a+'</small></div><div class="bar"><i style="width:'+Math.round(p*100)+'%"></i></div></div>'
-      +'<div class="skrow" style="margin-top:6px"><button class="nb" data-t="'+s+'" style="margin-left:auto">▶ Тренировать</button></div></div>';
-  });
-  return h+'</div>';
+// Проверка теории: короткие игры раздела на знание правил и формул (без «Быстрого счёта»)
+function theoryGames(){
+  const gs=(PACK.games||[]).filter(g=>g.id!=='calc');
+  if(!gs.length)return '';
+  return '<div class="card"><div class="tag">Проверь себя по теории</div>'+gs.map(g=>'<button class="btn sec" data-g="'+g.id+'" style="text-align:left"><b>'+esc(g.title)+'</b><br><span style="font-weight:400;font-size:13px;color:var(--m)">'+esc(g.desc)+'</span></button>').join('')+'</div>';
 }
 function gamesTab(){
   let h='<div class="card"><div class="tag">Быстрые игры</div><b>10 вопросов, очки и звёзды</b>';
@@ -415,11 +409,10 @@ function pracDone(){
   const ok=pr.res.filter(Boolean).length,tot=pr.res.length,sentAuto=autoSend();
   let h='<div class="stars"><b>'+ok+'</b> из '+tot+'<small>с первой попытки</small></div>'+autoNote(sentAuto);
   h+='<div class="fb '+(ok>=tot*0.8?'good':'bad')+'">'+(ok>=tot*0.8?'Отлично! Навык закрепляется.':ok>=tot*0.5?'Неплохо. Загляни в теорию и разбери ошибки по шагам.':'Пока трудно — прочитай теорию и потренируйся по шагам.')+'<br>'+esc(pr.last||'').replace(/\n/g,'<br>')+'<br>Получено: +'+pr.gain+' XP</div>';
-  h+='<button class="btn" id="again">Ещё подход</button><button class="btn sec" id="tosteps">Разобрать по шагам</button><button class="btn sec" id="menu">⬅️ К разделу</button>';
+  h+='<button class="btn" id="again">Ещё подход</button><button class="btn sec" id="menu">⬅️ К разделу</button>';
   if(!sentAuto&&session.length)h+='<button class="btn ok" id="send">Закончить и отправить результаты боту</button>';
   app.innerHTML=h;
   $('#again').onclick=()=>startPractice();
-  $('#tosteps').onclick=()=>{packTab='steps';setView('pack')};
   $('#menu').onclick=()=>{packTab='practice';setView('pack')};
   const sb=$('#send');if(sb)sb.onclick=sendToBot;
 }
@@ -439,7 +432,7 @@ function start(skill,keepTab){
 // Задача по шагам. Из темы (keepTab) разбираем только задачи этой темы и после — тренируем тоже эту тему
 function startTask(t,keepTab){
   cur={t,i:0,tries:0,res:[],fb:null,order:null,gain:0,topicG:keepTab?(t.g||''):'',kind:keepTab?(t.k||''):''};
-  packTab=keepTab?'practice':'steps';prepare();setView('task');
+  packTab='practice';prepare();setView('task');
 }
 function topicSteps(gid){return PACK.tasks.filter(t=>t.g===gid)}
 function kindSteps(k){return k?PACK.tasks.filter(t=>t.k===k):[]}

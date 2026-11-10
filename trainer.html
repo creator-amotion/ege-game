@@ -227,10 +227,11 @@ function addStats(set,n,ok,tot){var all=lsGet('anik_tr',{}),k=set+'_'+n,s=all[k]
 function snap(){return window.AnikSync&&AnikSync.state()||null;}
 
 /* ───────── экраны ───────── */
+var resultShown=false;   // на экране итог подхода: приход состояния синхронизации не должен перерисовывать страницу поверх него
 function route(){
   var h=location.hash.replace(/^#/,''),parts=h.split('&'),set=parts[0],n=null;
   parts.slice(1).forEach(function(p){var m=p.match(/^n=(\d+)$/);if(m)n=+m[1];});
-  run=null;
+  run=null;resultShown=false;
   if(!INDEX){app.innerHTML='<div class="empty">Загружаю…</div>';loadIndex().then(route).catch(function(){app.innerHTML='<div class="empty">Не получилось загрузить задания. Проверь интернет и обнови страницу.</div>';});return;}
   if(!SETS[set]||!INDEX.sets[set])return home();
   if(n!==null&&INDEX.sets[set].numbers.some(function(x){return x.n===n;}))return topic(set,n);
@@ -526,11 +527,11 @@ function finish(){
   var set=run.set,n=run.n;
   document.getElementById('again').onclick=function(){go(set+'&n='+n);setTimeout(function(){var b=document.getElementById('start');if(b)b.click();},0);};
   document.getElementById('back').onclick=function(){go(set);};
-  run=null;
+  run=null;resultShown=true;
 }
 
 window.addEventListener('hashchange',route);
-if(window.AnikSync)AnikSync.onState(function(){if(INDEX&&!run){var h=location.hash.replace(/^#/,'');if(SETS[h.split('&')[0]])route();}});
+if(window.AnikSync)AnikSync.onState(function(){if(INDEX&&!run&&!resultShown){var h=location.hash.replace(/^#/,'');if(SETS[h.split('&')[0]])route();}});
 route();
 </script>
 </body>
