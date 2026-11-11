@@ -195,6 +195,20 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:12px 1
 /* utils */
 .hid{display:none!important}
 .sep{height:1px;background:#2a2a3e;margin:6px 0}
+.tabs .tab-learn{order:-1}
+.lp-intro{background:var(--card);padding:12px 14px;font-size:13px;line-height:1.5;margin-bottom:8px}
+.lp-sum{font-size:13px;color:var(--m);margin:6px 0}
+.lp-row{display:flex;gap:10px;align-items:center;width:100%;text-align:left;margin-top:6px;padding:10px 12px;border:2px solid var(--line,#ddd);background:#fff;color:inherit;cursor:pointer;font:inherit}
+.lp-row i{flex:none;width:26px;height:26px;border:2px solid currentColor;display:flex;align-items:center;justify-content:center;font-style:normal;font-weight:800;font-size:13px}
+.lp-row b{display:block;font-size:14px}.lp-row small{display:block;font-size:12px;color:var(--m)}
+.lp-row.done i{background:#2E55C9;border-color:#2E55C9;color:#fff}
+.lp-row.weak{border-color:#E5332A}.lp-row.going{border-color:#F6CE2E}
+.lp-stages{display:flex;gap:6px;margin:4px 0 10px}
+.lp-stages span{flex:1;text-align:center;font-size:12px;font-weight:600;padding:5px 0;background:var(--card);opacity:.6}
+.lp-stages span.on{background:#111;color:#fff;opacity:1}.lp-stages span.past{opacity:.9}
+.lp-name{font-size:14px;margin-bottom:8px}
+.pwarn{background:#F6CE2E;color:#111;padding:10px 12px;font-size:13px;line-height:1.45;margin-bottom:10px}
+.pwarn button{margin-top:6px;border:2px solid #111;background:transparent;padding:6px 10px;font:inherit;font-weight:600;cursor:pointer}
 </style>
 <meta name="theme-color" content="#F3EEE2">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -259,10 +273,12 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:12px 1
     <button class="tab on" onclick="sTab(0)">Теория</button>
     <button class="tab" onclick="sTab(1)">Практика</button>
     <button class="tab" onclick="sTab(2)">Игры</button>
+    <button class="tab tab-learn" onclick="sTab(3);if(!LR||LR.num!==curNum)renderLearn(curNum)">Изучить</button>
   </div>
   <div class="tb on" id="tb0"></div>
   <div class="tb" id="tb1"></div>
   <div class="tb" id="tb2"></div>
+  <div class="tb" id="tb3"></div>
 </div>
 
 <!-- RESULTS -->
@@ -388,6 +404,7 @@ function init(){
   if(location.hash==='#stress'){openSpecial('stress');}
   else if(location.hash==='#paronyms'){openTopic(5);}
   else if(/^#practice=\d+$/.test(location.hash)){const n=+location.hash.slice(10);if(TOPICS.some(t=>t.num===n)){openTopic(n);sTab(1);}}   // шаг «задания из экзамена» в плане дня
+  else if(/^#learn=\d+$/.test(location.hash)){const n=+location.hash.slice(7);if(TOPICS.some(t=>t.num===n))openTopic(n);}   // «Изучить тему»
   else if(/^#theory=\d+$/.test(location.hash)){const n=+location.hash.slice(8);if(TOPICS.some(t=>t.num===n)){openTopic(n);sTab(0);}}   // кнопка «Теория» на экране «Сегодня»: тема открывается на вкладке теории
   else{
     // Ссылка вида index.html#game=17 — открыть задание сразу на вкладке «Игра»
@@ -425,8 +442,8 @@ function openTopic(num){
   document.getElementById('tSub').textContent='задание '+num+' · '+t.cnt+' заданий из экзаменов';
   document.getElementById('tb0').style.setProperty('--col',t.col);
   {const th=document.querySelector('#s-topic .th');skinTile(th,num);th.dataset.n=String(num).padStart(2,'0');}
-  renderTheory(num);renderPractice(num);renderGameTab(num);
-  showScr('topic');sTab(0);
+  renderTheory(num);renderPractice(num);renderGameTab(num);LR=null;renderLearn(num);
+  showScr('topic');sTab(3);
   document.getElementById('backBtn').style.display='block';
   document.getElementById('navTitle').textContent=t.name;
 }
@@ -447,6 +464,165 @@ function renderTheory(num){
     if(card.warn)h+=`<div class="warn">${card.warn}</div>`;
     return h+'</div>';
   }).join('');
+}
+
+
+/* =================== ИЗУЧИТЬ ТЕМУ =================== */
+/* Тема задания делится на части — темы игры (categories). Каждая часть: теория → тест «почему так?» → игра со словами.
+   Потом настоящие задания; если какие-то части не изучены — честно говорим об этом и предлагаем следующую. */
+let LP={};try{LP=JSON.parse(localStorage.getItem('ege_learn')||'{}');}catch(e){LP={};}
+function saveLP(){try{localStorage.setItem('ege_learn',JSON.stringify(LP));}catch(e){}}
+function lpOf(num,cat){const t=LP[num]||(LP[num]={});return t[cat]||(t[cat]={});}
+function learnSend(num,cat,stage,ok,tot){
+  const k=('er'+num+'_'+(cat==='__all__'?'all':cat)).toLowerCase();
+  if(!/^[a-z0-9_]{3,44}$/.test(k)||!(tot>=1&&tot<=99))return;
+  try{window.AnikSync&&AnikSync.send('l_'+k+'-'+stage+String(ok).padStart(2,'0')+String(tot).padStart(2,'0'));}catch(e){}
+}
+function aspects(num){
+  const cg=typeof CUSTOM_GAMES!=='undefined'&&CUSTOM_GAMES[num];
+  const vis=cg&&cg.categories?cg.categories.filter(c=>!c.hidden&&cg.items.some(it=>it.category===c.id)):[];
+  if(vis.length>1)return vis.map(c=>({id:c.id,name:c.name}));
+  return [{id:'__all__',name:cg?cg.title:'Вся тема'}];
+}
+function aspItems(num,cat){const cg=CUSTOM_GAMES[num];if(!cg)return [];return cat==='__all__'?cg.items.filter(it=>!(cg.categories||[]).some(c=>c.hidden&&c.id===it.category)):cg.items.filter(it=>it.category===cat);}
+// состояние части: new — не начата, going — идёт, done — изучена, weak — западает
+function aspState(num,cat){
+  const s=(LP[num]||{})[cat]||{},g=s.game,t=s.test;
+  if(g&&g[1]>=5&&g[0]/g[1]<0.5)return 'weak';
+  if(t&&t[0]/t[1]>=0.67&&g&&g[0]/g[1]>=0.7)return 'done';
+  if(s.th||t||g)return 'going';
+  return 'new';
+}
+const ASP_LABEL={new:'не начата',going:'в процессе',done:'изучена ✓',weak:'западает'};
+function nextAsp(num,skip){const a=aspects(num);return a.find(x=>x.id!==skip&&aspState(num,x.id)==='weak')||a.find(x=>x.id!==skip&&aspState(num,x.id)!=='done');}
+function notLearned(num){return aspects(num).filter(x=>aspState(num,x.id)!=='done');}
+
+function renderLearn(num){
+  const c=document.getElementById('tb3'),a=aspects(num);
+  const cnt={new:0,going:0,done:0,weak:0};a.forEach(x=>cnt[aspState(num,x.id)]++);
+  const weak=a.filter(x=>aspState(num,x.id)==='weak'),nx=nextAsp(num);
+  let h=`<div class="lp-intro"><b>Как учить тему</b><br>Тема разбита на части — от простого к сложному. В каждой части: короткая теория → тест «почему так пишется?» → игра со словами. Когда части изучены — настоящие задания №${num}.</div>`;
+  h+=`<div class="lp-sum">Изучено <b>${cnt.done}</b> из ${a.length}${cnt.going?` · в процессе ${cnt.going}`:''}${weak.length?` · <span style="color:var(--r,#E5332A)">западает: ${weak.map(x=>x.name).join('; ')}</span>`:''}</div>`;
+  if(nx)h+=`<button class="btp" style="margin:10px 0" onclick="learnStart(${num},'${nx.id}')">${cnt.done+cnt.going+cnt.weak?'Изучать дальше':'Начать изучение'}: ${nx.name}</button>`;
+  else h+=`<div class="cg-hint on" style="margin:10px 0">Все части темы изучены. Теперь — настоящие задания №${num}.</div><button class="btp" onclick="sTab(1)">Задания №${num} из экзамена</button>`;
+  h+=a.map((x,i)=>{const st=aspState(num,x.id),s=(LP[num]||{})[x.id]||{};
+    const det=[s.test?`тест ${s.test[0]}/${s.test[1]}`:'',s.game?`игра ${s.game[0]}/${s.game[1]}`:''].filter(Boolean).join(' · ');
+    return `<button class="lp-row ${st}" onclick="learnStart(${num},'${x.id}')"><i>${st==='done'?'✓':i+1}</i><span><b>${x.name}</b><small>${ASP_LABEL[st]}${det?' · '+det:''}</small></span></button>`;}).join('');
+  if(nx)h+=`<div class="cg-hint on" style="margin-top:14px">Можно сразу решать настоящие задания — но в них встретятся и неизученные части.</div><button class="bts" style="margin-top:8px;width:100%" onclick="sTab(1)">Всё равно к заданиям №${num}</button>`;
+  c.innerHTML=h;
+}
+
+// теория части: правила из теории задания, где встречаются слова из названия части, и примеры из игры
+function aspTheory(num,cat,name){
+  const cards=THEORY_ALL[num]||[];
+  const words=String(name).toLowerCase().replace(/ё/g,'е').split(/[^а-яa-z]+/).filter(w=>w.length>=3&&!/^(или|при|для|после|слов|слова|правил|правила|запоминаем|сложные|случаи|самые|другие|разные|не|только)$/.test(w)&&!/^(суффикс|приставк|корн|окончан|глагол|прилагат|существит|причаст|наречи|слитно|раздельн)/.test(w));
+  const rules=[];
+  cards.forEach(cd=>(cd.rules||[]).forEach(r=>{
+    const txt=(cd.title+' '+r.r+' '+r.t).toLowerCase().replace(/ё/g,'е');
+    const sc=words.reduce((a,w)=>a+(txt.indexOf(w)>=0?1:0),0);
+    if(sc)rules.push({r,sc});
+  }));
+  rules.sort((a,b)=>b.sc-a.sc);
+  const top=rules.length?rules[0].sc:0;rules.splice(0,rules.length,...rules.filter(x=>x.sc===top));
+  let h='';
+  if(cat==='__all__'||!rules.length){
+    h+=cards.map(cd=>`<div class="tcard"><h3>${cd.title}</h3>${cd.content?`<p>${cd.content}</p>`:''}${(cd.rules||[]).map(r=>`<div class="rbox"><b>${r.r}</b><small>${r.t}</small></div>`).join('')}${cd.tip?`<div class="tip">${cd.tip}</div>`:''}</div>`).join('');
+  }else{
+    h+=`<div class="tcard"><h3>${name}</h3>${rules.slice(0,3).map(x=>`<div class="rbox"><b>${x.r.r}</b><small>${x.r.t}</small></div>${x.r.ex&&x.r.ex.length?`<div class="exs">${x.r.ex.map(e=>`<span class="ex">${e}</span>`).join('')}</div>`:''}`).join('')}</div>`;
+  }
+  const seen=new Set(),ex=[];
+  aspItems(num,cat).slice().sort(()=>Math.random()-.5).forEach(it=>{if(ex.length<4&&it.hint&&!seen.has(it.hint)&&!Array.isArray(it.tap)){seen.add(it.hint);ex.push(it);}});
+  if(ex.length)h+=`<div class="tcard"><h3>Как рассуждать: примеры</h3>${ex.map(it=>`<div class="rbox"><b>${fmtW(it.word)} → ${it.answer}</b><small>${it.hint}</small></div>`).join('')}</div>`;
+  return h;
+}
+function fmtW(w){return String(w).replace(/_/g,'<u>_</u>');}
+
+// тест по теории: у слова уже стоит ответ — выбери верное объяснение (неверные — объяснения из других частей темы)
+function aspTest(num,cat){
+  const own=aspItems(num,cat).filter(it=>it.hint&&!Array.isArray(it.tap));
+  const others=[...new Set(aspItems(num,'__all__').filter(it=>it.category!==cat&&it.hint&&!Array.isArray(it.tap)).map(it=>it.hint))];
+  const out=[],used=new Set();
+  own.slice().sort(()=>Math.random()-.5).forEach(it=>{
+    if(out.length>=5||used.has(it.hint))return;
+    const near=[...new Set(own.map(x=>x.hint))].filter(hh=>hh!==it.hint&&hh.indexOf(it.answer)<0).sort(()=>Math.random()-.5).slice(0,1);
+    const wrong=near.concat(others.filter(hh=>hh!==it.hint&&near.indexOf(hh)<0).sort(()=>Math.random()-.5)).slice(0,2);
+    if(wrong.length<2){                          // тема из одной части: вопрос самой игры
+      if(it.options&&it.options.length>=2){used.add(it.hint);out.push({q:`${fmtW(it.word)}`,ask:'Как правильно?',opts:it.options.slice(),a:it.answer,h:it.hint});}
+      return;
+    }
+    used.add(it.hint);
+    out.push({q:`${fmtW(it.word)} → <b>${it.answer}</b>`,ask:'Почему так? Выбери верное объяснение',opts:[it.hint,...wrong].sort(()=>Math.random()-.5),a:it.hint,h:''});
+  });
+  return out;
+}
+
+let LR=null;
+function learnStart(num,cat){
+  const a=aspects(num).find(x=>x.id===cat);if(!a)return;
+  LR={num,cat,name:a.name,stage:'theory'};
+  lpOf(num,cat).th=1;saveLP();
+  sTab(3);learnTheory();
+}
+function lStages(){
+  const S=[['theory','Теория'],['test','Тест'],['game','Игра'],['done','Итог']],i=S.findIndex(x=>x[0]===LR.stage);
+  return `<div class="lp-stages">${S.map((s,j)=>`<span class="${j===i?'on':j<i?'past':''}">${j<i?'✓ ':''}${s[1]}</span>`).join('')}</div>`;
+}
+function learnTheory(){
+  const c=document.getElementById('tb3');
+  c.innerHTML=`${lStages()}<div class="lp-name">Часть: <b>${LR.name}</b></div>${aspTheory(LR.num,LR.cat,LR.name)}
+<button class="btp" style="margin-top:10px" onclick="learnTestStart()">Я прочитал(а): к тесту</button><button class="bts" style="margin-top:8px;width:100%" onclick="renderLearn(${LR.num})">← Ко всем частям темы</button>`;
+  window.scrollTo(0,0);
+}
+function learnTestStart(){
+  LR.stage='test';LR.tq=aspTest(LR.num,LR.cat);LR.ti=0;LR.tok=0;
+  if(LR.tq.length<3)return learnGame();
+  learnTestQ();
+}
+function learnTestQ(){
+  const q=LR.tq[LR.ti],c=document.getElementById('tb3');
+  c.innerHTML=`${lStages()}<div class="ph"><span class="pi">Вопрос ${LR.ti+1}/${LR.tq.length}</span><span class="ps">${LR.name}</span></div>
+<div class="cg-word" style="font-size:20px">${q.q}</div><p class="cg-q">${q.ask}</p>
+${q.opts.map((o,k)=>`<button class="cg-opt lp-opt" data-k="${k}">${o}</button>`).join('')}<div id="lpFb"></div>`;
+  c.querySelectorAll('.lp-opt').forEach(b=>b.onclick=()=>{
+    if(LR.tans)return;LR.tans=1;
+    const pick=q.opts[+b.dataset.k],ok=pick===q.a;if(ok)LR.tok++;
+    c.querySelectorAll('.lp-opt').forEach(x=>{x.disabled=true;const o=q.opts[+x.dataset.k];if(o===q.a)x.classList.add('ok');else if(x===b)x.classList.add('err');});
+    document.getElementById('lpFb').innerHTML=`<div class="cg-hint on">${ok?'Верно!':'Не совсем. Верно: '+q.a}${q.h?'<br>'+q.h:''}</div><button class="btp" style="margin-top:10px" id="lpNx">${LR.ti+1>=LR.tq.length?'Итог теста':'Дальше'}</button>`;
+    document.getElementById('lpNx').onclick=()=>{LR.tans=0;LR.ti++;if(LR.ti>=LR.tq.length)learnTestDone();else learnTestQ();};
+  });
+  window.scrollTo(0,0);
+}
+function learnTestDone(){
+  const n=LR.tq.length,ok=LR.tok,s=lpOf(LR.num,LR.cat);
+  if(!s.test||ok/n>=s.test[0]/s.test[1])s.test=[ok,n];saveLP();learnSend(LR.num,LR.cat,'t',ok,n);
+  score+=ok*3;sv();
+  const pass=ok/n>=0.67,c=document.getElementById('tb3');
+  c.innerHTML=`${lStages()}<div class="game-hero"><div class="fs ${pass?'g':'r'}" style="font-size:44px">${ok}/${n}</div><p style="color:var(--m)">${pass?'Теория усвоена — теперь игра со словами.':'Пока шатко. Перечитай теорию и пройди тест ещё раз — или иди в игру, а к теории вернись потом.'}</p></div>
+<button class="btp" onclick="learnGame()">${pass?'Дальше: игра со словами':'Всё равно к игре'}</button>${pass?'':`<button class="bts" style="margin-top:8px;width:100%" onclick="LR.stage='theory';learnTheory()">Перечитать теорию</button>`}`;
+}
+function learnGame(){
+  LR.stage='game';
+  window._learnGame={num:LR.num,cat:LR.cat};
+  sTab(2);startCustomGame(LR.num,LR.cat==='__all__'?'__mix__':LR.cat);
+}
+// конец раунда игры в режиме изучения (зовёт showCustomItem)
+function learnGameDone(ok,tot){
+  const L=window._learnGame;window._learnGame=null;
+  const s=lpOf(L.num,L.cat);
+  if(!s.game||ok/tot>=s.game[0]/s.game[1]||ok/tot<0.5)s.game=[ok,tot];saveLP();learnSend(L.num,L.cat,'s',ok,tot);
+  LR=LR&&LR.num===L.num?LR:{num:L.num,cat:L.cat,name:(aspects(L.num).find(x=>x.id===L.cat)||{}).name||''};
+  LR.stage='done';
+  const st=aspState(L.num,L.cat),rest=notLearned(L.num),nx=nextAsp(L.num,L.cat);
+  sTab(3);
+  const c=document.getElementById('tb3');
+  let h=`${lStages()}<div class="game-hero"><div class="fs ${ok/tot>=.7?'g':ok/tot>=.5?'y':'r'}" style="font-size:44px">${ok}/${tot}</div><p style="color:var(--m)">${LR.name}: ${st==='done'?'часть изучена ✓':st==='weak'?'западает — вернись к теории и сыграй ещё раз':'почти — ещё один раунд закрепит'}</p></div>`;
+  if(rest.length)h+=`<div class="cg-hint on">Ты можешь порешать настоящее задание №${L.num}, но для него нужны и части, которые ты ещё не изучил: <b>${rest.slice(0,4).map(x=>x.name).join('; ')}${rest.length>4?` и ещё ${rest.length-4}`:''}</b>.</div>`;
+  else h+=`<div class="cg-hint on">Все части темы изучены — самое время решить настоящие задания №${L.num}.</div>`;
+  if(st!=='done')h+=`<button class="btp" style="margin-top:10px" onclick="learnGame()">Ещё раунд игры</button>`;
+  if(nx)h+=`<button class="${st==='done'?'btp':'bts'}" style="margin-top:8px;width:100%" onclick="learnStart(${L.num},'${nx.id}')">Следующая часть: ${nx.name}</button>`;
+  h+=`<button class="${!nx&&st==='done'?'btp':'bts'}" style="margin-top:8px;width:100%" onclick="sTab(1)">Решать настоящие задания №${L.num}</button><button class="bts" style="margin-top:8px;width:100%" onclick="renderLearn(${L.num})">← Ко всем частям темы</button>`;
+  c.innerHTML=h;window.scrollTo(0,0);
+  renderGameTab(L.num);
 }
 
 /* --- PRACTICE --- */
@@ -478,6 +654,7 @@ function showPTask(num){
   const c=document.getElementById('tb1');
   const tasks=ALL_TASKS[num]||[];
   if(pidx>=tasks.length){showResults(pscore,tasks.length,num);return;}
+  window._pWarn=pidx===0&&notLearned(num).length?notLearned(num):null;
   const task=tasks[pidx];answered=false;sel.clear();
   const pct=Math.round(pidx/tasks.length*100);
   const at=ANS_TYPES[num]||'nums';
@@ -496,7 +673,7 @@ function showPTask(num){
     for(let i=1;i<=maxN;i++)ansHTML+=`<button class="nb" onclick="togN(${i},this)">${i}</button>`;
     ansHTML+='</div>';
   }
-  c.innerHTML=`<div class="ph"><span class="pi">Вопрос ${pidx+1}/${tasks.length}</span><span class="ps">${pscore} верно</span></div>
+  c.innerHTML=`${window._pWarn?`<div class="pwarn">Ты можешь порешать настоящее задание, но ещё не изучил части темы, которые в нём встречаются: <b>${window._pWarn.slice(0,3).map(x=>x.name).join('; ')}${window._pWarn.length>3?` и ещё ${window._pWarn.length-3}`:''}</b>.<br><button onclick="sTab(3);learnStart(${num},'${window._pWarn[0].id}')">Изучить: ${window._pWarn[0].name}</button></div>`:''}<div class="ph"><span class="pi">Вопрос ${pidx+1}/${tasks.length}</span><span class="ps">${pscore} верно</span></div>
 <div class="ptrack"><div class="pfill" style="width:${pct}%"></div></div>
 <div class="tsk"><div class="tsk-txt">${fmt(task.text)}</div></div>
 ${ansHTML}
@@ -744,6 +921,7 @@ function showCustomItem(){
     setTimeout(function(){window.anikPlanDone&&anikPlanDone();},700);
     const ok=window._cgOk,tot=items.length,pts=ok*10;
     score+=pts;sv();
+    if(window._learnGame&&window._learnGame.num===num){try{AnikSync&&AnikSync.send(resultLink(num,ok,tot,window._cgWrong||[],catIndex(num,window._cgCategory)).split('start=')[1]);}catch(e){}learnGameDone(ok,tot);return;}
     const catBtn=(cg.categories&&cg.categories.length)?`<button class="bts" onclick="renderGameTab(${num})">К темам</button>`:'';
     c.innerHTML=`<div class="game-hero"><div class="gi">${ok/tot>=.8?'':ok/tot>=.5?'':''}</div><div class="fs ${ok/tot>=.8?'g':ok/tot>=.5?'y':'r'}" style="font-size:44px">${ok}/${tot}</div><p style="color:var(--m)">+${pts} очков</p>${resultBlock(resultLink(num,ok,tot,window._cgWrong||[],catIndex(num,window._cgCategory)))}<div class="cg-hint on" style="margin-top:14px">Теперь закрепи на заданиях №${num} из экзамена.</div><button class="btp" style="margin-top:10px" onclick="sTab(1)">Задания №${num} из экзамена</button><div class="acts" style="margin-top:12px"><button class="bts" onclick="startCustomGame(${num},window._cgCategory)">Ещё раунд</button>${catBtn}<button class="bts" onclick="sTab(0)">Теория</button></div></div>`;
     return;
