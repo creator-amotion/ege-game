@@ -638,7 +638,9 @@ function pickFresh(key,n){
   try{seen=JSON.parse(localStorage.getItem('ege_seen_'+key)||'[]');}catch(e){}
   let idx=pool.map((_,i)=>i).filter(i=>seen.indexOf(i)<0);
   if(idx.length<n){seen=[];idx=pool.map((_,i)=>i);}
-  idx.sort(()=>Math.random()-.5);idx=idx.slice(0,n);
+  // задания ФИПИ (банк и досрочные) — первыми: основной источник; сборники и СтатГрад — следом
+  const pri=i=>{const s=pool[i]&&pool[i].s||'';return /ФИПИ/.test(s)?0:/СтатГрад/.test(s)?0.6:1};
+  const r=idx.map(i=>[i,pri(i)+Math.random()*1.2]);r.sort((a,b)=>a[1]-b[1]);idx=r.map(x=>x[0]).slice(0,n);
   try{localStorage.setItem('ege_seen_'+key,JSON.stringify(seen.concat(idx).slice(-600)));}catch(e){}
   return idx.map(i=>pool[i]);
 }
@@ -675,7 +677,7 @@ function showPTask(num){
   }
   c.innerHTML=`${window._pWarn?`<div class="pwarn">Ты можешь порешать настоящее задание, но ещё не изучил части темы, которые в нём встречаются: <b>${window._pWarn.slice(0,3).map(x=>x.name).join('; ')}${window._pWarn.length>3?` и ещё ${window._pWarn.length-3}`:''}</b>.<br><button onclick="sTab(3);learnStart(${num},'${window._pWarn[0].id}')">Изучить: ${window._pWarn[0].name}</button></div>`:''}<div class="ph"><span class="pi">Вопрос ${pidx+1}/${tasks.length}</span><span class="ps">${pscore} верно</span></div>
 <div class="ptrack"><div class="pfill" style="width:${pct}%"></div></div>
-<div class="tsk"><div class="tsk-txt">${fmt(task.text)}</div></div>
+<div class="tsk"><div class="tsk-txt">${fmt(task.text)}</div>${task.s?`<div style="font-size:11px;color:var(--m);margin-top:8px">Источник: ${task.s}</div>`:''}</div>
 ${ansHTML}
 <div class="res" id="resBox"></div>
 <button class="cbtn" id="chk" onclick="checkAns(${num})">Проверить</button>
