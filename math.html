@@ -80,6 +80,13 @@ h1{font-size:22px;margin:14px 0 4px;background:linear-gradient(135deg,var(--acc)
 .traps li{list-style:none;margin:5px 0;font-size:14px;line-height:1.5}
 .traps li:before{content:'⚠ ';color:var(--acc)}
 .fm{display:inline-block;background:var(--card2);border-radius:8px;padding:4px 9px;margin:3px 4px 0 0;font-size:13.5px}
+.vgrid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;margin-bottom:10px}
+.vn{min-height:40px;border:2px solid var(--ink,#111);background:transparent;color:var(--ink,#111);font-weight:800;font-size:15px;cursor:pointer}
+.vn.has{background:var(--card2,#e8e2d2)}
+.vn.on{background:var(--ink,#111);color:var(--paper,#fff)}
+.row2v{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.vres.ok{border-left:6px solid #2E55C9}.vres.bad{border-left:6px solid #E5332A}
+.vres details{margin-top:6px}
 </style>
 <meta name="theme-color" content="#F3EEE2">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -191,12 +198,14 @@ function render(){
   showXp();
   document.body.classList.toggle('in-pack',view!=='home');
   if(view==='home')home();else if(view==='pack')packView();else if(view==='task')taskView();
-  else if(view==='done')doneView();else if(view==='game')gameView();else if(view==='gdone')gameDone();else if(view==='prac')pracView();else if(view==='pdone')pracDone();else if(view==='ltheory')ltheoryView();else if(view==='ltest')ltestView();
+  else if(view==='done')doneView();else if(view==='game')gameView();else if(view==='gdone')gameDone();else if(view==='prac')pracView();else if(view==='pdone')pracDone();else if(view==='ltheory')ltheoryView();else if(view==='var')varView();else if(view==='vdone')varDone();else if(view==='ltest')ltestView();
   mathRender();
 }
 $('#back').onclick=()=>{
   if(view==='home')location.href='./';
   else if(view==='pack')setView('home');
+  else if(view==='var'){if(confirm('Выйти из варианта? Ответы не сохранятся.'))setView('home');}
+  else if(view==='vdone'||!PACK)setView(pr&&pr.fromVar&&V&&V.done?'vdone':'home');
   else setView('pack');
 };
 
@@ -247,6 +256,8 @@ function home(){
   $('#title').textContent='Математика (ЕГЭ)';
   let h='<h1>Математика</h1><p class="sub">Выбери раздел. В каждом три вкладки: теория простыми словами, практика (настоящие задания; тему можно изучить по аспектам: теория → тест → разбор по шагам → самостоятельно) и быстрые игры.</p>';
   h+=pathCard();
+  let vh=[];try{vh=JSON.parse(localStorage.getItem('math_variants')||'[]')}catch(e){}
+  h+='<div class="card"><div class="tag">Как на экзамене</div><b>Прорешать весь вариант: первая часть, 12 заданий</b><p class="src" style="margin:4px 0 8px">Номера как у ФИПИ, задания из открытого банка ФИПИ и сборников. Ответы проверяются в конце, потом — разбор и «Решить похожую» по ошибкам.'+(vh.length?' Последний результат: <b>'+vh[vh.length-1].ok+' из 12</b>.':'')+'</p><button class="btn" id="variant">Начать вариант</button></div>';
   INDEX.packs.forEach(p=>{
     const m=packCache[p.id]?Math.round(packMastery(packCache[p.id])*100):null;
     const sk=packSkin(p.id);
@@ -258,6 +269,7 @@ function home(){
   app.innerHTML=h;
   app.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>openPack(b.dataset.p));
   const pn=$('#pathnext');if(pn)pn.onclick=()=>goAspect(pn.dataset.go);
+  $('#variant').onclick=variantStart;
   const sb=$('#send');if(sb)sb.onclick=sendToBot;
 }
 function openPack(id){loadPack(id).then(p=>{
@@ -559,11 +571,17 @@ function pracView(){
   if(rv){
     h+='<div class="fb '+rv.cls+'">'+esc(rv.text).replace(/\n/g,'<br>')+'</div>';
     h+=kindTheory(t.k,rv.cls==='bad','Теория этого типа');
+    h+='<button class="btn sec" id="psim">Решить похожую задачу</button>';
     if(rv.k)h+='<button class="btn sec" id="pstep">Разобрать похожую задачу по шагам</button>';
     h+='<button class="btn" id="pnext">'+(pr.i+1>=pr.items.length?'Итог':'Дальше')+'</button>';
     app.innerHTML=h;
     $('#pnext').onclick=pracNext;
     const ps0=$('#pstep');if(ps0)ps0.onclick=()=>startKind(rv.k);
+    $('#psim').onclick=()=>loadPractice(t.n).then(list=>{
+      const s=similarPick(t,list,pr.items.map(x=>x.id));
+      if(!s){$('#psim').textContent='Похожих задач этого типа больше нет';$('#psim').disabled=true;return}
+      pr.items.splice(pr.i+1,0,Object.assign({n:t.n,sim:1},s));pracNext();
+    });
     window.scrollTo(0,0);return;
   }
   if(pr.fb)h+='<div class="fb '+pr.fb.cls+'">'+esc(pr.fb.text).replace(/\n/g,'<br>')+'</div>';
@@ -587,7 +605,7 @@ function pracFinish(ok,skipped){
   const t=pr.items[pr.i],first=ok&&pr.tries===0;
   pr.res.push(first);pr.gain+=first?10:ok?5:0;
   if(t.k){const s=lk(t.k),p=s.pr||(s.pr=[0,0]);p[1]++;if(first)p[0]++;saveLearn()}
-  if(t.sk&&PACK.skills[t.sk])record(t.sk,first?1:0);
+  if(t.sk)record(t.sk,first?1:0);
   const msg=ok?(first?'Верно! +10 XP':'Верно со второй попытки. +5 XP'):'Правильный ответ: '+t.a[0]+(kindSteps(t.k).length?'':'\nРазбора по шагам для задач такого типа пока нет — повтори теорию темы и реши ещё несколько таких.');
   pr.reveal={cls:ok?'good':'bad',text:msg,k:ok||!kindSteps(t.k).length?'':t.k};
   pr.last=msg;
@@ -600,6 +618,13 @@ function pracNext(){
 }
 function pracDone(){
   if(pr.learn&&L)return learnSoloDone();
+  if(pr.fromVar){
+    const ok=pr.res.filter(Boolean).length,t=pr.items[pr.items.length-1];
+    app.innerHTML='<div class="stars"><b>'+ok+'</b> из '+pr.res.length+'<small>похожие задачи</small></div>'
+      +'<button class="btn" id="simmore">Ещё похожую</button><button class="btn sec" id="simback">⬅️ К итогу варианта</button>';
+    $('#simmore').onclick=()=>similarStart(t);$('#simback').onclick=()=>setView('vdone');
+    return;
+  }
   if(!pr.kindsSent){pr.kindsSent=1;const by={};pr.items.forEach((it,i)=>{if(it.k&&pr.res[i]!==undefined){const b=by[it.k]||(by[it.k]=[0,0]);b[1]++;if(pr.res[i])b[0]++}});Object.keys(by).slice(0,6).forEach(k=>sendLearn(k,'p',by[k][0],by[k][1]))}
   setTimeout(function(){window.anikPlanDone&&anikPlanDone();},700);
   $('#title').textContent='Итог';
@@ -612,6 +637,93 @@ function pracDone(){
   $('#again').onclick=()=>startPractice();
   $('#menu').onclick=()=>{packTab='practice';setView('pack')};
   const sb=$('#send');if(sb)sb.onclick=sendToBot;
+}
+
+
+// ── Пробный вариант: вся первая часть ЕГЭ (12 заданий) в порядке экзамена, ответы проверяются в конце ──
+// номер экзамена (ФИПИ) → файл практики и отбор: в банке номера 6–11 хранятся под 7–12, а №12 (наибольшее/наименьшее) — внутри №9
+const MAXMIN=/наибольшее значение функции|наименьшее значение функции|точку максимума функции|точку минимума функции/;
+const VARIANT_MAP=[[1,1],[2,2],[3,3],[4,4],[5,5],[6,7],[7,8],[8,9,t=>!MAXMIN.test(t.t)],[9,10],[10,11],[11,12],[12,9,t=>MAXMIN.test(t.t)]];
+let V=null;
+function variantStart(){
+  const files=[...new Set(VARIANT_MAP.map(x=>x[1]))];
+  app.innerHTML='<div class="card"><div class="sub" style="margin:0">Собираю вариант…</div></div>';
+  Promise.all(files.map(n=>loadPractice(n).then(l=>[n,l]))).then(rs=>{
+    const by=Object.fromEntries(rs);let used=[];try{used=JSON.parse(localStorage.getItem('math_var_seen')||'[]')}catch(e){}
+    const items=VARIANT_MAP.map(([ex,f,flt])=>{
+      let pool=by[f].filter(t=>!flt||flt(t));
+      // как на экзамене: сначала задания из открытого банка ФИПИ, потом сборники, и только если их нет — задания Аника
+      const fipi=pool.filter(t=>t.r&&/ФИПИ/.test(t.s||'')),real=pool.filter(t=>t.r);
+      let src=fipi.length>=5?fipi:real.length>=5?real:pool;
+      const fresh=src.filter(t=>used.indexOf(t.id)<0);if(fresh.length)src=fresh;
+      return Object.assign({ex,n:f},src[Math.floor(Math.random()*src.length)]);
+    });
+    try{localStorage.setItem('math_var_seen',JSON.stringify(used.concat(items.map(t=>t.id)).slice(-600)))}catch(e){}
+    V={items,ans:items.map(()=>''),i:0,t0:Date.now(),done:false};
+    setView('var');
+  });
+}
+function varView(){
+  const t=V.items[V.i];
+  $('#title').textContent='Вариант ЕГЭ · №'+t.ex;
+  const min=Math.floor((Date.now()-V.t0)/60000);
+  let h='<div class="vgrid">'+V.items.map((x,k)=>'<button class="vn'+(k===V.i?' on':'')+(V.ans[k]?' has':'')+'" data-vi="'+k+'">'+x.ex+'</button>').join('')+'</div>';
+  h+='<div class="tag">Задание №'+t.ex+' · прошло '+min+' мин · на экзамене на всю работу 3 ч 55 мин</div><div class="card task">'+esc(t.t)+(t.f&&t.f.length?t.f.map(f=>'<img class="fig" src="'+f+'" alt="Рисунок к заданию">').join(''):'')+'</div><div class="src">'+(t.r?esc(t.s||'Из экзаменов и сборников'):'Задание из банка Аника')+'</div>';
+  h+=numpadHTML().replace('>Проверить<','>Сохранить ответ<')+'<div class="row2v"><button class="btn sec" id="vprev"'+(V.i?'':' disabled')+'>← Назад</button><button class="btn sec" id="vnext">'+(V.i+1<V.items.length?'Дальше →':'К концу')+'</button></div>'
+    +'<button class="btn" id="vfin">Завершить и проверить ('+V.ans.filter(Boolean).length+' из 12 с ответом)</button>';
+  app.innerHTML=h;
+  $('#inp').value=V.ans[V.i]||'';
+  const save=()=>{V.ans[V.i]=$('#inp').value.trim()};
+  bindNumpad(()=>{save();if(V.i+1<V.items.length)V.i++;render()});
+  app.querySelectorAll('[data-vi]').forEach(b=>b.onclick=()=>{save();V.i=+b.dataset.vi;render()});
+  $('#vprev').onclick=()=>{save();V.i=Math.max(0,V.i-1);render()};
+  $('#vnext').onclick=()=>{save();V.i=Math.min(V.items.length-1,V.i+1);render()};
+  $('#vfin').onclick=()=>{save();const left=V.ans.filter(a=>!a).length;if(left&&!confirm('Без ответа: '+left+'. Завершить вариант?'))return;variantFinish()};
+  window.scrollTo(0,0);
+}
+function variantFinish(){
+  V.res=V.items.map((t,k)=>{const u=parseNum(V.ans[k]);return !!u&&t.a.some(a=>{const v=parseNum(a);return v&&u[0]*v[1]===v[0]*u[1]})});
+  V.min=Math.max(1,Math.round((Date.now()-V.t0)/60000));V.done=true;
+  const ok=V.res.filter(Boolean).length;
+  V.items.forEach((t,k)=>{if(t.sk)record(t.sk,V.res[k]?1:0);if(t.k)sendLearn(t.k,'p',V.res[k]?1:0,1)});
+  try{const hist=JSON.parse(localStorage.getItem('math_variants')||'[]');hist.push({d:Date.now(),ok,min:V.min,res:V.res.map(Number)});localStorage.setItem('math_variants',JSON.stringify(hist.slice(-30)))}catch(e){}
+  xp+=ok*10;saveAll();
+  setView('vdone');
+}
+function varDone(){
+  const ok=V.res.filter(Boolean).length;
+  $('#title').textContent='Итог варианта';
+  let h='<div class="stars"><b>'+ok+'</b> из 12<small>первичных баллов за первую часть · '+V.min+' мин</small></div>';
+  h+='<div class="fb '+(ok>=10?'good':'bad')+'">'+(ok>=10?'Сильно! Первая часть почти без потерь — пора браться за вторую.':ok>=6?'Порог пройден. Разбери ошибки ниже — каждое задание первой части стоит балл.':'Пока трудно. Начни с номеров, где ошибся: изучи тему и реши похожие.')+'</div>';
+  h+='<div class="tag" style="margin-top:12px">По заданиям</div>'+V.items.map((t,k)=>'<div class="card vres '+(V.res[k]?'ok':'bad')+'"><b>№'+t.ex+' '+(V.res[k]?'✓':'✗')+'</b> <span class="src">твой ответ: '+esc(V.ans[k]||'—')+(V.res[k]?'':' · верно: '+esc(t.a[0]))+'</span>'
+    +(V.res[k]?'':'<details><summary>Условие</summary><div class="task" style="margin-top:6px">'+esc(t.t)+'</div>'+kindTheory(t.k,false,'Теория этого типа')+'</details><button class="btn sec" data-sim="'+k+'">Решить похожую</button>')+'</div>').join('');
+  let hist=[];try{hist=JSON.parse(localStorage.getItem('math_variants')||'[]')}catch(e){}
+  if(hist.length>1)h+='<div class="src" style="margin-top:8px">Прошлые варианты: '+hist.slice(-6,-1).map(x=>x.ok+'/12').join(' · ')+'</div>';
+  h+='<button class="btn" id="vagain">Новый вариант</button><button class="btn sec" id="vhome">⬅️ К разделам</button>';
+  if(session.length&&!autoSend())h+='<button class="btn ok" id="send">Отправить результаты боту</button>';
+  app.innerHTML=h;
+  app.querySelectorAll('[data-sim]').forEach(b=>b.onclick=()=>similarStart(V.items[+b.dataset.sim]));
+  $('#vagain').onclick=variantStart;$('#vhome').onclick=()=>setView('home');
+  const sb=$('#send');if(sb)sb.onclick=sendToBot;
+}
+// «Решить похожую»: тот же тип задачи, из экзаменов — если есть; близкая по сложности (длина условия, наличие рисунка)
+function similarPick(t,list,except){
+  const ex=new Set(except||[]);ex.add(t.id);
+  let pool=list.filter(x=>!ex.has(x.id)&&(t.k?x.k===t.k:x.g===t.g));
+  if(pool.length<2)pool=list.filter(x=>!ex.has(x.id)&&x.g===t.g);
+  if(!pool.length)return null;
+  if(t.r){const real=pool.filter(x=>x.r);if(real.length)pool=real;}
+  const L=t.t.length,fig=!!(t.f&&t.f.length);
+  pool.sort((a,b)=>(Math.abs(a.t.length-L)/L+((!!(a.f&&a.f.length))!==fig?0.5:0))-(Math.abs(b.t.length-L)/L+((!!(b.f&&b.f.length))!==fig?0.5:0)));
+  const top=pool.slice(0,Math.max(3,Math.ceil(pool.length*0.25)));
+  return top[Math.floor(Math.random()*top.length)];
+}
+function similarStart(t){
+  loadPractice(t.n).then(list=>{
+    const s=similarPick(t,list);if(!s)return;
+    pr={items:[Object.assign({n:t.n},s)],i:0,res:[],tries:0,fb:null,gain:0,fromVar:1};
+    setView('prac');
+  });
 }
 
 // ── Задание по шагам ──
@@ -632,7 +744,7 @@ function startTask(t,keepTab){
   packTab='practice';prepare();setView('task');
 }
 function topicSteps(gid){return PACK.tasks.filter(t=>t.g===gid)}
-function kindSteps(k){return k?PACK.tasks.filter(t=>t.k===k):[]}
+function kindSteps(k){return k&&PACK?PACK.tasks.filter(t=>t.k===k):[]}
 function startKind(k){
   const pool=kindSteps(k);if(!pool.length)return;
   const t=pool[Math.floor(Math.random()*pool.length)];
