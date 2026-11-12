@@ -80,7 +80,7 @@ h1{font-size:22px;margin:14px 0 4px;background:linear-gradient(135deg,var(--acc)
 .traps li{list-style:none;margin:5px 0;font-size:14px;line-height:1.5}
 .traps li:before{content:'⚠ ';color:var(--acc)}
 .fm{display:inline-block;background:var(--card2);border-radius:8px;padding:4px 9px;margin:3px 4px 0 0;font-size:13.5px}
-.vgrid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;margin-bottom:10px}
+.vgrid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;margin-bottom:10px}
 .vn{min-height:40px;border:2px solid var(--ink,#111);background:transparent;color:var(--ink,#111);font-weight:800;font-size:15px;cursor:pointer}
 .vn.has{background:var(--card2,#e8e2d2)}
 .vn.on{background:var(--ink,#111);color:var(--paper,#fff)}
@@ -257,7 +257,7 @@ function home(){
   let h='<h1>Математика</h1><p class="sub">Выбери раздел. В каждом три вкладки: теория простыми словами, практика (настоящие задания; тему можно изучить по аспектам: теория → тест → разбор по шагам → самостоятельно) и быстрые игры.</p>';
   h+=pathCard();
   let vh=[];try{vh=JSON.parse(localStorage.getItem('math_variants')||'[]')}catch(e){}
-  h+='<div class="card"><div class="tag">Как на экзамене</div><b>Прорешать весь вариант: первая часть, 12 заданий</b><p class="src" style="margin:4px 0 8px">Номера как у ФИПИ, задания из открытого банка ФИПИ и сборников. Ответы проверяются в конце, потом — разбор и «Решить похожую» по ошибкам.'+(vh.length?' Последний результат: <b>'+vh[vh.length-1].ok+' из 12</b>.':'')+'</p><button class="btn" id="variant">Начать вариант</button></div>';
+  h+='<div class="card"><div class="tag">Как на экзамене</div><b>Прорешать весь вариант ЕГЭ 2027: первая часть, 13 заданий</b><p class="src" style="margin:4px 0 8px">Структура и номера — как в демоверсии ФИПИ 2027 (новое задание №6 — случайные величины). Задания из открытого банка ФИПИ и сборников; где их ещё нет — наши, по образцу демоверсии. Ответы проверяются в конце, потом — разбор и «Решить похожую» по ошибкам.'+(vh.length?' Последний результат: <b>'+vh[vh.length-1].ok+' из '+(vh[vh.length-1].n||12)+'</b>.':'')+'</p><button class="btn" id="variant">Начать вариант</button></div>';
   INDEX.packs.forEach(p=>{
     const m=packCache[p.id]?Math.round(packMastery(packCache[p.id])*100):null;
     const sk=packSkin(p.id);
@@ -641,9 +641,9 @@ function pracDone(){
 
 
 // ── Пробный вариант: вся первая часть ЕГЭ (12 заданий) в порядке экзамена, ответы проверяются в конце ──
-// номер экзамена (ФИПИ) → файл практики и отбор: в банке номера 6–11 хранятся под 7–12, а №12 (наибольшее/наименьшее) — внутри №9
-const MAXMIN=/наибольшее значение функции|наименьшее значение функции|точку максимума функции|точку минимума функции/;
-const VARIANT_MAP=[[1,1],[2,2],[3,3],[4,4],[5,5],[6,7],[7,8],[8,9,t=>!MAXMIN.test(t.t)],[9,10],[10,11],[11,12],[12,9,t=>MAXMIN.test(t.t)]];
+// структура ЕГЭ 2027 (спецификация ФИПИ): первая часть — 13 заданий с кратким ответом, номера в банке совпадают с экзаменом
+const VARIANT_MAP=[1,2,3,4,5,6,7,8,9,10,11,12,13].map(n=>[n,n]);
+const VARIANT_N=VARIANT_MAP.length;
 let V=null;
 function variantStart(){
   const files=[...new Set(VARIANT_MAP.map(x=>x[1]))];
@@ -670,7 +670,7 @@ function varView(){
   let h='<div class="vgrid">'+V.items.map((x,k)=>'<button class="vn'+(k===V.i?' on':'')+(V.ans[k]?' has':'')+'" data-vi="'+k+'">'+x.ex+'</button>').join('')+'</div>';
   h+='<div class="tag">Задание №'+t.ex+' · прошло '+min+' мин · на экзамене на всю работу 3 ч 55 мин</div><div class="card task">'+esc(t.t)+(t.f&&t.f.length?t.f.map(f=>'<img class="fig" src="'+f+'" alt="Рисунок к заданию">').join(''):'')+'</div><div class="src">'+(t.r?esc(t.s||'Из экзаменов и сборников'):'Задание из банка Аника')+'</div>';
   h+=numpadHTML().replace('>Проверить<','>Сохранить ответ<')+'<div class="row2v"><button class="btn sec" id="vprev"'+(V.i?'':' disabled')+'>← Назад</button><button class="btn sec" id="vnext">'+(V.i+1<V.items.length?'Дальше →':'К концу')+'</button></div>'
-    +'<button class="btn" id="vfin">Завершить и проверить ('+V.ans.filter(Boolean).length+' из 12 с ответом)</button>';
+    +'<button class="btn" id="vfin">Завершить и проверить ('+V.ans.filter(Boolean).length+' из '+VARIANT_N+' с ответом)</button>';
   app.innerHTML=h;
   $('#inp').value=V.ans[V.i]||'';
   const save=()=>{V.ans[V.i]=$('#inp').value.trim()};
@@ -686,19 +686,19 @@ function variantFinish(){
   V.min=Math.max(1,Math.round((Date.now()-V.t0)/60000));V.done=true;
   const ok=V.res.filter(Boolean).length;
   V.items.forEach((t,k)=>{if(t.sk)record(t.sk,V.res[k]?1:0);if(t.k)sendLearn(t.k,'p',V.res[k]?1:0,1)});
-  try{const hist=JSON.parse(localStorage.getItem('math_variants')||'[]');hist.push({d:Date.now(),ok,min:V.min,res:V.res.map(Number)});localStorage.setItem('math_variants',JSON.stringify(hist.slice(-30)))}catch(e){}
+  try{const hist=JSON.parse(localStorage.getItem('math_variants')||'[]');hist.push({d:Date.now(),ok,n:VARIANT_N,min:V.min,res:V.res.map(Number)});localStorage.setItem('math_variants',JSON.stringify(hist.slice(-30)))}catch(e){}
   xp+=ok*10;saveAll();
   setView('vdone');
 }
 function varDone(){
   const ok=V.res.filter(Boolean).length;
   $('#title').textContent='Итог варианта';
-  let h='<div class="stars"><b>'+ok+'</b> из 12<small>первичных баллов за первую часть · '+V.min+' мин</small></div>';
-  h+='<div class="fb '+(ok>=10?'good':'bad')+'">'+(ok>=10?'Сильно! Первая часть почти без потерь — пора браться за вторую.':ok>=6?'Порог пройден. Разбери ошибки ниже — каждое задание первой части стоит балл.':'Пока трудно. Начни с номеров, где ошибся: изучи тему и реши похожие.')+'</div>';
+  let h='<div class="stars"><b>'+ok+'</b> из '+VARIANT_N+'<small>первичных баллов за первую часть · '+V.min+' мин</small></div>';
+  h+='<div class="fb '+(ok>=11?'good':'bad')+'">'+(ok>=11?'Сильно! Первая часть почти без потерь — пора браться за вторую.':ok>=6?'Порог пройден. Разбери ошибки ниже — каждое задание первой части стоит балл.':'Пока трудно. Начни с номеров, где ошибся: изучи тему и реши похожие.')+'</div>';
   h+='<div class="tag" style="margin-top:12px">По заданиям</div>'+V.items.map((t,k)=>'<div class="card vres '+(V.res[k]?'ok':'bad')+'"><b>№'+t.ex+' '+(V.res[k]?'✓':'✗')+'</b> <span class="src">твой ответ: '+esc(V.ans[k]||'—')+(V.res[k]?'':' · верно: '+esc(t.a[0]))+'</span>'
     +(V.res[k]?'':'<details><summary>Условие</summary><div class="task" style="margin-top:6px">'+esc(t.t)+'</div>'+kindTheory(t.k,false,'Теория этого типа')+'</details><button class="btn sec" data-sim="'+k+'">Решить похожую</button>')+'</div>').join('');
   let hist=[];try{hist=JSON.parse(localStorage.getItem('math_variants')||'[]')}catch(e){}
-  if(hist.length>1)h+='<div class="src" style="margin-top:8px">Прошлые варианты: '+hist.slice(-6,-1).map(x=>x.ok+'/12').join(' · ')+'</div>';
+  if(hist.length>1)h+='<div class="src" style="margin-top:8px">Прошлые варианты: '+hist.slice(-6,-1).map(x=>x.ok+'/'+(x.n||12)).join(' · ')+'</div>';
   h+='<button class="btn" id="vagain">Новый вариант</button><button class="btn sec" id="vhome">⬅️ К разделам</button>';
   if(session.length&&!autoSend())h+='<button class="btn ok" id="send">Отправить результаты боту</button>';
   app.innerHTML=h;
