@@ -90,6 +90,8 @@ h1{font-size:22px;margin:14px 0 4px;background:linear-gradient(135deg,var(--acc)
 .thc summary{font-size:15.5px}
 .thp{font-size:14.5px;line-height:1.6;margin:8px 0 0}
 .thf{margin:4px 0 0;padding-left:18px}.thf li{margin:5px 0;font-size:14.5px}
+.lbox{margin-top:10px}
+.lbox>summary{font-size:15px}
 </style>
 <meta name="theme-color" content="#F3EEE2">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -277,7 +279,7 @@ function home(){
   const sb=$('#send');if(sb)sb.onclick=sendToBot;
 }
 function openPack(id){loadPack(id).then(p=>{
-  PACK=p;openHelp=null;packTab='theory';pracNum=0;pracSkill='';pracGroup='';
+  PACK=p;openHelp=null;packTab='practice';pracNum=0;pracSkill='';pracGroup='';
   const sk=packSkin(id);['--col','--ink-p','--bigc'].forEach((v,i)=>document.body.style.setProperty(v,sk[i]));
   setView('pack');
 })}
@@ -285,7 +287,7 @@ function openPack(id){loadPack(id).then(p=>{
 function packView(){
   $('#title').textContent=PACK.title;
   if(packTab==='steps')packTab='practice';   // раздела «По шагам» нет: разбор открывается из практики
-  const T=[['theory','Теория'],['practice','Практика'],['games','Игры']];
+  const T=[['practice','Практика'],['theory','Теория'],['games','Игры']];
   let h='<div class="tabs2" role="tablist">'+T.map(([k,t])=>'<button class="tab'+(packTab===k?' on':'')+'" data-tab="'+k+'">'+t+'</button>').join('')+'</div>';
   if(packTab==='theory')h+=theoryTab();
   else if(packTab==='practice')h+=practiceTab();
@@ -323,7 +325,6 @@ function thCard(t,open){
   h+='<div class="tag" style="margin-top:10px">Как решать</div><ol class="alg">'+t.steps.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ol>';
   if(t.example&&t.example.t)h+='<div class="tag" style="margin-top:10px">Пример</div><div class="task">'+esc(t.example.t)+'</div><ol class="alg">'+t.example.s.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ol><div class="fb good" style="margin-top:6px">Ответ: <b>'+esc(t.example.a)+'</b></div>';
   if(t.traps.length)h+='<div class="tag" style="margin-top:10px">Частые ошибки</div><ul class="traps">'+t.traps.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul>';
-  if(t.src)h+='<div class="src" style="margin-top:8px">Источник: '+esc(t.src)+'</div>';
   return h+'</details>';
 }
 function theoryTab(){
@@ -364,14 +365,20 @@ function loadPractice(n){
 }
 function practiceTab(){
   const nums=PACK.numbers;
-  let h=PACK.numbers.map(n=>'<button class="btn sec" data-diag="'+n+'">Проверить, что я уже знаю в №'+n+'</button>').join('')+'<p class="sub">Выбери тему: сначала теория и алгоритм, потом разбор по шагам, потом решаешь сам. Ответ — число (дробью или десятичной). Подход — до '+ROUNDS+' заданий.</p>';
+  let h='<p class="sub">Решай задания из экзамена: ответ — число (дробью или десятичной). Можно выбрать тему. Теория и разбор по шагам — ниже, если понадобятся.</p>';
   if(nums.length>1)h+='<div class="chips"><button class="chip'+(pracNum===0?' on':'')+'" data-pn="0">Все</button>'+nums.map(n=>'<button class="chip'+(pracNum===n?' on':'')+'" data-pn="'+n+'">№'+n+'</button>').join('')+'</div>';
   return h+'<div id="pracbox"><div class="card"><div class="sub" style="margin:0">Загружаю задания…</div></div></div>';
 }
 function pracNums(){return pracNum?[pracNum]:PACK.numbers}
+let pracOpen=false;   // «Изучить тему» в практике свёрнуто, пока ученик сам не откроет
+// без выбранной темы — теория всех тем номера (свёрнутыми карточками)
+function thGroupCards(){
+  if(!MTH)return '<p class="src">Теория загружается…</p>';
+  const gs=[].concat(...pracNums().map(n=>(MTH.numbers[n]||[]).filter(g=>MTH.topics[g])));
+  return gs.length?'<p class="src" style="margin:6px 0">Выбери тему выше, чтобы открыть разбор по шагам и «Изучить». Теория тем:</p>'+gs.map(g=>thCard(MTH.topics[g],false)).join(''):'<p class="src">Теории по этому номеру пока нет.</p>';
+}
 function pracFilter(a){if(pracGroup)a=a.filter(t=>t.g===pracGroup);if(!pracSkill)return a;const f=a.filter(t=>t.sk===pracSkill);return f.length>=3?f:a}
 function pracInit(){
-  app.querySelectorAll('[data-diag]').forEach(b=>b.onclick=()=>diagStartMath(+b.dataset.diag));
   app.querySelectorAll('[data-pn]').forEach(b=>b.onclick=()=>{pracNum=+b.dataset.pn;pracGroup='';setView('pack')});
   Promise.all(pracNums().map(loadPractice)).then(lists=>{
     if(view!=='pack'||packTab!=='practice')return;
@@ -383,15 +390,20 @@ function pracInit(){
     const tp=pracGroup&&TOPICS_META&&TOPICS_META[pracGroup];
     let topic='';
     if(tp){
+      const th=thOf(pracGroup);
       topic='<div class="card"><div class="tag">Тема</div><b>'+esc(tp.name)+'</b>'
-        +'<div class="tag" style="margin-top:12px">1. Теория</div><ul class="cues">'+tp.theory.map(x=>'<li><span class="if" style="font-weight:500">'+esc(x)+'</span></li>').join('')+'</ul>'
+        +(th?thCard(th,false):'<div class="tag" style="margin-top:12px">1. Теория</div><ul class="cues">'+tp.theory.map(x=>'<li><span class="if" style="font-weight:500">'+esc(x)+'</span></li>').join('')+'</ul>')
         +'<div class="tag" style="margin-top:12px">2. Алгоритм</div>'+((tp.cues&&tp.cues.length)?'<div class="src" style="margin:4px 0">Что заметить в условии:</div><ul class="cues">'+tp.cues.map(c=>'<li><span class="if">'+esc(c.if)+'</span><span class="do">→ '+esc(c.do)+'</span></li>').join('')+'</ul><div class="src" style="margin:8px 0 2px">Шаги:</div>':'')+'<ol class="alg">'+tp.algo.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ol>'
         +learnSummary(pracGroup)+topicKinds(pracGroup)
         +'<div class="tag" style="margin-top:12px">3. Разбор по шагам</div>'
         +(topicSteps(pracGroup).length?'<p class="src" style="margin:0">Задача решается маленькими шагами: видно, на каком ты запнулся. Задач по шагам в этой теме: '+topicSteps(pracGroup).length+'.</p><button class="btn sec" id="tsteps">Разобрать по шагам</button>':'<p class="src" style="margin:0">Шагов по этой теме пока нет — переходи к самостоятельным заданиям.</p>')
         +'</div>';
     }
-    $('#pracbox').innerHTML=chips+topic+'<div class="card">'+(tp?'<div class="tag">4. Самостоятельно</div>':'')+(pracSkill&&PACK.skills[pracSkill]?'<div class="src" style="margin:0 0 6px">Только по навыку «'+esc(PACK.skills[pracSkill].name)+'» <button class="nb" id="pall" style="margin-left:8px">все задания раздела</button></div>':'')+'<b>'+all.length+' заданий</b><div class="src">из них из экзаменов и сборников: '+real+'</div><button class="btn" id="pstart">Начать: '+cnt+' заданий</button></div>';
+    const learnBox='<details class="kth lbox"'+(pracOpen?' open':'')+'><summary>Изучить тему: теория, разбор по шагам, приёмы</summary>'+(topic||thGroupCards())+'</details>';
+    const diagBtns=PACK.numbers.map(n=>'<button class="btn sec" data-diag="'+n+'">Проверить, что я уже знаю в №'+n+'</button>').join('');
+    $('#pracbox').innerHTML=chips+'<div class="card">'+(pracSkill&&PACK.skills[pracSkill]?'<div class="src" style="margin:0 0 6px">Только по навыку «'+esc(PACK.skills[pracSkill].name)+'» <button class="nb" id="pall" style="margin-left:8px">все задания раздела</button></div>':'')+'<b>'+all.length+' заданий</b><div class="src">из них из экзаменов и сборников: '+real+'</div><button class="btn" id="pstart">Решать: '+cnt+' заданий</button></div>'+learnBox+diagBtns;
+    app.querySelectorAll('[data-diag]').forEach(b=>b.onclick=()=>diagStartMath(+b.dataset.diag));
+    const lb=app.querySelector('.lbox');if(lb)lb.addEventListener('toggle',()=>{pracOpen=lb.open});
     $('#pstart').onclick=()=>startPractice();
     const pa=$('#pall');if(pa)pa.onclick=()=>{pracSkill='';pracGroup='';setView('pack')};
     app.querySelectorAll('[data-pg]').forEach(b=>b.onclick=()=>{pracGroup=b.dataset.pg;pracSkill='';setView('pack')});
@@ -531,10 +543,12 @@ function learnToSolo(){
   L.stage='solo';
   const k=L.k,n=(KINDS[k]&&KINDS[k].n)||PACK.numbers[0];
   loadPractice(n).then(list=>{
-    let pool=list.filter(t=>t.k===k);
-    if(!pool.length){const g=(KINDS[k].gs||[KINDS[k].g])[0];pool=list.filter(t=>t.g===g)}
+    // только задачи ЭТОГО типа: если в практике их меньше трёх — добираем из разбора по шагам того же типа (ответ — итог разбора)
+    const pool=list.filter(t=>t.k===k);
     const real=shuffle(pool.filter(t=>t.r)),own=shuffle(pool.filter(t=>!t.r));
-    const items=real.concat(own).slice(0,3).map(t=>Object.assign({n},t));
+    let items=real.concat(own).slice(0,3).map(t=>Object.assign({n},t));
+    if(items.length<3){const seen=new Set(items.map(t=>t.t));
+      shuffle(kindSteps(k)).forEach(x=>{if(items.length<3&&x.f&&!seen.has(x.t)){seen.add(x.t);items.push({n,t:x.t,a:[String(x.f)],k:x.k||k,g:x.g||KINDS[k].g,sk:x.sk,id:'st_'+items.length})}});}
     if(!items.length){packTab='practice';return setView('pack')}
     pr={items,i:0,res:[],tries:0,fb:null,gain:0,learn:true};
     setView('prac');
