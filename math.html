@@ -313,6 +313,8 @@ function analysisHTML(n){
 
 // ── Теория темы (math_theory.json): определения и формулы → алгоритм → пример → ошибки → источник ──
 function thOf(g){if(!MTH||!g)return null;return MTH.topics[g]||MTH.topics[MTH.alias[g]]||null}
+// тема типа задач: из math_kinds (g, gs); у типов «прямоугольного треугольника» без темы — p1_rt
+function kindGroup(k){const d=KINDS&&KINDS[k];if(!d)return '';return d.g||(d.gs&&d.gs[0])||(/^rt_/.test(k)?'p1_rt':'')}
 function thCard(t,open){
   if(!t)return '';
   let h='<details class="kth thc"'+(open?' open':'')+'><summary>'+esc(t.title)+'</summary>';
@@ -454,7 +456,7 @@ function stageBar(){
 function ltheoryView(){
   const d=KINDS[L.k];
   $('#title').textContent='Изучаем аспект';
-  let h=stageBar()+thCard(thOf(d.g),true)+'<div class="card"><div class="tag">Особенности этого типа задач</div><b>'+esc(d.t)+'</b>'+kindFig(L.k)+'<ul class="cues" style="margin-top:8px">'+d.th.map(x=>'<li><span class="if" style="font-weight:500">'+esc(x)+'</span></li>').join('')+'</ul>'+kindErrs(L.k)+'</div>';
+  let h=stageBar()+thCard(thOf(kindGroup(L.k)),true)+'<div class="card"><div class="tag">Особенности этого типа задач</div><b>'+esc(d.t)+'</b>'+kindFig(L.k)+'<ul class="cues" style="margin-top:8px">'+d.th.map(x=>'<li><span class="if" style="font-weight:500">'+esc(x)+'</span></li>').join('')+'</ul>'+kindErrs(L.k)+'</div>';
   if(d.ex&&d.ex.t){
     h+='<div class="card"><div class="tag">Разобранный пример</div><div class="task">'+esc(d.ex.t)+'</div>'
       +(d.ex.s&&d.ex.s.length?'<ol class="alg">'+d.ex.s.map(s=>'<li>'+esc(s[0])+' <b>'+esc(s[1])+'</b></li>').join('')+'</ol>':'')
@@ -467,7 +469,7 @@ function ltheoryView(){
 }
 // вопросы теста — «выбор» из шагов этого аспекта: общие (без чисел конкретной задачи)
 function buildTest(k){
-  const tt=thOf(KINDS[k]&&KINDS[k].g);
+  const tt=thOf(kindGroup(k));
   if(tt&&tt.test.length>=2)return shuffle(tt.test).map(q=>({q:q[0],opts:[q[1]].concat(q[2]),r:q[3]||''}));
   return buildTestSteps(k);
 }
@@ -538,6 +540,7 @@ function learnToSolo(){
   });
 }
 function learnSoloDone(){
+  setTimeout(function(){window.anikPlanDone&&anikPlanDone();},700);   // шаг «Изучить» в плане дня пройден
   const ok=pr.res.filter(Boolean).length,tot=pr.res.length,s=lk(L.k);
   s.solo=[Math.max(ok,(s.solo&&s.solo[0])||0),tot];saveLearn();sendLearn(L.k,'p',ok,tot);
   const st=aspectState(L.k),gid=(KINDS[L.k].gs||[KINDS[L.k].g])[0],nx=aspectsOf(gid).find(k=>k!==L.k&&aspectState(k)!=='done');
@@ -981,6 +984,8 @@ fetch('math_kinds.json').then(r=>r.json()).then(d=>{KINDS=d.kinds;if(view==='hom
 fetch('math_topics.json').then(r=>r.json()).then(d=>{TOPICS_META=d.topics}).catch(()=>{});
 fetch('math_groups.json').then(r=>r.json()).then(d=>{GROUPS_META=d.numbers}).catch(()=>{});
 fetch('math_analysis.json').then(r=>r.json()).then(d=>{ANALYSIS=d.numbers;if(view==='pack'&&packTab==='theory')render()}).catch(()=>{});
+// план дня может сменить адрес на этой же странице (#learn= → #prac=): разбор адреса — при загрузке, поэтому перезагружаемся
+window.addEventListener('hashchange',function(){if(/^#(learn|prac|pack|skill|n)=/.test(location.hash))location.reload();});
 fetch('math_packs.json').then(r=>r.json()).then(idx=>{
   INDEX=idx;
   const h=location.hash;let m;
@@ -989,6 +994,14 @@ fetch('math_packs.json').then(r=>r.json()).then(idx=>{
   }
   if((m=h.match(/^#pack=(\w+)&tab=(theory|practice|steps|games)$/))){
     return loadPack(m[1]).then(p=>{PACK=p;packTab=m[2];setView('pack')}).catch(()=>setView('home'));
+  }
+  if((m=h.match(/^#(learn|prac)=(\w+)$/))){                  // из плана дня: изучение типа задач или задания по нему
+    const go=()=>{const d=KINDS&&KINDS[m[2]];if(!d)return setView('home');
+      if(m[1]==='learn')return goAspect(m[2]);
+      const meta=INDEX.packs.find(p=>p.numbers.includes(d.n));if(!meta)return setView('home');
+      return loadPack(meta.id).then(p=>{PACK=p;pracNum=PACK.numbers.length>1?d.n:0;pracSkill='';pracGroup=d.g||'';packTab='practice';startPractice()});};
+    if(KINDS)return go();
+    return fetch('math_kinds.json').then(r=>r.json()).then(d=>{KINDS=d.kinds;go()}).catch(()=>setView('home'));
   }
   if((m=h.match(/^#skill=(\w+)$/))){
     return fetch('math_skills.json').then(r=>r.json()).then(sk=>{

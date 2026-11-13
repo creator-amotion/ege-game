@@ -412,16 +412,16 @@ function init(){
   if(location.hash==='#stress'){openSpecial('stress');}
   else if(location.hash==='#paronyms'){openTopic(5);}
   else if(/^#practice=\d+$/.test(location.hash)){const n=+location.hash.slice(10);if(TOPICS.some(t=>t.num===n)){openTopic(n);sTab(1);}}   // шаг «задания из экзамена» в плане дня
-  else if(/^#learn=\d+$/.test(location.hash)){const n=+location.hash.slice(7);if(TOPICS.some(t=>t.num===n))openTopic(n);}   // «Изучить тему»
+  else if(/^#learn=\d+(&t=[\w-]+)?$/.test(location.hash)){const mm=/^#learn=(\d+)(?:&t=([\w-]+))?$/.exec(location.hash),n=+mm[1];if(TOPICS.some(t=>t.num===n)){openTopic(n);if(mm[2]&&aspects(n).some(a=>a.id===mm[2]))learnStart(n,mm[2]);}}   // «Изучить тему» (из плана дня — сразу нужная часть)
   else if(/^#theory=\d+$/.test(location.hash)){const n=+location.hash.slice(8);if(TOPICS.some(t=>t.num===n)){openTopic(n);sTab(0);}}   // кнопка «Теория» на экране «Сегодня»: тема открывается на вкладке теории
   else{
     // Ссылка вида index.html#game=17 — открыть задание сразу на вкладке «Игра»
     // (кнопка «Игра по этой теме» в Telegram-боте после неверного ответа)
     // ...или #game=17&cat=<тема> — сразу запустить игру по выбранной теме (так репетитор задаёт конкретную тему игры)
-    const m=/^#game=(\d+)(?:&cat=([\w-]+))?$/.exec(location.hash);
+    const m=/^#game=(\d+)(?:&cat=([\w:-]+))?$/.exec(location.hash);
     if(m){const n=+m[1];if(TOPICS.some(t=>t.num===n)){openTopic(n);sTab(2);
       const cg=typeof CUSTOM_GAMES!=='undefined'&&CUSTOM_GAMES[n];
-      if(m[2]&&cg&&(m[2]==='__mix__'||(cg.categories||[]).some(c=>c.id===m[2])))startCustomGame(n,m[2]);}}
+      if(m[2]&&cg&&(m[2]==='__mix__'||(m[2].indexOf('t:')===0&&topicOf(n,m[2].slice(2)))||(cg.categories||[]).some(c=>c.id===m[2])))startCustomGame(n,m[2]);}}
   }
 }
 
@@ -591,6 +591,7 @@ function learnTestDone(){
   const n=LR.tq.length,ok=LR.tok,s=lpOf(LR.num,LR.cat);
   if(!s.test||ok/n>=s.test[0]/s.test[1])s.test=[ok,n];saveLP();learnSend(LR.num,LR.cat,'t',ok,n);
   score+=ok*3;sv();
+  setTimeout(function(){window.anikPlanDone&&anikPlanDone();},700);   // шаг «Изучить» в плане дня пройден
   const pass=ok*3>=n*2,c=document.getElementById('tb3'),sp=(topicOf(LR.num,LR.cat)||{}).special;
   c.innerHTML=`${lStages()}<div class="game-hero"><div class="fs ${pass?'g':'r'}" style="font-size:44px">${ok}/${n}</div><p style="color:var(--m)">${pass?'Теория усвоена — теперь тренируемся на словах.':'Пока шатко. Перечитай теорию и пройди тест ещё раз — или иди в игру, а к теории вернись потом.'}</p></div>
 <button class="btp" onclick="learnGame()">${pass?(sp==='stress'?'Дальше: тренажёр ударений':'Дальше: игра со словами'):'Всё равно к игре'}</button>${pass?'':`<button class="bts" style="margin-top:8px;width:100%" onclick="LR.stage='theory';learnTheory()">Перечитать теорию</button>`}`;
@@ -1314,6 +1315,8 @@ function goHome(){
 }
 
 init();
+// план дня ведёт по шагам внутри этой страницы (#learn → #game → #practice): смена адреса без перезагрузки тоже открывает шаг
+window.addEventListener('hashchange',function(){if(location.hash&&location.hash!=='#')init();});
 </script>
 </body>
 </html>

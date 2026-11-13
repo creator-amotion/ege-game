@@ -281,7 +281,7 @@ function snap(){return window.AnikSync&&AnikSync.state()||null;}
 var resultShown=false;   // на экране итог подхода: приход состояния синхронизации не должен перерисовывать страницу поверх него
 function route(){
   var h=location.hash.replace(/^#/,''),parts=h.split('&'),set=parts[0],n=null;
-  var tab=null;parts.slice(1).forEach(function(p){var m=p.match(/^n=(\d+)$/);if(m)n=+m[1];if(p==='learn'||p==='games'||p==='theory')tab=p;});
+  var tab=null;parts.slice(1).forEach(function(p){var m=p.match(/^n=(\d+)$/);if(m)n=+m[1];if(p==='learn'||p==='games'||p==='theory'||p==='tasks')tab=p;});
   run=null;resultShown=false;
   if(!INDEX){app.innerHTML='<div class="empty">Загружаю…</div>';loadIndex().then(route).catch(function(){app.innerHTML='<div class="empty">Не получилось загрузить задания. Проверь интернет и обнови страницу.</div>';});return;}
   if(!SETS[set]||!INDEX.sets[set])return home();
@@ -356,7 +356,7 @@ function topic(set,n,tab){
     if(b.dataset.t==='g')loadGames(set,n,col);
     if(b.dataset.t==='l')document.getElementById('pan-l').innerHTML=learnHtml(set,n),wireLearn(set,n);};});
   wireLearn(set,n);
-  var want={theory:'t',games:'g'}[tab];
+  var want={theory:'t',games:'g',tasks:'p'}[tab];
   if(want){var tb=app.querySelector('.tabs2 [data-t='+want+']');if(tb)tb.click();}
 }
 function openTab(t){var b=app.querySelector('.tabs2 [data-t='+t+']');if(b){b.click();window.scrollTo(0,0);}}
