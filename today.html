@@ -135,7 +135,7 @@ var ZSNAP=(function(){
   String(c.y||'').split('').forEach(function(ch,i){if(ch==='1'){var d=new Date(t0);d.setDate(t0.getDate()-(34-i));days.push(iso(d));}});
   return {v:1,from:'bot',today:c.t,exam:c.e||'ege',streak:c.s,goal:c.g,done_today:c.d,days:days,stamps:[],skills:{},
     plan:(c.p||[]).map(function(p){return {skill:p[0],number:p[1],why:p[2],link:p[3],name:p[4],count:10,minutes:5};}),
-    rules:(c.r||[]).map(function(r){return {n:r[0],cat:r[1],name:r[2],tw:r[3],ta:r[4],gw:r[5]};})};
+    rules:(c.r||[]).map(function(r){return {n:r[0],cat:r[1],name:r[2],tw:r[3],ta:r[4],gw:r[5]};}),kmap:c.k||''};
 })();
 function snap(){
   var st=window.AnikSync&&AnikSync.state()||null;
@@ -307,7 +307,8 @@ function today(){
     }).join('');
   }
   html+=reportsHTML();
-  html+='<a class="btn" href="index.html">Выбрать задание</a><a class="btn" href="today.html#stamps">Мои марки</a>';
+  var km=s&&s.kmap?String(s.kmap):'';
+  html+='<a class="btn" href="map.html'+(km?'?k='+encodeURIComponent(km):'')+'">Моя карта знаний</a><a class="btn" href="index.html">Выбрать задание</a><a class="btn" href="today.html#stamps">Мои марки</a>';
   app.innerHTML=html;
   bindProfile();
   var mx=document.getElementById('mix');
