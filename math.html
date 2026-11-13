@@ -202,7 +202,7 @@ function render(){
   showXp();
   document.body.classList.toggle('in-pack',view!=='home');
   if(view==='home')home();else if(view==='pack')packView();else if(view==='task')taskView();
-  else if(view==='done')doneView();else if(view==='game')gameView();else if(view==='gdone')gameDone();else if(view==='prac')pracView();else if(view==='pdone')pracDone();else if(view==='ltheory')ltheoryView();else if(view==='var')varView();else if(view==='vdone')varDone();else if(view==='ltest')ltestView();
+  else if(view==='done')doneView();else if(view==='game')gameView();else if(view==='gdone')gameDone();else if(view==='prac')pracView();else if(view==='pdone')pracDone();else if(view==='ltheory')ltheoryView();else if(view==='var')varView();else if(view==='diag')diagView();else if(view==='ddone')diagDone();else if(view==='vdone')varDone();else if(view==='ltest')ltestView();
   mathRender();
 }
 $('#back').onclick=()=>{
@@ -364,13 +364,14 @@ function loadPractice(n){
 }
 function practiceTab(){
   const nums=PACK.numbers;
-  let h='<p class="sub">Выбери тему: сначала теория и алгоритм, потом разбор по шагам, потом решаешь сам. Ответ — число (дробью или десятичной). Подход — до '+ROUNDS+' заданий.</p>';
+  let h=PACK.numbers.map(n=>'<button class="btn sec" data-diag="'+n+'">Проверить, что я уже знаю в №'+n+'</button>').join('')+'<p class="sub">Выбери тему: сначала теория и алгоритм, потом разбор по шагам, потом решаешь сам. Ответ — число (дробью или десятичной). Подход — до '+ROUNDS+' заданий.</p>';
   if(nums.length>1)h+='<div class="chips"><button class="chip'+(pracNum===0?' on':'')+'" data-pn="0">Все</button>'+nums.map(n=>'<button class="chip'+(pracNum===n?' on':'')+'" data-pn="'+n+'">№'+n+'</button>').join('')+'</div>';
   return h+'<div id="pracbox"><div class="card"><div class="sub" style="margin:0">Загружаю задания…</div></div></div>';
 }
 function pracNums(){return pracNum?[pracNum]:PACK.numbers}
 function pracFilter(a){if(pracGroup)a=a.filter(t=>t.g===pracGroup);if(!pracSkill)return a;const f=a.filter(t=>t.sk===pracSkill);return f.length>=3?f:a}
 function pracInit(){
+  app.querySelectorAll('[data-diag]').forEach(b=>b.onclick=()=>diagStartMath(+b.dataset.diag));
   app.querySelectorAll('[data-pn]').forEach(b=>b.onclick=()=>{pracNum=+b.dataset.pn;pracGroup='';setView('pack')});
   Promise.all(pracNums().map(loadPractice)).then(lists=>{
     if(view!=='pack'||packTab!=='practice')return;
@@ -754,6 +755,60 @@ function similarStart(t){
   });
 }
 
+
+// ── Входная диагностика по номеру: по одному заданию на каждую тему (сначала из экзаменов), ответ числом ──
+// Тема без ошибки — уровень 3 «решает с опорой» в карте знаний; с ошибкой — с неё начнётся изучение. Этап d уходит боту.
+let DGM=null;
+function diagStartMath(n){
+  loadPractice(n).then(list=>{
+    const groups=((GROUPS_META&&GROUPS_META[n])||[]).map(g=>g.id).filter(g=>!/_misc$/.test(g));
+    const gs=groups.length?groups:[...new Set(list.map(t=>t.g))];
+    const items=[];
+    gs.forEach(g=>{
+      const pool=list.filter(t=>t.g===g&&t.k);if(!pool.length)return;
+      const fipi=pool.filter(t=>t.r&&/ФИПИ/.test(t.s||'')),real=pool.filter(t=>t.r);
+      const src=fipi.length?fipi:real.length?real:pool;
+      items.push(Object.assign({n},src[Math.floor(Math.random()*src.length)]));
+    });
+    if(!items.length)return setView('home');
+    DGM={n,items:items.slice(0,8),i:0,res:[],fb:null};
+    setView('diag');
+  });
+}
+function diagView(){
+  const t=DGM.items[DGM.i];
+  $('#title').textContent='Проверка №'+DGM.n;
+  let h='<div class="card"><b>Проверим, что ты уже знаешь</b><p class="sub" style="margin:4px 0 0">По одному заданию на каждую тему №'+DGM.n+'. Отвечай без подсказок: по результату поймём, с чего начинать.</p></div>';
+  h+='<div class="dots">'+DGM.items.map((_,k)=>'<span class="dot '+(k<DGM.res.length?(DGM.res[k]?'ok':'bad'):(k===DGM.i?'cur':''))+'"></span>').join('')+'</div>';
+  h+='<div class="tag">Задание '+(DGM.i+1)+' из '+DGM.items.length+'</div><div class="card task">'+esc(t.t)+(t.f&&t.f.length?t.f.map(f=>'<img class="fig" src="'+f+'" alt="Рисунок к заданию">').join(''):'')+'</div>';
+  if(DGM.fb)h+='<div class="fb bad">'+esc(DGM.fb)+'</div>';
+  h+=numpadHTML()+'<button class="btn sec" id="dskip">Не знаю</button>';
+  app.innerHTML=h;
+  const done=ok=>{DGM.res.push(ok);DGM.fb=null;DGM.i++;if(DGM.i>=DGM.items.length)return diagMathEnd();render()};
+  bindNumpad(text=>{const u=parseNum(text);if(!u){DGM.fb='Напиши ответ числом (например 0,35 или 3/7).';return render()}
+    done(t.a.some(a=>{const v=parseNum(a);return v&&u[0]*v[1]===v[0]*u[1]}))});
+  $('#dskip').onclick=()=>done(false);
+  window.scrollTo(0,0);
+}
+function diagMathEnd(){
+  DGM.items.forEach((t,k)=>{const ok=DGM.res[k]?1:0,s=lk(t.k);s.diag=[ok,1];sendLearn(t.k,'d',ok,1)});
+  saveLearn();
+  setTimeout(function(){window.anikPlanDone&&anikPlanDone();},700);
+  setView('ddone');
+}
+function diagDone(){
+  const name=g=>{const m=((GROUPS_META&&GROUPS_META[DGM.n])||[]).find(x=>x.id===g);return m?m.name:(KINDS&&KINDS[g]?KINDS[g].t:g)};
+  const ok=DGM.res.filter(Boolean).length,first=DGM.items.findIndex((t,k)=>!DGM.res[k]);
+  $('#title').textContent='Итог проверки';
+  let h='<div class="stars"><b>'+ok+'</b> из '+DGM.items.length+'<small>тем №'+DGM.n+' уже получается</small></div>';
+  h+=DGM.items.map((t,k)=>'<div class="card" style="border-left:6px solid '+(DGM.res[k]?'#2E55C9':'#E5332A')+'"><b>'+esc(name(t.g))+'</b><div class="src">'+(DGM.res[k]?'получается — можно сразу к заданиям':'начнём с теории этой темы · верный ответ: '+esc(t.a[0]))+'</div></div>').join('');
+  if(first>=0)h+='<button class="btn" id="dlearn">Начать с: '+esc(name(DGM.items[first].g))+'</button>';
+  h+='<button class="btn sec" id="dhome">⬅️ К разделам</button>';
+  app.innerHTML=h;
+  const b=$('#dlearn');if(b)b.onclick=()=>goAspect(DGM.items[first].k);
+  $('#dhome').onclick=()=>setView('home');
+}
+
 // ── Задание по шагам ──
 function pickTask(skill){
   let pool=PACK.tasks.filter(t=>t.sk===skill);
@@ -985,7 +1040,7 @@ fetch('math_topics.json').then(r=>r.json()).then(d=>{TOPICS_META=d.topics}).catc
 fetch('math_groups.json').then(r=>r.json()).then(d=>{GROUPS_META=d.numbers}).catch(()=>{});
 fetch('math_analysis.json').then(r=>r.json()).then(d=>{ANALYSIS=d.numbers;if(view==='pack'&&packTab==='theory')render()}).catch(()=>{});
 // план дня может сменить адрес на этой же странице (#learn= → #prac=): разбор адреса — при загрузке, поэтому перезагружаемся
-window.addEventListener('hashchange',function(){if(/^#(learn|prac|pack|skill|n)=/.test(location.hash))location.reload();});
+window.addEventListener('hashchange',function(){if(/^#(learn|prac|pack|skill|n|diag)=/.test(location.hash))location.reload();});
 fetch('math_packs.json').then(r=>r.json()).then(idx=>{
   INDEX=idx;
   const h=location.hash;let m;
@@ -995,6 +1050,7 @@ fetch('math_packs.json').then(r=>r.json()).then(idx=>{
   if((m=h.match(/^#pack=(\w+)&tab=(theory|practice|steps|games)$/))){
     return loadPack(m[1]).then(p=>{PACK=p;packTab=m[2];setView('pack')}).catch(()=>setView('home'));
   }
+  if((m=h.match(/^#diag=(\d+)$/))){ return diagStartMath(+m[1]); }       // входная диагностика номера (карта знаний)
   if((m=h.match(/^#(learn|prac)=(\w+)$/))){                  // из плана дня: изучение типа задач или задания по нему
     const go=()=>{const d=KINDS&&KINDS[m[2]];if(!d)return setView('home');
       if(m[1]==='learn')return goAspect(m[2]);

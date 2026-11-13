@@ -118,7 +118,7 @@ h1{font-family:var(--display);font-size:38px;font-weight:800;letter-spacing:-1.5
 var TG=window.Telegram&&window.Telegram.WebApp?window.Telegram.WebApp:null;
 if(TG){try{TG.ready();TG.expand();TG.setHeaderColor('#F3EEE2');TG.setBackgroundColor('#F3EEE2');}catch(e){}}
 var REG=null,app=document.getElementById('app');
-var WHY={new:'Новое',weak:'Слабое место',repeat:'Пора повторить'};
+var WHY={new:'Новое',weak:'Слабое место',repeat:'Пора повторить',review:'Проверка памяти'};
 var SETS=[['ege.rus','ЕГЭ · Русский'],['ege.math','ЕГЭ · Математика'],['ege.mathb','ЕГЭ · База'],['oge.rus','ОГЭ · Русский'],['oge.math','ОГЭ · Математика']];
 var STAMP_RULE='Марка выдаётся, когда знание по теме не ниже 80 % и три последних занятия подряд прошли хорошо: в каждом не меньше 3 ответов и не меньше 70 % верных. Игры и задания считаются.';
 
@@ -204,6 +204,7 @@ function bindProfile(){
    Так же считает бот (progress_state.rus_steps), поэтому план в боте и здесь один. */
 function stepsFor(p){
   var l=String(p.link||''),n=p.number,m;
+  if(p.why==='review'||/^rus-ege\.html#practice=|^math\.html#prac=/.test(l))return [{k:'tasks',name:'Задания',url:l||'index.html'}];   // повторение — сразу задания
   if((m=l.match(/^rus-ege\.html#learn=(\d+)(?:&t=([\w-]+))?$/)))
     return [{k:'learn',name:'Изучить',url:l},{k:'game',name:'Игра',url:n===4?'rus-ege.html#stress':'rus-ege.html#game='+n+'&cat='+(m[2]?'t:'+m[2]:'__mix__')},{k:'tasks',name:'Задания',url:'rus-ege.html#practice='+n}];
   if((m=l.match(/^math\.html#learn=(\w+)$/)))return [{k:'learn',name:'Изучить',url:l},{k:'tasks',name:'Задания',url:'math.html#prac='+m[1]}];

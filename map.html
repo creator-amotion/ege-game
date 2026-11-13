@@ -89,6 +89,8 @@ function learnLink(subj,n,id){
   if(subj==='ege.mathb')return 'trainer.html#ege-mathb&n='+n;
   return 'trainer.html#'+subj.replace('.','-')+'&n='+n+'&learn';
 }
+// входная диагностика номера (есть у русского ЕГЭ и профильной математики)
+function diagLink(subj,n){return subj==='ege.rus'?'rus-ege.html#diag='+n:subj==='ege.math'?'math.html#diag='+n:'';}
 // подсказка репетитору по уровню части
 function advice(p){
   if(p.weak)return 'Западает: разберите с учеником ошибки по этой части, перечитайте правило и дайте тест по теории, потом игру.';
@@ -143,7 +145,7 @@ function render(cat,code){
           return '<div class="part"><div class="pt">'+esc(p.title)+(p.weak?'<span class="tag weak">западает</span>':p.rev?'<span class="tag rev">повторить</span>':'')+
             '<span class="lv">уровень <b>'+p.l+'</b> — '+LEVEL[p.l]+'</span>'+(TUTOR?'<div class="advice">'+esc(advice(p))+'</div>':'')+'</div>'+
             '<a href="'+learnLink(s.key,n.n,p.id)+'">'+(p.l>=4?'Повторить':'Изучить')+'</a></div>';
-        }).join('')+'</details>';
+        }).join('')+(avg===0&&diagLink(s.key,n.n)?'<div class="part"><div class="pt"><b>Не знаешь, с чего начать?</b><span class="lv">Несколько вопросов покажут, какие части уже получаются.</span></div><a href="'+diagLink(s.key,n.n)+'">Проверить</a></div>':'')+'</details>';
     });
   });
   h+='<div class="stl"><span>Как считается уровень</span></div><div class="how"><ol>'+

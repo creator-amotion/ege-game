@@ -412,6 +412,7 @@ function init(){
   if(location.hash==='#stress'){openSpecial('stress');}
   else if(location.hash==='#paronyms'){openTopic(5);}
   else if(/^#practice=\d+$/.test(location.hash)){const n=+location.hash.slice(10);if(TOPICS.some(t=>t.num===n)){openTopic(n);sTab(1);}}   // шаг «задания из экзамена» в плане дня
+  else if(/^#diag=\d+$/.test(location.hash)){const n=+location.hash.slice(6);if(TOPICS.some(t=>t.num===n))diagStart(n);}   // входная диагностика (карта знаний, план дня)
   else if(/^#learn=\d+(&t=[\w-]+)?$/.test(location.hash)){const mm=/^#learn=(\d+)(?:&t=([\w-]+))?$/.exec(location.hash),n=+mm[1];if(TOPICS.some(t=>t.num===n)){openTopic(n);if(mm[2]&&aspects(n).some(a=>a.id===mm[2]))learnStart(n,mm[2]);}}   // «Изучить тему» (из плана дня — сразу нужная часть)
   else if(/^#theory=\d+$/.test(location.hash)){const n=+location.hash.slice(8);if(TOPICS.some(t=>t.num===n)){openTopic(n);sTab(0);}}   // кнопка «Теория» на экране «Сегодня»: тема открывается на вкладке теории
   else{
@@ -520,7 +521,10 @@ function renderLearn(num){
   const weak=a.filter(x=>aspState(num,x.id)==='weak'),nx=nextAsp(num);
   let h=`<div class="lp-intro"><b>Как учить тему</b><br>Тема разбита на части — от простого к сложному. В каждой части: правило и алгоритм → тест по теории → игра со словами. Когда части изучены — настоящие задания №${num}.</div>`;
   h+=`<div class="lp-sum">Изучено <b>${cnt.done}</b> из ${a.length}${cnt.going?` · в процессе ${cnt.going}`:''}${weak.length?` · <span style="color:var(--r,#E5332A)">западает: ${weak.map(x=>x.name).join('; ')}</span>`:''}</div>`;
-  if(nx)h+=`<button class="btp" style="margin:10px 0" onclick="learnStart(${num},'${nx.id}')">${cnt.done+cnt.going+cnt.weak?'Изучать дальше':'Начать изучение'}: ${nx.name}</button>`;
+  const fresh=!(cnt.done+cnt.going+cnt.weak),canDiag=a.some(x=>!x.special);
+  if(fresh&&canDiag)h+=`<button class="btp" style="margin:10px 0 0" onclick="diagStart(${num})">Сначала проверить, что я уже знаю (до 12 вопросов)</button><p class="lp-sum">Пропустишь части, которые уже получаются, и начнёшь с того, что нужно.</p>`;
+  if(nx)h+=`<button class="${fresh&&canDiag?'bts':'btp'}" style="margin:10px 0;${fresh&&canDiag?'width:100%':''}" onclick="learnStart(${num},'${nx.id}')">${cnt.done+cnt.going+cnt.weak?'Изучать дальше':'Начать изучение'}: ${nx.name}</button>`;
+  if(!fresh&&canDiag)h+=`<button class="bts" style="margin:0 0 10px;width:100%" onclick="diagStart(${num})">Проверить себя по всей теме ещё раз</button>`;
   else h+=`<div class="cg-hint on" style="margin:10px 0">Все части темы изучены. Теперь — настоящие задания №${num}.</div><button class="btp" onclick="sTab(1)">Задания №${num} из экзамена</button>`;
   h+=a.map((x,i)=>{const st=aspState(num,x.id),s=(LP[num]||{})[x.id]||{};
     const det=[s.test?`тест ${s.test[0]}/${s.test[1]}`:'',s.game?`игра ${s.game[0]}/${s.game[1]}`:''].filter(Boolean).join(' · ');
@@ -621,6 +625,57 @@ function learnGameDone(ok,tot){
   h+=`<button class="${!nx&&st==='done'?'btp':'bts'}" style="margin-top:8px;width:100%" onclick="sTab(1)">Решать настоящие задания №${L.num}</button><button class="bts" style="margin-top:8px;width:100%" onclick="renderLearn(${L.num})">← Ко всем частям темы</button>`;
   c.innerHTML=h;window.scrollTo(0,0);
   renderGameTab(L.num);
+}
+
+
+/* =================== ВХОДНАЯ ДИАГНОСТИКА =================== */
+/* По 2 вопроса на каждую часть темы (до 6 частей, до 12 вопросов), от простых частей к сложным. Учить начинаем после диагностики:
+   часть без ошибок → уровень 3 «решает с опорой» (теорию можно не проходить), с ошибками → с неё начинается изучение.
+   Результаты уходят боту этапом d (l_er<номер>_<часть>-d<верно><всего>) и попадают в карту знаний. */
+let DG=null;
+function diagStart(num){
+  const a=aspects(num).filter(x=>!x.special);
+  if(!a.length){openTopic(num);return;}
+  const per=2,qs=[];                 // по два вопроса на часть: один верный ответ из двух вариантов ещё ничего не доказывает
+  a.slice(0,6).forEach(x=>{
+    const pool=aspItems(num,x.id).filter(it=>!Array.isArray(it.tap)&&it.options&&it.options.length>=2).sort(()=>Math.random()-.5).slice(0,per);
+    pool.forEach(it=>qs.push({part:x.id,name:x.name,it}));
+  });
+  DG={num,qs:qs.slice(0,12),i:0,res:{},ans:false};
+  if(curNum!==num)openTopic(num);
+  sTab(3);diagQ();
+}
+function diagQ(){
+  const c=document.getElementById('tb3'),q=DG.qs[DG.i];
+  if(!q)return diagEnd();
+  DG.ans=false;
+  const opts=q.it.options.slice();if(opts.length>2)opts.sort(()=>Math.random()-.5);
+  c.innerHTML=`<div class="lp-intro"><b>Проверим, что ты уже знаешь</b><br>Отвечай без подсказок. По ответам поймём, с какой части начинать, а что можно пропустить.</div>
+<div class="ph"><span class="pi">Вопрос ${DG.i+1}/${DG.qs.length}</span><span class="ps">№${DG.num}</span></div>
+<div class="cg-word">${fmtW(q.it.word)}</div>
+${opts.map((o,k)=>`<button class="cg-opt dg-opt" data-k="${k}">${o}</button>`).join('')}<div id="dgFb"></div>`;
+  c.querySelectorAll('.dg-opt').forEach(b=>b.onclick=()=>{
+    if(DG.ans)return;DG.ans=true;
+    const ok=opts[+b.dataset.k]===q.it.answer,r=DG.res[q.part]||(DG.res[q.part]=[0,0]);r[1]++;if(ok)r[0]++;
+    c.querySelectorAll('.dg-opt').forEach(x=>{x.disabled=true;if(opts[+x.dataset.k]===q.it.answer)x.classList.add('ok');else if(x===b)x.classList.add('err');});
+    document.getElementById('dgFb').innerHTML=`<button class="btp" style="margin-top:10px" id="dgNx">${DG.i+1>=DG.qs.length?'Результат':'Дальше'}</button>`;
+    document.getElementById('dgNx').onclick=()=>{DG.i++;diagQ();};
+  });
+  window.scrollTo(0,0);
+}
+function diagEnd(){
+  const num=DG.num,a=aspects(num).filter(x=>DG.res[x.id]);
+  a.forEach(x=>{const r=DG.res[x.id],s=lpOf(num,x.id);s.diag=r;if(r[0]===r[1]){s.th=1;s.test=s.test||[r[0],r[1]];s.game=s.game||[r[0],r[1]];}learnSend(num,x.id,'d',r[0],r[1]);});
+  saveLP();
+  const known=a.filter(x=>DG.res[x.id][0]===DG.res[x.id][1]),gaps=a.filter(x=>DG.res[x.id][0]<DG.res[x.id][1]);
+  const c=document.getElementById('tb3');
+  let h=`<div class="game-hero"><div class="fs ${gaps.length?'y':'g'}" style="font-size:40px">${known.length}/${a.length}</div><p style="color:var(--m)">частей темы уже получается</p></div>`;
+  h+=a.map(x=>{const r=DG.res[x.id],ok=r[0]===r[1];return `<div class="lp-row ${ok?'done':'weak'}" style="cursor:default"><i>${ok?'✓':'!'}</i><span><b>${x.name}</b><small>${ok?'знаешь — можно сразу к заданиям':'начнём с теории'} · ${r[0]} из ${r[1]}</small></span></div>`;}).join('');
+  if(gaps.length)h+=`<button class="btp" style="margin-top:12px" onclick="learnStart(${num},'${gaps[0].id}')">Начать с: ${gaps[0].name}</button>`;
+  else h+=`<div class="cg-hint on" style="margin-top:12px">Всё получилось. Закрепи на настоящих заданиях №${num} — так знание станет «решает сам».</div><button class="btp" style="margin-top:8px" onclick="sTab(1)">Задания №${num} из экзамена</button>`;
+  h+=`<button class="bts" style="margin-top:8px;width:100%" onclick="renderLearn(${num})">Все части темы</button>`;
+  c.innerHTML=h;DG=null;window.scrollTo(0,0);
+  setTimeout(function(){window.anikPlanDone&&anikPlanDone();},700);
 }
 
 /* --- PRACTICE --- */
