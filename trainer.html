@@ -342,7 +342,7 @@ function topic(set,n,tab){
     '<div class="facts"><div class="fact"><b>'+x.count+'</b><span>заданий</span></div><div class="fact"><b>'+(sk?Math.round(sk.p*100)+'%':'—')+'</b><span>знание</span></div><div class="fact"><b>'+(stat.tot?Math.round(100*stat.ok/stat.tot)+'%':'—')+'</b><span>верно здесь</span></div></div>'+
     '<div class="tabs2 t4" role="tablist"><button class="tab on" data-t="l">Изучить</button><button class="tab" data-t="t">Теория</button><button class="tab" data-t="g">Игры</button><button class="tab" data-t="p">Задания</button></div>'+
     '<div id="pan-l">'+learnHtml(set,n)+'</div>'+
-    '<div id="pan-p" hidden>'+(numState(set,n).step==='new'||numState(set,n).step==='theory'?'<div class="hint" style="margin:0 0 10px">Ты ещё не изучил эту тему. Решать можно и сразу, но лучше сначала прочитать теорию и сыграть в игры — так задания пойдут легче.</div>':'')+
+    '<div id="pan-p" hidden>'+
     '<p class="lead">Только настоящие задания из экзаменов и сборников (банк ФИПИ и сборники) — те же, что в боте.</p>'+
     '<button class="btn" id="start">Начать: '+cnt+' '+plural(cnt,'задание','задания','заданий')+'</button>'+
     '<p class="src" style="margin-top:14px">Подход можно закончить в любой момент: засчитаются решённые.</p></div>'+
