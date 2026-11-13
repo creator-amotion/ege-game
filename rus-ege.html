@@ -506,7 +506,7 @@ function aspItems(num,id){
 function aspState(num,cat){
   const s=(LP[num]||{})[cat]||{},g=s.game,t=s.test,sp=(topicOf(num,cat)||{}).special;
   if(g&&g[1]>=5&&g[0]/g[1]<0.5)return 'weak';
-  if(t&&t[0]/t[1]>=0.67&&(sp||g&&g[0]/g[1]>=0.7))return 'done';
+  if(t&&t[0]*3>=t[1]*2&&(sp||g&&g[0]/g[1]>=0.7))return 'done';
   if(s.th||t||g)return 'going';
   return 'new';
 }
@@ -591,7 +591,7 @@ function learnTestDone(){
   const n=LR.tq.length,ok=LR.tok,s=lpOf(LR.num,LR.cat);
   if(!s.test||ok/n>=s.test[0]/s.test[1])s.test=[ok,n];saveLP();learnSend(LR.num,LR.cat,'t',ok,n);
   score+=ok*3;sv();
-  const pass=ok/n>=0.67,c=document.getElementById('tb3'),sp=(topicOf(LR.num,LR.cat)||{}).special;
+  const pass=ok*3>=n*2,c=document.getElementById('tb3'),sp=(topicOf(LR.num,LR.cat)||{}).special;
   c.innerHTML=`${lStages()}<div class="game-hero"><div class="fs ${pass?'g':'r'}" style="font-size:44px">${ok}/${n}</div><p style="color:var(--m)">${pass?'Теория усвоена — теперь тренируемся на словах.':'Пока шатко. Перечитай теорию и пройди тест ещё раз — или иди в игру, а к теории вернись потом.'}</p></div>
 <button class="btp" onclick="learnGame()">${pass?(sp==='stress'?'Дальше: тренажёр ударений':'Дальше: игра со словами'):'Всё равно к игре'}</button>${pass?'':`<button class="bts" style="margin-top:8px;width:100%" onclick="LR.stage='theory';learnTheory()">Перечитать теорию</button>`}`;
 }

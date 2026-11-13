@@ -87,6 +87,9 @@ h1{font-size:22px;margin:14px 0 4px;background:linear-gradient(135deg,var(--acc)
 .row2v{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .vres.ok{border-left:6px solid #2E55C9}.vres.bad{border-left:6px solid #E5332A}
 .vres details{margin-top:6px}
+.thc summary{font-size:15.5px}
+.thp{font-size:14.5px;line-height:1.6;margin:8px 0 0}
+.thf{margin:4px 0 0;padding-left:18px}.thf li{margin:5px 0;font-size:14.5px}
 </style>
 <meta name="theme-color" content="#F3EEE2">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -105,6 +108,7 @@ h1{font-size:22px;margin:14px 0 4px;background:linear-gradient(135deg,var(--acc)
 // ── Параметры знания — те же, что в боте (bkt.py) ──
 const P_L0=0.30,P_T=0.09,P_S=0.10,P_G=0.20,MAX_TRIES=2,ROUNDS=10;
 let INDEX=null, PACK=null, packCache={}, prog={}, xp=0, session=[], cur=null, gm=null, view='home', openHelp=null;
+let MTH=null;
 let packTab='theory', pracNum=0, pracSkill='', pracCache={}, pr=null, ANALYSIS=null, GROUPS_META=null, TOPICS_META=null, pracGroup='', KINDS=null;
 const TG=window.Telegram&&window.Telegram.WebApp&&window.Telegram.WebApp.initData?window.Telegram.WebApp:null;
 if(TG){try{TG.ready();TG.expand();TG.setHeaderColor('#F3EEE2');TG.setBackgroundColor('#F3EEE2');}catch(e){}}
@@ -306,12 +310,28 @@ function analysisHTML(n){
   if(a.themes.length)h+='<div class="src" style="margin-top:12px">Чаще всего в заданиях: '+a.themes.map(x=>esc(x.name)+' — '+x.share+'%').join('; ')+'</div>';
   return h+'</div>';
 }
+
+// ── Теория темы (math_theory.json): определения и формулы → алгоритм → пример → ошибки → источник ──
+function thOf(g){if(!MTH||!g)return null;return MTH.topics[g]||MTH.topics[MTH.alias[g]]||null}
+function thCard(t,open){
+  if(!t)return '';
+  let h='<details class="kth thc"'+(open?' open':'')+'><summary>'+esc(t.title)+'</summary>';
+  h+=t.rule.map(x=>'<p class="thp">'+esc(x)+'</p>').join('');
+  if(t.formulas.length)h+='<div class="tag" style="margin-top:10px">Формулы</div><ul class="thf">'+t.formulas.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul>';
+  h+='<div class="tag" style="margin-top:10px">Как решать</div><ol class="alg">'+t.steps.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ol>';
+  if(t.example&&t.example.t)h+='<div class="tag" style="margin-top:10px">Пример</div><div class="task">'+esc(t.example.t)+'</div><ol class="alg">'+t.example.s.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ol><div class="fb good" style="margin-top:6px">Ответ: <b>'+esc(t.example.a)+'</b></div>';
+  if(t.traps.length)h+='<div class="tag" style="margin-top:10px">Частые ошибки</div><ul class="traps">'+t.traps.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul>';
+  if(t.src)h+='<div class="src" style="margin-top:8px">Источник: '+esc(t.src)+'</div>';
+  return h+'</details>';
+}
 function theoryTab(){
-  let h='<p class="sub">'+esc(PACK.desc)+'. Сначала разбор задания, потом правила навыков. Задачи решаем во вкладке «Практика»: там у каждой темы есть разбор по шагам.</p>'+theoryGames();
+  let h='<p class="sub">'+esc(PACK.desc)+'. Сначала что это за задание, потом теория каждой темы: определения, формулы, алгоритм и пример. Задачи — во вкладке «Практика».</p>';
   const nums=PACK.numbers;
   nums.forEach(n=>{
     const sk=skillsOfNumber(n);
     h+=analysisHTML(n);
+    const gs=MTH&&MTH.numbers[n]?MTH.numbers[n].filter(g=>MTH.topics[g]):[];
+    if(gs.length){h+='<div class="tag" style="margin-top:14px">Теория по темам'+(nums.length>1?' · задание №'+n:'')+'</div>'+gs.map((g,i)=>thCard(MTH.topics[g],i===0)).join('');return}
     if(!sk.length)return;
     h+='<div class="tag" style="margin-top:14px">Навыки и правила'+(nums.length>1?' · задание №'+n:'')+'</div>';
     sk.forEach(s=>{
@@ -321,7 +341,7 @@ function theoryTab(){
         +'</div>';
     });
   });
-  return h;
+  return h+theoryGames();
 }
 // Проверка теории: короткие игры раздела на знание правил и формул (без «Быстрого счёта»)
 function theoryGames(){
@@ -409,7 +429,7 @@ function aspectsOf(gid){
 function aspectState(k){
   const s=lprog[k]||{},p=s.pr||[0,0],tst=s.test;
   if(p[1]>=3&&p[0]/p[1]<0.5)return 'weak';
-  if(tst&&tst[0]/tst[1]>=0.67&&s.solo&&s.solo[0]>=Math.min(2,s.solo[1]))return 'done';
+  if(tst&&tst[0]*3>=tst[1]*2&&s.solo&&s.solo[0]>=Math.min(2,s.solo[1]))return 'done';
   if(s.th||tst)return 'going';
   return 'new';
 }
@@ -434,19 +454,24 @@ function stageBar(){
 function ltheoryView(){
   const d=KINDS[L.k];
   $('#title').textContent='Изучаем аспект';
-  let h=stageBar()+'<div class="card"><div class="tag">Аспект</div><b>'+esc(d.t)+'</b>'+kindFig(L.k)+'<ul class="cues" style="margin-top:8px">'+d.th.map(x=>'<li><span class="if" style="font-weight:500">'+esc(x)+'</span></li>').join('')+'</ul>'+kindErrs(L.k)+'</div>';
+  let h=stageBar()+thCard(thOf(d.g),true)+'<div class="card"><div class="tag">Особенности этого типа задач</div><b>'+esc(d.t)+'</b>'+kindFig(L.k)+'<ul class="cues" style="margin-top:8px">'+d.th.map(x=>'<li><span class="if" style="font-weight:500">'+esc(x)+'</span></li>').join('')+'</ul>'+kindErrs(L.k)+'</div>';
   if(d.ex&&d.ex.t){
     h+='<div class="card"><div class="tag">Разобранный пример</div><div class="task">'+esc(d.ex.t)+'</div>'
       +(d.ex.s&&d.ex.s.length?'<ol class="alg">'+d.ex.s.map(s=>'<li>'+esc(s[0])+' <b>'+esc(s[1])+'</b></li>').join('')+'</ol>':'')
       +'<div class="fb good" style="margin-top:8px">Ответ: <b>'+esc(d.ex.a)+'</b></div></div>';
   }
-  h+='<button class="btn" id="ltotest">Я прочитал(а): к тесту</button>';
+  h+='<button class="btn" id="ltotest">Я прочитал(а): к тесту по теории</button>';
   app.innerHTML=h;
-  $('#ltotest').onclick=()=>{L.stage='test';L.tq=buildTest(L.k);L.ti=0;L.tok=0;L.tpick=null;if(L.tq.length<3){L.stage='steps';return learnToSteps()}setView('ltest')};
+  $('#ltotest').onclick=()=>{L.stage='test';L.tq=buildTest(L.k);L.ti=0;L.tok=0;L.tpick=null;if(L.tq.length<2){L.stage='steps';return learnToSteps()}setView('ltest')};
   window.scrollTo(0,0);
 }
 // вопросы теста — «выбор» из шагов этого аспекта: общие (без чисел конкретной задачи)
 function buildTest(k){
+  const tt=thOf(KINDS[k]&&KINDS[k].g);
+  if(tt&&tt.test.length>=2)return shuffle(tt.test).map(q=>({q:q[0],opts:[q[1]].concat(q[2]),r:q[3]||''}));
+  return buildTestSteps(k);
+}
+function buildTestSteps(k){
   const gen=t=>t.st.filter(s=>s.k==='choice'&&!s.rc);
   const okQ=s=>[s.q].concat(s.opts).every(x=>!/\d{2,}|\d[,.]\d/.test(String(x).replace(/\d+\^\\circ/g,'').replace(/\d+\^\{\\circ\}/g,'')));
   const seen=new Set(),out=[];
@@ -479,7 +504,7 @@ function ltestDone(){
   const n=L.tq.length,ok=L.tok,s=lk(L.k),best=s.test;
   if(!best||ok/n>=best[0]/best[1])s.test=[ok,n];
   xp+=ok*2;saveAll();saveLearn();sendLearn(L.k,'t',ok,n);
-  const pass=ok/n>=0.67;
+  const pass=ok*3>=n*2;
   $('#title').textContent='Итог теста';
   let h=stageBar()+'<div class="stars"><b>'+ok+'</b> из '+n+'<small>правильных ответов</small></div>'
     +'<div class="fb '+(pass?'good':'bad')+'">'+(pass?'Теория усвоена — переходим к решению.':'Пока шатко. Перечитай теорию и пройди тест ещё раз — или иди дальше, а к теории вернись позже.')+'</div>'
@@ -951,6 +976,7 @@ function sendToBot(){
 
 // ── Запуск ──
 loadAll();loadLearn();
+fetch('math_theory.json').then(r=>r.json()).then(d=>{MTH=d;if(view==='pack'&&packTab==='theory'||view==='ltheory')render()}).catch(()=>{});
 fetch('math_kinds.json').then(r=>r.json()).then(d=>{KINDS=d.kinds;if(view==='home')render();if(view==='task'||view==='prac'||(view==='pack'&&packTab==='practice'))render()}).catch(()=>{});
 fetch('math_topics.json').then(r=>r.json()).then(d=>{TOPICS_META=d.topics}).catch(()=>{});
 fetch('math_groups.json').then(r=>r.json()).then(d=>{GROUPS_META=d.numbers}).catch(()=>{});
