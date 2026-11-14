@@ -9,7 +9,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@700;800&family=Golos+Text:wght@400..700&display=swap">
-<link rel="stylesheet" href="anik.css?v=5">
+<link rel="stylesheet" href="anik.css?v=6">
+<script src="anik-theory.js?v=1"></script>
 <script src="anik-look.js?v=1"></script>
 <script src="anik-sync.js?v=3"></script>
 <script src="anik-nav.js?v=6" defer></script>
@@ -381,12 +382,9 @@ function wireLearn(set,n){
 /* ───────── теория: карточки {title, content, rules:[{r,t,ex}], tip, warn} ───────── */
 var theoryCache={};
 function theoryHtml(cards,col){
+  // каждая карточка — смысловыми блоками (anik-theory.js): Главное → правила с примерами → Совет / Осторожно
   return cards.map(function(c){
-    return '<div class="tcard" style="--col:'+col+'"><h3>'+esc(c.title)+'</h3>'+(c.content?'<p>'+esc(c.content)+'</p>':'')+
-      (c.rules||[]).map(function(r){
-        return '<div class="rbox"><b>'+esc(r.r)+'</b><small>'+esc(r.t)+'</small>'+
-          (r.ex&&r.ex.length?'<div class="exs">'+r.ex.map(function(e){return '<span class="ex">'+esc(e)+'</span>';}).join('')+'</div>':'')+'</div>';
-      }).join('')+(c.tip?'<div class="tip" style="margin-top:10px">'+esc(c.tip)+'</div>':'')+(c.warn?'<div class="warn" style="margin-top:10px">'+esc(c.warn)+'</div>':'')+'</div>';
+    return '<div class="tcard thcard" style="--col:'+col+'"><h3>'+esc(c.title)+'</h3>'+AnikTheory.card(c,{html:false})+'</div>';
   }).join('');
 }
 function loadTheory(set,n,col){

@@ -221,9 +221,10 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:12px 1
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@700;800&family=Golos+Text:wght@400..700&display=swap">
-<link rel="stylesheet" href="anik.css?v=5">
+<link rel="stylesheet" href="anik.css?v=6">
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script src="anik-look.js?v=1"></script>
+<script src="anik-theory.js?v=1"></script>
 <script src="anik-sync.js?v=3"></script>
 <script src="anik-nav.js?v=6" defer></script>
 </head>
@@ -462,17 +463,16 @@ function renderTheory(num){
   const c=document.getElementById('tb0');
   const cards=THEORY_ALL[num];
   if(!cards||!cards.length){c.innerHTML='<div style="color:var(--m);padding:20px;text-align:center">Теория в разработке </div>';return;}
+  const t=TOPICS.find(x=>x.num===num),ts=topicsOf(num)||[];
+  // карточка части темы — из LEARN_TOPICS (там правило, шаги, примеры, ловушки и key по отдельности), остальные — разбором карточки
   c.innerHTML=cards.map(card=>{
-    const t=TOPICS.find(x=>x.num===num);
-    let h=`<div class="tcard" style="--col:${t?t.col:'var(--acc)'}"><h3>${card.title}</h3>${card.content?`<p>${card.content}</p>`:''}`;
-    (card.rules||[]).forEach(r=>{
-      h+=`<div class="rbox"><b>${r.r}</b><small>${r.t}</small></div>`;
-      if(r.ex&&r.ex.length)h+=`<div class="exs">${r.ex.map(e=>`<span class="ex">${e}</span>`).join('')}</div>`;
-    });
-    if(card.tip)h+=`<div class="tip">${card.tip}</div>`;
-    if(card.warn)h+=`<div class="warn">${card.warn}</div>`;
-    return h+'</div>';
+    const lt=card.k==='learn'&&ts.find(x=>x.title===card.title);
+    return `<div class="tcard thcard" style="--col:${t?t.col:'var(--acc)'}"><h3>${card.title}</h3>${lt?learnBlocks(lt):AnikTheory.card(card,{html:true})}</div>`;
   }).join('');
+}
+// блоки части темы: Главное (key или первый абзац) → Правило → Как рассуждать → Примеры → Исключения → Ловушки
+function learnBlocks(t){
+  return AnikTheory.topic({key:t.key,rule:t.rule,steps:t.steps,ex:t.ex,exc:t.exc,traps:t.traps},{fmt:AnikTheory.rusFmt,stepsLabel:'Как рассуждать',exLabel:'Разберём примеры'});
 }
 
 
@@ -536,14 +536,8 @@ function renderLearn(num){
 function aspTheory(num,id,name){
   const t=topicOf(num,id);
   if(!t){const cards=THEORY_ALL[num]||[];
-    return cards.map(cd=>`<div class="tcard"><h3>${cd.title}</h3>${cd.content?`<p>${cd.content}</p>`:''}${(cd.rules||[]).map(r=>`<div class="rbox"><b>${r.r}</b><small>${r.t}</small></div>`).join('')}</div>`).join('');}
-  const e=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
-  let h=`<div class="tcard lt"><h3>Правило</h3>${t.rule.map(p=>`<p>${e(p)}</p>`).join('')}</div>`;
-  h+=`<div class="tcard lt"><h3>Как рассуждать</h3><ol class="lt-steps">${t.steps.map(s=>`<li>${e(s)}</li>`).join('')}</ol></div>`;
-  if(t.ex.length)h+=`<div class="tcard lt"><h3>Разберём примеры</h3>${t.ex.map(x=>`<div class="rbox">${e(x)}</div>`).join('')}</div>`;
-  if(t.exc.length)h+=`<div class="warn">Исключения — запомнить: ${t.exc.map(e).join('; ')}</div>`;
-  if(t.traps.length)h+=`<div class="tip">Частые ошибки: ${t.traps.map(e).join('; ')}</div>`;
-  return h;
+    return cards.map(cd=>`<div class="tcard thcard"><h3>${cd.title}</h3>${AnikTheory.card(cd,{html:true})}</div>`).join('');}
+  return `<div class="lt">${learnBlocks(t)}</div>`;
 }
 function fmtW(w){return String(w).replace(/_/g,'<u>_</u>');}
 

@@ -97,8 +97,9 @@ h1{font-size:22px;margin:14px 0 4px;background:linear-gradient(135deg,var(--acc)
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@700;800&family=Golos+Text:wght@400..700&display=swap">
-<link rel="stylesheet" href="anik.css?v=5">
+<link rel="stylesheet" href="anik.css?v=6">
 <script src="anik-look.js?v=1"></script>
+<script src="anik-theory.js?v=1"></script>
 <script src="anik-sync.js?v=3"></script>
 <script src="anik-nav.js?v=6" defer></script>
 </head>
@@ -142,9 +143,9 @@ function mathRender(){
 }
 
 // Теория по типу задачи (math_kinds.json): свойства, формулы, порядок действий и пример
-function kindFig(k,cap){
+function kindFig(k,cap,eager){
   const d=KINDS&&KINDS[k];if(!d||!d.fig)return '';
-  return '<img class="fig" src="'+d.fig+'" alt="Схема к типу задачи" loading="lazy"><div class="src" style="text-align:center;margin:-2px 0 8px">'+esc(cap||'Схема: так выглядит этот тип задач (буквы — как в условии)')+'</div>';
+  return '<img class="fig" src="'+d.fig+'" alt="Схема к типу задачи"'+(eager?'':' loading="lazy"')+'><div class="src" style="text-align:center;margin:-2px 0 8px">'+esc(cap||'Схема: так выглядит этот тип задач (буквы — как в условии)')+'</div>';
 }
 function kindErrs(k){
   const d=KINDS&&KINDS[k];if(!d||!d.err||!d.err.length)return '';
@@ -306,9 +307,8 @@ function analysisHTML(n){
   const a=ANALYSIS&&ANALYSIS[n];if(!a)return '';
   let h='<div class="card"><div class="tag">Задание №'+n+'</div><b>'+esc(a.title)+'</b><p class="sub" style="margin:6px 0 0">'+esc(a.what)+'</p>';
   if(a.cues.length)h+='<div class="tag" style="margin-top:14px">Что заметить в условии</div><ul class="cues">'+a.cues.map(c=>'<li><span class="if">'+esc(c.if)+'</span><span class="do">→ '+esc(c.do)+'</span></li>').join('')+'</ul>';
-  h+='<div class="tag" style="margin-top:14px">Алгоритм</div><ol class="alg">'+a.steps.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ol>';
-  if(a.traps.length)h+='<div class="tag" style="margin-top:14px">Частые ловушки</div><ul class="traps">'+a.traps.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul>';
-  if(a.formulas.length)h+='<div class="tag" style="margin-top:14px">Формулы</div><div>'+a.formulas.map(x=>'<span class="fm">'+esc(x)+'</span>').join('')+'</div>';
+  // алгоритм, формулы и ловушки — смысловыми блоками (anik-theory.js)
+  h+=AnikTheory.topic({steps:a.steps,formulas:a.formulas,traps:a.traps},{fmt:esc,stepsLabel:'Алгоритм',trapLabel:'Частые ловушки'});
   if(a.themes.length)h+='<div class="src" style="margin-top:12px">Чаще всего в заданиях: '+a.themes.map(x=>esc(x.name)+' — '+x.share+'%').join('; ')+'</div>';
   return h+'</div>';
 }
@@ -319,13 +319,9 @@ function thOf(g){if(!MTH||!g)return null;return MTH.topics[g]||MTH.topics[MTH.al
 function kindGroup(k){const d=KINDS&&KINDS[k];if(!d)return '';return d.g||(d.gs&&d.gs[0])||(/^rt_/.test(k)?'p1_rt':'')}
 function thCard(t,open){
   if(!t)return '';
-  let h='<details class="kth thc"'+(open?' open':'')+'><summary>'+esc(t.title)+'</summary>';
-  h+=t.rule.map(x=>'<p class="thp">'+esc(x)+'</p>').join('');
-  if(t.formulas.length)h+='<div class="tag" style="margin-top:10px">Формулы</div><ul class="thf">'+t.formulas.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul>';
-  h+='<div class="tag" style="margin-top:10px">Как решать</div><ol class="alg">'+t.steps.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ol>';
-  if(t.example&&t.example.t)h+='<div class="tag" style="margin-top:10px">Пример</div><div class="task">'+esc(t.example.t)+'</div><ol class="alg">'+t.example.s.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ol><div class="fb good" style="margin-top:6px">Ответ: <b>'+esc(t.example.a)+'</b></div>';
-  if(t.traps.length)h+='<div class="tag" style="margin-top:10px">Частые ошибки</div><ul class="traps">'+t.traps.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul>';
-  return h+'</details>';
+  // смысловые блоки: Главное (key или первый абзац) → Правило → Формулы → Как решать → Пример → Ловушки (anik-theory.js)
+  return '<details class="kth thc"'+(open?' open':'')+'><summary>'+esc(t.title)+'</summary>'
+    +AnikTheory.topic({key:t.key,rule:t.rule,formulas:t.formulas,steps:t.steps,example:t.example,traps:t.traps},{fmt:esc})+'</details>';
 }
 function theoryTab(){
   let h='<p class="sub">'+esc(PACK.desc)+'. Сначала что это за задание, потом теория каждой темы: определения, формулы, алгоритм и пример. Задачи — во вкладке «Практика».</p>';
@@ -470,7 +466,7 @@ function stageBar(){
 function ltheoryView(){
   const d=KINDS[L.k];
   $('#title').textContent='Изучаем аспект';
-  let h=stageBar()+thCard(thOf(kindGroup(L.k)),true)+'<div class="card"><div class="tag">Особенности этого типа задач</div><b>'+esc(d.t)+'</b>'+kindFig(L.k)+'<ul class="cues" style="margin-top:8px">'+d.th.map(x=>'<li><span class="if" style="font-weight:500">'+esc(x)+'</span></li>').join('')+'</ul>'+kindErrs(L.k)+'</div>';
+  let h=stageBar()+thCard(thOf(kindGroup(L.k)),true)+'<div class="card"><div class="tag">Особенности этого типа задач</div><b>'+esc(d.t)+'</b>'+kindFig(L.k,'',true)+'<ul class="cues" style="margin-top:8px">'+d.th.map(x=>'<li><span class="if" style="font-weight:500">'+esc(x)+'</span></li>').join('')+'</ul>'+kindErrs(L.k)+'</div>';
   if(d.ex&&d.ex.t){
     h+='<div class="card"><div class="tag">Разобранный пример</div><div class="task">'+esc(d.ex.t)+'</div>'
       +(d.ex.s&&d.ex.s.length?'<ol class="alg">'+d.ex.s.map(s=>'<li>'+esc(s[0])+' <b>'+esc(s[1])+'</b></li>').join('')+'</ol>':'')

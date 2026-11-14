@@ -258,3 +258,93 @@ body.has-tabs{padding-bottom:calc(78px + env(safe-area-inset-bottom))}
 /* ссылка «Сообщить об ошибке» под заданием */
 .fblink{display:inline-block;margin-top:14px;padding:8px 0;border:0;background:none;color:var(--muted);font-size:13px;text-decoration:underline;cursor:pointer}
 .fblink:hover{color:var(--ink)}
+
+/* ── теория блоками (anik-theory.js): Главное · Правило · Формулы · Как решать · Пример · Исключения · Ловушки ──
+   Каждый смысловой кусок — своя плашка с цветной полосой и знаком, абзацы — пунктами, строка не шире ~62 знаков. */
+.thb-wrap{display:flex;flex-direction:column;gap:12px;margin:10px 0 4px}
+.thb{position:relative;background:#fff;border-left:5px solid var(--thc,var(--ink));padding:12px 14px 13px 14px;color:var(--ink);font-size:15.5px;line-height:1.6;overflow-wrap:break-word;min-width:0}
+.thb-wrap .thb p,.thb-wrap .thb li,.thb-wrap .rbox.thb-r p{max-width:62ch;color:var(--ink);font-size:inherit;line-height:inherit}
+.thb p+p{margin-top:8px}
+.thb-h{display:flex;align-items:center;gap:8px;margin:0 0 8px;font-size:12px;font-weight:700;letter-spacing:.9px;text-transform:uppercase;color:var(--ink)}
+.thb-h i{flex:none;width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;font-style:normal;font-family:var(--display);font-size:14px;font-weight:800;letter-spacing:0;text-transform:none;background:var(--thc,var(--ink));color:var(--thi,#fff)}
+.thb-lead{font-weight:650}
+/* Главное — жёлтое, крупно */
+.thb-key{--thc:var(--yellow);--thi:var(--ink);background:var(--yellow-t)}
+.thb-key .thb-big{font-size:17.5px;line-height:1.45;font-weight:600}
+/* Правило — синие квадратики */
+.thb-rule{--thc:var(--blue)}
+.thb-list{list-style:none;margin:0;padding:0}
+.thb-list>li{position:relative;padding-left:20px}
+.thb-list>li+li{margin-top:9px}
+.thb-list>li::before{content:"";position:absolute;left:2px;top:.62em;width:8px;height:8px;background:var(--thc,var(--ink))}
+/* Формулы — каждая на своей строке, крупно; длинная прокручивается внутри строки */
+.thb-form{--thc:var(--blue);background:#E6ECFC}
+.thb-fs{display:flex;flex-direction:column;gap:6px}
+.thb-f{background:#fff;padding:7px 12px;min-width:0}
+.thb-fx{font-size:1.14em;line-height:1.7;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;max-width:100%;padding:2px 0}
+.thb-fx.txt{font-size:1em;line-height:1.6}
+.thb-fc{margin-top:2px;font-size:13.5px;line-height:1.45;color:var(--muted)}
+.thb .katex-display{overflow-x:auto;overflow-y:hidden;max-width:100%}
+/* Как решать — шаги-кружки */
+.thb-steps{--thc:var(--ink);list-style:none;margin:0;padding:0;counter-reset:thb}
+.thb-steps>li{position:relative;counter-increment:thb;padding-left:38px;min-height:28px}
+.thb-steps>li+li{margin-top:10px}
+.thb-steps>li::before{content:counter(thb);position:absolute;left:0;top:-1px;width:28px;height:28px;border-radius:50%;background:var(--ink);color:var(--yellow);font-family:var(--display);font-size:14px;font-weight:800;display:flex;align-items:center;justify-content:center}
+.thb-steps.thb-sm>li{padding-left:32px;min-height:24px}
+.thb-steps.thb-sm>li::before{width:23px;height:23px;font-size:12.5px;background:var(--blue);color:#fff}
+.thb-steps{margin-top:2px}
+/* Пример — плашка */
+.thb-ex{--thc:var(--ink);background:#fff}
+.thb-plate{background:var(--chip);padding:10px 12px;border-left:3px solid var(--ink)}
+.thb-plate+.thb-plate{margin-top:6px}
+.thb-task{font-weight:500;margin-bottom:8px}
+.thb-ans{margin-top:10px;display:inline-block;background:var(--blue);color:#fff;padding:5px 10px;font-size:15px}
+.thb-ans b{color:#fff}
+.thb-gap{display:inline-block;min-width:.7em;text-align:center;color:var(--red);font-weight:700}
+.thb-arr{color:var(--blue);font-weight:700}
+/* Исключения — розовые */
+.thb-exc{--thc:var(--pink);--thi:var(--ink);background:var(--pink-t)}
+.thb-exc .thb-list>li::before{background:var(--ink);width:7px;height:7px}
+/* Ловушки — тёплый красный, восклицательные знаки */
+.thb-trap{--thc:var(--red);--thi:var(--ink);background:#FCE3DF}
+.thb-trap .thb-list>li{padding-left:22px}
+.thb-trap .thb-list>li::before{content:"!";width:auto;height:auto;top:0;left:3px;background:none;color:var(--red);font-family:var(--display);font-weight:800;font-size:16px;line-height:1.5}
+/* Совет */
+.thb-tip{--thc:var(--blue);background:#E6ECFC}
+/* под-правила карточек (термины, приёмы): имя с жёлтой подсветкой, текст, примеры-фишки */
+.rbox.thb-r{background:#fff;border-left:5px solid var(--line);padding:12px 14px;margin:0;font-size:15.5px;line-height:1.6;color:var(--ink)}
+.rbox.thb-r p{max-width:62ch;color:var(--ink);font-size:inherit;line-height:inherit}
+.rbox.thb-r p+p{margin-top:6px}
+.thb-rn{display:inline;font-family:var(--display);font-weight:800;font-size:16.5px;letter-spacing:-.2px;background:linear-gradient(transparent 60%,var(--yellow) 60%)}
+.thb-rn+p,.thb-rn+ol{margin-top:6px}
+.thb-exs{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}
+.thb-chip{background:var(--chip);padding:4px 10px;font-size:14px;line-height:1.45;max-width:100%}
+/* карточки теории с блоками: внутри белой карточки плашки отделены фоном бумаги */
+.tcard.thcard{padding:16px 14px 14px}
+.tcard.thcard .thb-rule,.tcard.thcard .thb-how,.tcard.thcard .thb-ex,.tcard.thcard .rbox.thb-r{background:var(--paper)}
+.tcard.thcard .thb-plate,.tcard.thcard .thb-chip{background:#fff}
+@media (max-width:420px){
+  .thb{padding:11px 12px 12px;font-size:15px}
+  .thb-key .thb-big{font-size:16.5px}
+  .tcard.thcard{padding:14px 10px 10px}
+}
+@media (min-width:700px){.thb{font-size:16px}}
+.thb-key .thb-big.thb-soft{font-weight:500;font-size:16.5px;line-height:1.55}
+.thb-w{white-space:nowrap}
+/* математика: карточка темы (details.kth.thc) — раскрывающаяся, внутри те же блоки */
+.kth.thc{padding:12px 12px 12px}
+.kth.thc>summary{font-family:var(--display);font-size:17px;font-weight:800;letter-spacing:-.3px;line-height:1.25}
+.kth.thc .thb-wrap{margin-top:12px}
+@media (max-width:420px){.kth.thc{padding:11px 10px}}
+/* блоки прямо в белой карточке (.card) — белые плашки отделяем фоном бумаги */
+.card>.thb-wrap .thb-rule,.card>.thb-wrap .thb-how,.card>.thb-wrap .thb-ex{background:var(--paper)}
+.card>.thb-wrap .thb-plate{background:#fff}
+/* тема внутри карточки «Изучить тему»: без лишней рамки-матрёшки, чтобы на телефоне строка не сжималась */
+.card .kth.thc{background:transparent;padding:4px 0 0;margin:10px 0 0}
+@media (max-width:420px){
+  .lbox{padding:10px 8px}
+  .lbox .card{padding:12px 10px}
+  .lbox .thb,.card .thb{padding:10px 10px 11px 11px}
+  .thb-steps>li{padding-left:36px}
+}
+.thb-wrap .thb-list,.thb-wrap .thb-steps{padding:0;margin:0}
