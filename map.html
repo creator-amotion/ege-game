@@ -77,10 +77,22 @@ function decodeCode(c){
   });
 }
 function codeFromState(){
-  var k=Q.get('k');
-  if(k&&/^1\./.test(k))return k.slice(2);
-  var st=window.AnikSync&&AnikSync.state&&AnikSync.state();
-  return st&&st.kmap?String(st.kmap).replace(/^1\./,''):'';
+  // своя карта: сначала свежий снимок из облака (бот пересчитывает его после каждого этапа «Изучить»),
+  // код из ссылки бота мог устареть; у репетитора (t=1) — только код ученика из ссылки
+  var k=Q.get('k'),st=!TUTOR&&window.AnikSync&&AnikSync.state&&AnikSync.state();
+  if(st&&st.kmap)return String(st.kmap).replace(/^1\./,'');
+  return k&&/^1\./.test(k)?k.slice(2):'';
+}
+// своя карта: то, что уже пройдено в «Изучить» на этом устройстве, видно сразу, ещё до ответа бота
+var LOCAL_RUS=(function(){if(TUTOR)return {};try{return JSON.parse(localStorage.getItem('ege_learn')||'{}')||{};}catch(e){return {};}})();
+function overlayLocal(key,n,id,c){
+  if(key!=='ege.rus')return c;
+  var s=(LOCAL_RUS[n]||{})[id];if(!s)return c;
+  var l=c.l,weak=c.weak,g=s.game,t=s.test;
+  if(t&&t[1]&&t[0]*3>=t[1]*2)l=Math.max(l,2);
+  if(g&&g[1]&&g[0]/g[1]>=0.7){l=Math.max(l,3);weak=false;}
+  else if(s.th||t||g)l=Math.max(l,1);
+  return {l:l,weak:weak,rev:c.rev&&!(g&&g[0]/g[1]>=0.7)};
 }
 // куда вести из части: в изучение этой части (как в плане дня)
 function learnLink(subj,n,id){
@@ -103,7 +115,7 @@ function render(cat,code){
   var cells=decodeCode(code),k=0,subs=[];
   cat.order.forEach(function(key){
     var S=cat.subjects[key],nums=S.numbers.map(function(n){
-      var parts=n.parts.map(function(pp){var c=cells[k++]||{l:0,weak:false,rev:false};return {id:pp[0],title:pp[1],l:c.l,weak:c.weak,rev:c.rev};});
+      var parts=n.parts.map(function(pp){var c=overlayLocal(key,n.n,pp[0],cells[k++]||{l:0,weak:false,rev:false});return {id:pp[0],title:pp[1],l:c.l,weak:c.weak,rev:c.rev};});
       return {n:n.n,name:n.name,parts:parts};
     });
     var all=[].concat.apply([],nums.map(function(n){return n.parts;}));
@@ -158,7 +170,7 @@ function render(cat,code){
 fetch('knowledge_catalog.json').then(function(r){return r.json();}).then(function(cat){
   var draw=function(){render(cat,codeFromState());};
   draw();
-  if(window.AnikSync&&AnikSync.onState&&!Q.get('k'))AnikSync.onState(draw);
+  if(window.AnikSync&&AnikSync.onState&&!TUTOR)AnikSync.onState(draw);
 }).catch(function(){app.innerHTML='<div class="empty">Не получилось загрузить карту. Проверь интернет и обнови страницу.</div>';});
 </script>
 </body>

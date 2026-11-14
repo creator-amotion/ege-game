@@ -442,8 +442,9 @@ function aspectsOf(gid){
 }
 // статус аспекта: new — не начат, going — идёт, done — изучен, weak — западает (много ошибок в практике)
 function aspectState(k){
-  const s=lprog[k]||{},p=s.pr||[0,0],tst=s.test;
-  if(p[1]>=3&&p[0]/p[1]<0.5)return 'weak';
+  const s=lprog[k]||{},p=s.pr||[0,0],tst=s.test,rc=s.rec;
+  // «западает» — по последним 5 задачам: исправился — метка уходит, старые ошибки не держат её навсегда
+  if(rc?rc.length>=3&&rc.reduce((x,y)=>x+y,0)/rc.length<0.5:p[1]>=3&&p[0]/p[1]<0.5)return 'weak';
   if(tst&&tst[0]*3>=tst[1]*2&&s.solo&&s.solo[0]>=Math.min(2,s.solo[1]))return 'done';
   if(s.th||tst)return 'going';
   return 'new';
@@ -647,7 +648,7 @@ function pracCheck(text){
 function pracFinish(ok,skipped){
   const t=pr.items[pr.i],first=ok&&pr.tries===0;
   pr.res.push(first);pr.gain+=first?10:ok?5:0;
-  if(t.k){const s=lk(t.k),p=s.pr||(s.pr=[0,0]);p[1]++;if(first)p[0]++;saveLearn()}
+  if(t.k){const s=lk(t.k),p=s.pr||(s.pr=[0,0]);p[1]++;if(first)p[0]++;s.rec=(s.rec||[]).concat(first?1:0).slice(-5);saveLearn()}
   if(t.sk)record(t.sk,first?1:0);
   const msg=ok?(first?'Верно! +10 XP':'Верно со второй попытки. +5 XP'):'Правильный ответ: '+t.a[0]+(kindSteps(t.k).length?'':'\nРазбора по шагам для задач такого типа пока нет — повтори теорию темы и реши ещё несколько таких.');
   pr.reveal={cls:ok?'good':'bad',text:msg,k:ok||!kindSteps(t.k).length?'':t.k};
