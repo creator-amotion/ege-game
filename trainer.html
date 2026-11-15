@@ -427,6 +427,13 @@ function loadParts(set,n,col){
   }).catch(function(){});
 }
 function lbox(){return document.getElementById('pan-l');}
+// вкладка «Теория» у номеров без отдельного конспекта — теория всех частей подряд
+function partsTheory(set,n,col){
+  if(!LRN||LRN.set!==set||LRN.n!==n)return '';
+  setTimeout(function(){mathIn(document.getElementById('theory'));},0);
+  return LRN.parts.map(function(p){var fm=(p.formulas||[]).map(function(f){return Array.isArray(f)?(f[1]?f[0]+' ('+f[1]+')':f[0]):f;});
+    return '<div class="tcard thcard" style="--col:'+col+'"><h3>'+esc(p.title)+'</h3>'+AnikTheory.topic({key:p.key,rule:p.rule,formulas:fm,steps:p.steps,example:p.example,traps:p.traps},{fmt:esc,stepsLabel:'Как решать',trapLabel:'Частые ошибки'})+'</div>';}).join('');
+}
 function partsView(openId){
   if(!LRN)return;
   if(openId){var q=LRN.parts.filter(function(p){return p.id===openId;})[0];if(q){openTab('l');return partOpen(q,'theory');}}
@@ -538,7 +545,7 @@ function loadTheory(set,n,col){
   var put=function(html){box.outerHTML='<div id="theory" data-done="1">'+html+'</div>';};
   var soon='<div class="card"><div class="txt"><p><b>Начни с практики.</b></p><p>Решай задания №'+n+' — после каждого ответа будет подсказка и разбор.</p></div></div>';
   (theoryCache[key]?Promise.resolve(theoryCache[key]):getJSON('trainer/theory_'+key+'.json').then(function(c){theoryCache[key]=c;return c;}))
-    .then(function(c){put(c&&c.length?theoryHtml(c,col):soon);}).catch(function(){put(soon);});
+    .then(function(c){put(c&&c.length?theoryHtml(c,col):partsTheory(set,n,col)||soon);}).catch(function(){put(partsTheory(set,n,col)||soon);});
 }
 
 /* ───────── игры к заданию: вопросы с вариантами ответа ───────── */
