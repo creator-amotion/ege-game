@@ -75,7 +75,7 @@ h1{font-family:var(--display);font-size:38px;font-weight:800;letter-spacing:-1.5
 
   <div class="sp"></div>
   <button class="go" id="go" disabled>Выбери экзамен и предмет</button>
-  <p class="hint">Прогресс сохраняется на этом устройстве. Чтобы результаты видел бот-помощник, открывай приложение кнопкой в чате с ботом.</p>
+  <p class="hint"></p>
 </main>
 
 <script>
@@ -83,7 +83,7 @@ h1{font-family:var(--display);font-size:38px;font-weight:800;letter-spacing:-1.5
 var CATALOG={
   ege:{
     rus:{name:'Русский язык',status:'ready',desc:'Все 26 заданий: теория, практика, игры',url:'rus-ege.html'},
-    math:{name:'Математика (профиль)',status:'pilot',desc:'11 разделов: геометрия, уравнения, производная, вероятность и др. — игры и разбор по шагам',url:'math.html'},
+    math:{name:'Математика (профиль)',status:'pilot',desc:'Все 13 заданий: теория, практика, игры и разбор по шагам',url:'math.html'},
     mathb:{name:'Математика (база)',status:'ready',desc:'Задания 1–21 по номерам: проверка ответа, прогресс, марки',url:'trainer.html#ege-mathb'}
   },
   oge:{
@@ -91,7 +91,7 @@ var CATALOG={
     math:{name:'Математика',status:'ready',desc:'Часть 1 по номерам: расчёты, алгебра, геометрия',url:'trainer.html#oge-math'}
   }
 };
-var BADGE={ready:'<span class="badge ready">готово</span>',pilot:'<span class="badge pilot">пилот</span>',soon:'<span class="badge soon">скоро</span>'};
+var BADGE={ready:'',pilot:'',soon:'<span class="badge soon">скоро</span>'};   // ученику не нужны служебные «готово/пилот»
 var exam=null,subj=null;
 var TG=window.Telegram&&window.Telegram.WebApp?window.Telegram.WebApp:null;
 if(TG){try{TG.ready();TG.expand();TG.setHeaderColor('#F3EEE2');TG.setBackgroundColor('#F3EEE2');}catch(e){}}

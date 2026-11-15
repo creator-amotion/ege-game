@@ -271,9 +271,8 @@ function home(){
     h+='<button class="pk" data-p="'+p.id+'" style="--col:'+sk[0]+';--ink:'+sk[1]+';--bigc:'+sk[2]+'"><span class="big" aria-hidden="true">'+packNum(p)+'</span><span class="t">'+esc(p.title.replace(/\s*\(№[^)]*\)/,''))+'<small>'+esc(p.desc)+'</small></span>'
       +(m!==null?'<span class="bar"><i style="width:'+m+'%"></i></span>':'')+'</button>';
   });
-  if(session.length)h+='<button class="btn ok" id="send">Отправить результаты боту ('+session.length+' шагов)</button>';
-  h+='<p class="sub" style="text-align:center;margin-top:14px">'+(TG?'Результаты уходят боту по кнопке выше.':'Прогресс хранится на этом устройстве.')+'</p>';
-  app.innerHTML=h;
+  if(session.length)h+='<button class="btn ok" id="send">Сохранить результат</button>';
+    app.innerHTML=h;
   app.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>openPack(b.dataset.p));
   const pn=$('#pathnext');if(pn)pn.onclick=()=>goAspect(pn.dataset.go);
   $('#variant').onclick=variantStart;
@@ -293,7 +292,7 @@ function packView(){
   if(packTab==='theory')h+=theoryTab();
   else if(packTab==='practice')h+=practiceTab();
   else h+=gamesTab();
-  if(session.length)h+='<button class="btn ok" id="send">Отправить результаты боту ('+session.length+' шагов)</button>';
+  if(session.length)h+='<button class="btn ok" id="send">Сохранить результат</button>';
   app.innerHTML=h;
   app.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{packTab=b.dataset.tab;setView('pack')});
   app.querySelectorAll('[data-g]').forEach(b=>b.onclick=()=>gameStart(b.dataset.g));
@@ -397,7 +396,7 @@ function pracInit(){
     }
     const learnBox='<details class="kth lbox"'+(pracOpen?' open':'')+'><summary>Изучить тему: теория, разбор по шагам, приёмы</summary>'+(topic||thGroupCards())+'</details>';
     const diagBtns=PACK.numbers.map(n=>'<button class="btn sec" data-diag="'+n+'">Проверить, что я уже знаю в №'+n+'</button>').join('');
-    $('#pracbox').innerHTML=chips+'<div class="card">'+(pracSkill&&PACK.skills[pracSkill]?'<div class="src" style="margin:0 0 6px">Только по навыку «'+esc(PACK.skills[pracSkill].name)+'» <button class="nb" id="pall" style="margin-left:8px">все задания раздела</button></div>':'')+'<b>'+all.length+' заданий</b><div class="src">из них из экзаменов и сборников: '+real+'</div><button class="btn" id="pstart">Решать: '+cnt+' заданий</button></div>'+learnBox+diagBtns;
+    $('#pracbox').innerHTML=chips+'<div class="card">'+(pracSkill&&PACK.skills[pracSkill]?'<div class="src" style="margin:0 0 6px">Только по навыку «'+esc(PACK.skills[pracSkill].name)+'» <button class="nb" id="pall" style="margin-left:8px">все задания раздела</button></div>':'')+'<b>Реши задания этого раздела</b><button class="btn" id="pstart">Решать</button></div>'+learnBox+diagBtns;
     app.querySelectorAll('[data-diag]').forEach(b=>b.onclick=()=>diagStartMath(+b.dataset.diag));
     const lb=app.querySelector('.lbox');if(lb)lb.addEventListener('toggle',()=>{pracOpen=lb.open});
     $('#pstart').onclick=()=>startPractice();
@@ -413,12 +412,12 @@ function topicKinds(gid){
   if(!KINDS)return '';
   const ks=Object.keys(KINDS).filter(k=>(KINDS[k].gs||[KINDS[k].g]).includes(gid)).sort((x,y)=>(kindSteps(y).length>0)-(kindSteps(x).length>0)||(KINDS[y].pr||0)-(KINDS[x].pr||0));
   if(!ks.length)return '';
-  return '<div class="tag" style="margin-top:12px">Приёмы этой темы · '+ks.length+'</div>'+ks.map(k=>{
+  return '<div class="tag" style="margin-top:12px">Приёмы этой темы</div>'+ks.map(k=>{
     const hs=kindSteps(k).length>0;
     const as=aspectState(k);
-    return '<details class="kth"><summary>'+esc(KINDS[k].t)+' <span class="src" style="color:'+ST_COLOR[as]+'">· '+ST_LABEL[as]+(hs?'':' · без разбора по шагам')+'</span></summary>'+kindFig(k)+'<ul>'+KINDS[k].th.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul>'+kindErrs(k)
+    return '<details class="kth"><summary>'+esc(KINDS[k].t)+' <span class="src" style="color:'+ST_COLOR[as]+'">· '+ST_LABEL[as]+'</span></summary>'+kindFig(k)+'<ul>'+KINDS[k].th.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul>'+kindErrs(k)
       +'<button class="btn" data-learn="'+k+'">Изучить этот аспект</button>'
-      +(hs?'<button class="btn sec" data-kind="'+k+'">Разобрать этот тип по шагам</button>':'<div class="src" style="margin-top:6px">Разбора по шагам этого типа пока нет — повтори теорию и реши задания в блоке «Самостоятельно».</div>')+'</details>';
+      +(hs?'<button class="btn sec" data-kind="'+k+'">Разобрать этот тип по шагам</button>':'')+'</details>';
   }).join('');
 }
 // ── Режим «Изучить тему»: аспект (тип задач) → теория → короткий тест → разбор по шагам → самостоятельно ──
@@ -434,7 +433,7 @@ function saveLearn(){try{localStorage.setItem('math_learn',JSON.stringify(lprog)
 function lk(k){return lprog[k]||(lprog[k]={})}
 function aspectsOf(gid){
   if(!KINDS)return [];
-  return Object.keys(KINDS).filter(k=>(KINDS[k].gs||[KINDS[k].g]).includes(gid)).sort((a,b)=>(KINDS[b].pr||0)-(KINDS[a].pr||0)||KINDS[a].t.localeCompare(KINDS[b].t));
+  return Object.keys(KINDS).filter(k=>(KINDS[k].gs||[KINDS[k].g]).includes(gid)).sort((a,b)=>(KINDS[a].lv||2)-(KINDS[b].lv||2)||(KINDS[b].pr||0)-(KINDS[a].pr||0)||KINDS[a].t.localeCompare(KINDS[b].t));
 }
 // статус аспекта: new — не начат, going — идёт, done — изучен, weak — западает (много ошибок в практике)
 function aspectState(k){
@@ -463,15 +462,18 @@ function stageBar(){
   const i=S.findIndex(x=>x[0]===L.stage);
   return '<div class="dots" style="gap:6px;margin-bottom:10px">'+S.map((s,j)=>'<span class="tag" style="padding:3px 9px;border-radius:12px;'+(j===i?'background:var(--b);color:#0a0a14':j<i?'opacity:.9':'opacity:.5')+'">'+(j<i?'✓ ':'')+s[1]+'</span>').join('')+'</div>';
 }
+// подписанная формула [формула, словами] → строка «$…$ (словами)» для блока «Формулы»
+function fmStr(f){return Array.isArray(f)?(f[1]?f[0]+' ('+f[1]+')':f[0]):f}
 function ltheoryView(){
   const d=KINDS[L.k];
   $('#title').textContent='Изучаем аспект';
-  let h=stageBar()+thCard(thOf(kindGroup(L.k)),true)+'<div class="card"><div class="tag">Особенности этого типа задач</div><b>'+esc(d.t)+'</b>'+kindFig(L.k,'',true)+'<ul class="cues" style="margin-top:8px">'+d.th.map(x=>'<li><span class="if" style="font-weight:500">'+esc(x)+'</span></li>').join('')+'</ul>'+kindErrs(L.k)+'</div>';
-  if(d.ex&&d.ex.t){
-    h+='<div class="card"><div class="tag">Разобранный пример</div><div class="task">'+esc(d.ex.t)+'</div>'
-      +(d.ex.s&&d.ex.s.length?'<ol class="alg">'+d.ex.s.map(s=>'<li>'+esc(s[0])+' <b>'+esc(s[1])+'</b></li>').join('')+'</ol>':'')
-      +'<div class="fb good" style="margin-top:8px">Ответ: <b>'+esc(d.ex.a)+'</b></div></div>';
-  }
+  const ex=d.ex&&d.ex.t?{t:d.ex.t,s:(d.ex.s||[]).map(x=>Array.isArray(x)?x[0]+' '+x[1]:x),a:d.ex.a}:null;
+  // своя теория аспекта (как в русском): главное → правило → формулы → алгоритм → пример → ловушки
+  let h=stageBar()+'<div class="card"><div class="tag">'+(d.lv?['','Базовый','Средний','Сложный'][d.lv]+' уровень · ':'')+'аспект темы</div><b>'+esc(d.t)+'</b>'+kindFig(L.k,'',true)
+    +AnikTheory.topic({key:d.key,rule:d.rl&&d.rl.length?d.rl:d.th,formulas:(d.fm||[]).map(fmStr),steps:d.al,example:ex,traps:d.tr},{fmt:esc,stepsLabel:'Как решать',trapLabel:'Частые ошибки'})
+    +(d.tr&&d.tr.length?'':kindErrs(L.k))+'</div>';
+  const tt=thOf(kindGroup(L.k));
+  if(tt)h+='<div class="tag" style="margin-top:12px">Если нужно освежить основы</div>'+thCard(tt,false);
   h+='<button class="btn" id="ltotest">Я прочитал(а): к тесту по теории</button>';
   app.innerHTML=h;
   $('#ltotest').onclick=()=>{L.stage='test';L.tq=buildTest(L.k);L.ti=0;L.tok=0;L.tpick=null;if(L.tq.length<2){L.stage='steps';return learnToSteps()}setView('ltest')};
@@ -479,17 +481,21 @@ function ltheoryView(){
 }
 // вопросы теста — «выбор» из шагов этого аспекта: общие (без чисел конкретной задачи)
 function buildTest(k){
+  const d=KINDS[k]||{};
+  if(d.tq&&d.tq.length>=2)return shuffle(d.tq).map(q=>({q:q[0],opts:[q[1]].concat(q[2]),r:q[3]||''}));
+  const own=buildTestSteps(k,true);
+  if(own.length>=3)return own;
   const tt=thOf(kindGroup(k));
-  if(tt&&tt.test.length>=2)return shuffle(tt.test).map(q=>({q:q[0],opts:[q[1]].concat(q[2]),r:q[3]||''}));
+  if(tt&&tt.test.length>=2)return shuffle(tt.test).slice(0,4).map(q=>({q:q[0],opts:[q[1]].concat(q[2]),r:q[3]||''}));
   return buildTestSteps(k);
 }
-function buildTestSteps(k){
+function buildTestSteps(k,onlyOwn){
   const gen=t=>t.st.filter(s=>s.k==='choice'&&!s.rc);
   const okQ=s=>[s.q].concat(s.opts).every(x=>!/\d{2,}|\d[,.]\d/.test(String(x).replace(/\d+\^\\circ/g,'').replace(/\d+\^\{\\circ\}/g,'')));
   const seen=new Set(),out=[];
   const pool=shuffle(PACK.tasks.filter(t=>t.k===k));
   pool.forEach(t=>gen(t).forEach(s=>{if(out.length>=6)return;if(seen.has(s.q)||!okQ(s))return;seen.add(s.q);out.push({q:s.q,opts:s.opts,r:s.r})}));
-  if(out.length<5){   // добираем вопросы из соседних аспектов той же темы
+  if(out.length<5&&!onlyOwn){   // добираем вопросы из соседних аспектов той же темы
     const g=(KINDS[k].gs||[KINDS[k].g])[0];
     shuffle(PACK.tasks.filter(t=>t.g===g&&t.k!==k)).forEach(t=>gen(t).forEach(s=>{if(out.length>=6)return;if(seen.has(s.q)||!okQ(s))return;seen.add(s.q);out.push({q:s.q,opts:s.opts,r:s.r})}));
   }
@@ -606,7 +612,7 @@ function pracView(){
   $('#title').textContent='Практика №'+t.n;
   let h='<div class="dots">';
   pr.items.forEach((_,k)=>{h+='<span class="dot '+(k<pr.res.length?(pr.res[k]?'ok':'bad'):(k===pr.i?'cur':''))+'"></span>'});
-  h+='</div><div class="tag">Задание '+(pr.i+1)+' из '+pr.items.length+' · №'+t.n+'</div><div class="card task">'+esc(t.t)+(t.f&&t.f.length&&Array.isArray(t.f)?t.f.map(f=>'<img class="fig" src="'+f+'" alt="Рисунок к заданию">').join(''):t.fig?'<img class="fig" src="'+t.fig+'" alt="График к заданию">':kindFig(t.k,'Схема типа задачи (общий вид; числа — из условия)'))+'</div><div class="src">'+(t.r?esc(t.s||'Из экзаменов и сборников'):'Задание из банка Аника')+'</div>';
+  h+='</div><div class="tag">Задание '+(pr.i+1)+' из '+pr.items.length+' · №'+t.n+'</div><div class="card task">'+esc(t.t)+(t.f&&t.f.length&&Array.isArray(t.f)?t.f.map(f=>'<img class="fig" src="'+f+'" alt="Рисунок к заданию">').join(''):t.fig?'<img class="fig" src="'+t.fig+'" alt="График к заданию">':kindFig(t.k,'Схема типа задачи (общий вид; числа — из условия)'))+'</div><div class="src">'+(t.r&&t.s?esc(t.s):'')+'</div>';
   const rv=pr.reveal;                                           // ответ показан: остаёмся на ЭТОЙ задаче, к следующей — только по «Дальше»
   if(rv){
     h+='<div class="fb '+rv.cls+'">'+esc(rv.text).replace(/\n/g,'<br>')+'</div>';
@@ -646,7 +652,7 @@ function pracFinish(ok,skipped){
   pr.res.push(first);pr.gain+=first?10:ok?5:0;
   if(t.k){const s=lk(t.k),p=s.pr||(s.pr=[0,0]);p[1]++;if(first)p[0]++;s.rec=(s.rec||[]).concat(first?1:0).slice(-5);saveLearn()}
   if(t.sk)record(t.sk,first?1:0);
-  const msg=ok?(first?'Верно! +10 XP':'Верно со второй попытки. +5 XP'):'Правильный ответ: '+t.a[0]+(kindSteps(t.k).length?'':'\nРазбора по шагам для задач такого типа пока нет — повтори теорию темы и реши ещё несколько таких.');
+  const msg=ok?(first?'Верно! +10 XP':'Верно со второй попытки. +5 XP'):'Правильный ответ: '+t.a[0]+(kindSteps(t.k).length?'':'\nПовтори теорию этого типа задач и реши ещё несколько таких.');
   pr.reveal={cls:ok?'good':'bad',text:msg,k:ok||!kindSteps(t.k).length?'':t.k};
   pr.last=msg;
   saveAll();render();
@@ -672,7 +678,7 @@ function pracDone(){
   let h='<div class="stars"><b>'+ok+'</b> из '+tot+'<small>с первой попытки</small></div>'+autoNote(sentAuto);
   h+='<div class="fb '+(ok>=tot*0.8?'good':'bad')+'">'+(ok>=tot*0.8?'Отлично! Навык закрепляется.':ok>=tot*0.5?'Неплохо. Загляни в теорию и разбери ошибки по шагам.':'Пока трудно — прочитай теорию и потренируйся по шагам.')+'<br>'+esc(pr.last||'').replace(/\n/g,'<br>')+'<br>Получено: +'+pr.gain+' XP</div>';
   h+='<button class="btn" id="again">Ещё подход</button><button class="btn sec" id="menu">⬅️ К разделу</button>';
-  if(!sentAuto&&session.length)h+='<button class="btn ok" id="send">Закончить и отправить результаты боту</button>';
+  if(!sentAuto&&session.length)h+='<button class="btn ok" id="send">Сохранить результат</button>';
   app.innerHTML=h;
   $('#again').onclick=()=>startPractice();
   $('#menu').onclick=()=>{packTab='practice';setView('pack')};
@@ -708,7 +714,7 @@ function varView(){
   $('#title').textContent='Вариант ЕГЭ · №'+t.ex;
   const min=Math.floor((Date.now()-V.t0)/60000);
   let h='<div class="vgrid">'+V.items.map((x,k)=>'<button class="vn'+(k===V.i?' on':'')+(V.ans[k]?' has':'')+'" data-vi="'+k+'">'+x.ex+'</button>').join('')+'</div>';
-  h+='<div class="tag">Задание №'+t.ex+' · прошло '+min+' мин · на экзамене на всю работу 3 ч 55 мин</div><div class="card task">'+esc(t.t)+(t.f&&t.f.length?t.f.map(f=>'<img class="fig" src="'+f+'" alt="Рисунок к заданию">').join(''):'')+'</div><div class="src">'+(t.r?esc(t.s||'Из экзаменов и сборников'):'Задание из банка Аника')+'</div>';
+  h+='<div class="tag">Задание №'+t.ex+' · прошло '+min+' мин · на экзамене на всю работу 3 ч 55 мин</div><div class="card task">'+esc(t.t)+(t.f&&t.f.length?t.f.map(f=>'<img class="fig" src="'+f+'" alt="Рисунок к заданию">').join(''):'')+'</div><div class="src">'+(t.r&&t.s?esc(t.s):'')+'</div>';
   h+=numpadHTML().replace('>Проверить<','>Сохранить ответ<')+'<div class="row2v"><button class="btn sec" id="vprev"'+(V.i?'':' disabled')+'>← Назад</button><button class="btn sec" id="vnext">'+(V.i+1<V.items.length?'Дальше →':'К концу')+'</button></div>'
     +'<button class="btn" id="vfin">Завершить и проверить ('+V.ans.filter(Boolean).length+' из '+VARIANT_N+' с ответом)</button>';
   app.innerHTML=h;
@@ -740,7 +746,7 @@ function varDone(){
   let hist=[];try{hist=JSON.parse(localStorage.getItem('math_variants')||'[]')}catch(e){}
   if(hist.length>1)h+='<div class="src" style="margin-top:8px">Прошлые варианты: '+hist.slice(-6,-1).map(x=>x.ok+'/'+(x.n||12)).join(' · ')+'</div>';
   h+='<button class="btn" id="vagain">Новый вариант</button><button class="btn sec" id="vhome">⬅️ К разделам</button>';
-  if(session.length&&!autoSend())h+='<button class="btn ok" id="send">Отправить результаты боту</button>';
+  if(session.length&&!autoSend())h+='<button class="btn ok" id="send">Сохранить результат</button>';
   app.innerHTML=h;
   app.querySelectorAll('[data-sim]').forEach(b=>b.onclick=()=>similarStart(V.items[+b.dataset.sim]));
   $('#vagain').onclick=variantStart;$('#vhome').onclick=()=>setView('home');
@@ -938,7 +944,7 @@ function doneView(){
   h+='<button class="btn'+(cur.learn&&L?' sec':'')+'" id="again">'+(failed.length?'Потренировать то, где споткнулся':'Ещё такую же')+'</button>';
   h+='<button class="btn sec" id="other">Другое задание</button>';
   h+='<button class="btn sec" id="solo">Теперь реши сам: практика без шагов</button>';
-  if(!sentAuto)h+='<button class="btn ok" id="send">Закончить и отправить результаты боту</button>';
+  if(!sentAuto)h+='<button class="btn ok" id="send">Сохранить результат</button>';
   h+='<button class="btn sec" id="menu">⬅️ К разделу</button>';
   app.innerHTML=h;
   const ls=$('#learnsolo');if(ls)ls.onclick=()=>learnToSolo();
@@ -999,7 +1005,7 @@ function gameDone(){
   const sentAuto=autoSend();
   let h=autoNote(sentAuto)+'<div class="stars"><b>'+gm.ok+'</b> из '+n+'<small>верно · +'+gm.gain+' XP</small></div>';
   h+='<button class="btn" id="again">Ещё раз</button><button class="btn sec" id="menu">Другие игры</button>';
-  if(!sentAuto)h+='<button class="btn ok" id="send">Отправить результаты боту</button>';
+  if(!sentAuto)h+='<button class="btn ok" id="send">Сохранить результат</button>';
   app.innerHTML=h;
   $('#again').onclick=()=>gameStart(gm.g.id);
   $('#menu').onclick=()=>setView('pack');
@@ -1028,7 +1034,7 @@ function autoSend(){
   return true;
 }
 function autoNote(sent){
-  return sent?'<div class="fb good">✅ Результат записан в твой прогресс — бот и репетитор его увидят.</div>':'';
+  return '';
 }
 function sendToBot(){
   if(!session.length)return;

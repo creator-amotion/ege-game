@@ -242,9 +242,8 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:12px 1
     <div class="wm">аник<i>.</i></div>
     <div class="eyebrow">ЕГЭ · 11 класс</div>
     <h1>Русский язык</h1>
-    <p>26 заданий · 4969 задач в базе</p>
+    <p>Все 26 заданий ЕГЭ</p>
     <div class="srow">
-      <div class="sbox"><div class="n">4002</div><div class="l">заданий из экзаменов</div></div>
       <div class="sbox"><div class="n">26</div><div class="l">заданий</div></div>
       <div class="sbox"><div class="n" id="totalPts">0</div><div class="l">очков</div></div>
     </div>
@@ -449,7 +448,7 @@ function openTopic(num){
   const t=TOPICS.find(x=>x.num===num);if(!t)return;
   document.getElementById('tEmoji').innerHTML=t.emoji;
   document.getElementById('tName').textContent=t.name;
-  document.getElementById('tSub').textContent='задание '+num+' · '+t.cnt+' заданий из экзаменов';
+  document.getElementById('tSub').textContent='задание '+num;
   document.getElementById('tb0').style.setProperty('--col',t.col);
   {const th=document.querySelector('#s-topic .th');skinTile(th,num);th.dataset.n=String(num).padStart(2,'0');}
   renderTheory(num);renderPractice(num);renderGameTab(num);LR=null;renderLearn(num);
@@ -462,7 +461,7 @@ function openTopic(num){
 function renderTheory(num){
   const c=document.getElementById('tb0');
   const cards=THEORY_ALL[num];
-  if(!cards||!cards.length){c.innerHTML='<div style="color:var(--m);padding:20px;text-align:center">Теория в разработке </div>';return;}
+  if(!cards||!cards.length){c.innerHTML='<div style="color:var(--m);padding:20px;text-align:center">Теорию к этому заданию смотри в «Изучить»</div>';return;}
   const t=TOPICS.find(x=>x.num===num),ts=topicsOf(num)||[];
   // карточка части темы — из LEARN_TOPICS (там правило, шаги, примеры, ловушки и key по отдельности), остальные — разбором карточки
   c.innerHTML=cards.map(card=>{
@@ -793,8 +792,8 @@ function sEq(a,b){if(a.size!==b.size)return false;for(const x of a)if(!b.has(x))
 /* --- RESULTS --- */
 function sendNumbered(num,ok,tot){
   const payload='n_e'+String(num).padStart(2,'0')+String(ok).padStart(2,'0')+String(tot).padStart(2,'0');
-  if(window.AnikSync&&AnikSync.send(payload))return '<div class="cg-hint on" style="margin-top:14px">✅ Результат записан в твой прогресс — бот и репетитор его увидят.</div>';
-  return `<div class="cg-hint on" style="margin-top:14px">Чтобы бот учёл подход в твоём прогрессе, отправь результат.</div><button class="btp" style="margin-top:10px" onclick="sendResult('https://t.me/'+BOT_USERNAME+'?start=${payload}')">📤 Отправить результат боту</button>`;
+  if(window.AnikSync&&AnikSync.send(payload))return '';
+  return `<button class="btp" style="margin-top:10px" onclick="sendResult('https://t.me/'+BOT_USERNAME+'?start=${payload}')">📤 Сохранить результат</button>`;
 }
 function showResults(correct,total,num){
   setTimeout(function(){window.anikPlanDone&&anikPlanDone();},700);
@@ -819,7 +818,7 @@ function renderGameTab(num){
   } else if(cg){
     document.getElementById('tb2').innerHTML=`<div class="game-hero"><div class="gi"></div><h3>${cg.title}</h3><p style="color:var(--m);font-size:13px;margin:8px 0 18px">${cg.instruction} &middot; +10 очков за верный</p>${roundPicker(num)}<button class="btp" onclick="startCustomGame(${num})" style="max-width:240px;margin:0 auto;display:block">Начать</button></div>`;
   } else {
-    document.getElementById('tb2').innerHTML=`<div class="game-hero"><div class="gi"></div><h3>Игры готовим</h3><p style="color:var(--m);font-size:13px;margin:8px 0 0">К этому заданию пока нет игр. Тренируйся в «Практике» — там настоящие задания из экзаменов.</p></div>`;
+    document.getElementById('tb2').innerHTML=`<div class="game-hero"><div class="gi"></div><h3>Тренируйся в «Практике»</h3><p style="color:var(--m);font-size:13px;margin:8px 0 0">К этому заданию лучше всего готовиться на настоящих заданиях из экзаменов.</p></div>`;
   }
 
 }
@@ -922,9 +921,8 @@ function sendResult(url){
 }
 function resultBlock(link){
   // с облаком результат уходит боту сам; без него (или вне Telegram) — кнопка, как раньше
-  if(window.AnikSync&&AnikSync.send(link.split('?start=')[1]||''))return `<div class="cg-hint on" style="margin-top:14px">✅ Результат записан в твой прогресс — бот и репетитор его увидят.</div>`;
-  return `<div class="cg-hint on" style="margin-top:14px">Чтобы бот учёл игру в твоём прогрессе, а репетитор увидел, где ты споткнулся, отправь результат.</div>
-<button class="btp" style="margin-top:10px" onclick="sendResult('${link}')">Отправить результат боту</button>`;
+  if(window.AnikSync&&AnikSync.send(link.split('?start=')[1]||''))return ``;
+  return `<button class="btp" style="margin-top:14px" onclick="sendResult('${link}')">Сохранить результат</button>`;
 }
 
 /* сколько вопросов в раунде — выбирает ученик (запоминаем); «все» — вся тема */
@@ -1311,7 +1309,7 @@ function sExcTab(i){
 
 function renderExcQuiz(key){
   const cat=EXCEPTIONS[key];const quiz=cat.quiz||[];
-  if(!quiz.length){document.getElementById('quizArea').innerHTML='<p style="color:var(--m)">Квиз в разработке</p>';return;}
+  if(!quiz.length){document.getElementById('quizArea').innerHTML='<p style="color:var(--m)">Вопросов по этой теме нет</p>';return;}
   window._quiz=quiz;window._qIdx=0;window._qOk=0;
   showQuizQ();
 }

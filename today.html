@@ -351,7 +351,7 @@ function stamps(setKey){
       }
       return '<button class="stamp sgt locked" style="--col:transparent;--ink:#111111" data-id="'+esc(k.id)+'">'+head+'<span class="pb" style="width:'+pct+'%;background:'+c[0]+'"></span></button>';
     }).join('')+'</div>'+
-    (s&&s.from!=='bot'?'':(s?'<div class="empty" style="margin-top:14px"><b>Марки пока приходят в чат с ботом.</b> Здесь они появятся, когда заработает связь приложения с сервером.</div>':'<div class="empty" style="margin-top:14px"><b>Пока марок нет.</b> Занимайся через бота — здесь появится прогресс по каждой теме.</div>'));
+    (s&&s.from!=='bot'?'':(s?'<div class="empty" style="margin-top:14px"><b>Марки появятся здесь</b> после первых занятий.</div>':'<div class="empty" style="margin-top:14px"><b>Пока марок нет.</b> Занимайся через бота — здесь появится прогресс по каждой теме.</div>'));
   app.innerHTML=html;
   Array.prototype.forEach.call(app.querySelectorAll('.tabs3 button'),function(b){b.onclick=function(){stamps(b.dataset.s);window.scrollTo(0,0);};});
   Array.prototype.forEach.call(app.querySelectorAll('.stamp'),function(b){b.onclick=function(){sheet(b.dataset.id,have[b.dataset.id]);};});

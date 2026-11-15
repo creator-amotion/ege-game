@@ -296,7 +296,7 @@ function home(){
     '<div class="eyebrow" style="margin-top:14px">настоящие задания с проверкой</div><h1 style="margin-top:6px">Тренажёр</h1><p class="lead">Решай по номерам — бот и приложение видят твой прогресс.</p>'+
     '<div class="cards" style="margin-top:18px">'+Object.keys(SETS).map(function(k){
       var s=SETS[k],tot=INDEX.sets[k].numbers.reduce(function(a,x){return a+x.count;},0);
-      return '<a class="setcard" style="'+AnikLook.style(s.skin)+'" href="#'+k+'"><div class="big" aria-hidden="true">'+s.sign+'</div><div class="tn">'+s.exam+' · '+tot+' '+plural(tot,'задание','задания','заданий')+'</div><div class="nm">'+esc(INDEX.sets[k].title.replace(/^(ОГЭ|ЕГЭ)\s*·\s*/,''))+'</div><div class="ds">'+esc(s.desc)+'</div></a>';
+      return '<a class="setcard" style="'+AnikLook.style(s.skin)+'" href="#'+k+'"><div class="big" aria-hidden="true">'+s.sign+'</div><div class="tn">'+s.exam+'</div><div class="nm">'+esc(INDEX.sets[k].title.replace(/^(ОГЭ|ЕГЭ)\s*·\s*/,''))+'</div><div class="ds">'+esc(s.desc)+'</div></a>';
     }).join('')+'</div>';
 }
 
@@ -321,12 +321,12 @@ function setScreen(set){
   var done=sts.filter(function(x){return x.step==='done';}).length,started=sts.filter(function(x){return x.step!=='new';}).length,weakN=sts.filter(function(x){return x.weak;});
   var solved=sts.reduce(function(a,x){return a+x.pr.tot;},0),played=sts.reduce(function(a,x){return a+x.gm.tot;},0);
   html+='<div class="stl">Твой прогресс</div><div class="facts"><div class="fact"><b>'+done+'/'+sts.length+'</b><span>тем изучено</span></div><div class="fact"><b>'+solved+'</b><span>заданий решено</span></div><div class="fact"><b>'+played+'</b><span>вопросов в играх</span></div></div>'+
-    (weakN.length?'<p class="lead" style="font-size:14px">Западает: '+weakN.map(function(x){return '№'+x.n;}).join(', ')+'. Начни с них — теория и игры, потом задания.</p>':started?'':'<p class="lead" style="font-size:14px">Начни с любого номера: теория → игры → настоящие задания. Прогресс сохраняется.</p>');
+    (weakN.length?'<p class="lead" style="font-size:14px">Западает: '+weakN.map(function(x){return '№'+x.n;}).join(', ')+'. Начни с них — теория и игры, потом задания.</p>':started?'':'<p class="lead" style="font-size:14px">Начни с любого номера: теория → игры → настоящие задания.</p>');
   html+='<div class="stl" style="display:flex;justify-content:space-between"><span>Номера заданий</span><span>полоса — знание</span></div><div class="grid">'+S.numbers.map(function(x){
     var c=numSkin(set,x.n),sk=skills[x.skill],stat=numStats(set,x.n);
     var p=sk?Math.round(sk.p*100):(stat.tot?Math.round(100*stat.ok/stat.tot):0);
     var ns=numState(set,x.n);if(!sk&&!stat.tot&&ns.gm.tot)p=Math.round(60*ns.gm.ok/ns.gm.tot);
-    var ds=ns.weak?'западает':sk?'знание '+p+'%':stat.tot?'верно '+stat.ok+' из '+stat.tot:ns.step!=='new'?STEP_TXT[ns.step]:x.count+' '+plural(x.count,'задание','задания','заданий');
+    var ds=ns.weak?'западает':sk?'знание '+p+'%':stat.tot?'верно '+stat.ok+' из '+stat.tot:STEP_TXT[ns.step];
     return '<button class="tile sgt" style="'+AnikLook.style(c)+'" data-n="'+x.n+'">'+AnikLook.signHTML(numSign(set,x.n))+'<div class="tn">№ '+pad2(x.n)+' · '+esc(ds)+'</div><div class="nm">'+esc(x.name)+'</div>'+
       (stamps[x.skill]?'<span class="st">МАРКА</span>':'')+'<span class="pb"><i class="pf" style="width:'+p+'%"></i></span></button>';
   }).join('')+'</div>';
@@ -344,8 +344,8 @@ function topic(set,n,tab){
     '<div class="tabs2 t4" role="tablist"><button class="tab on" data-t="l">Изучить</button><button class="tab" data-t="t">Теория</button><button class="tab" data-t="g">Игры</button><button class="tab" data-t="p">Задания</button></div>'+
     '<div id="pan-l">'+learnHtml(set,n)+'</div>'+
     '<div id="pan-p" hidden>'+
-    '<p class="lead">Только настоящие задания из экзаменов и сборников (банк ФИПИ и сборники) — те же, что в боте.</p>'+
-    '<button class="btn" id="start">Начать: '+cnt+' '+plural(cnt,'задание','задания','заданий')+'</button>'+
+    '<p class="lead">Настоящие задания из экзаменов и сборников.</p>'+
+    '<button class="btn" id="start">Начать</button>'+
     '<p class="src" style="margin-top:14px">Подход можно закончить в любой момент: засчитаются решённые.</p></div>'+
     '<div id="pan-g" hidden><div class="card"><div class="txt"><p>Загружаю…</p></div></div></div>'+
     '<div id="pan-t" hidden><div id="theory" class="card"><div class="txt"><p>Загружаю…</p></div></div></div>';
@@ -392,7 +392,7 @@ function loadTheory(set,n,col){
   var box=document.getElementById('theory'),key=set+'_'+n;
   if(box.dataset.done)return;
   var put=function(html){box.outerHTML='<div id="theory" data-done="1">'+html+'</div>';};
-  var soon='<div class="card"><div class="txt"><p><b>Теория скоро появится.</b></p><p>Конспект по заданию №'+n+' будет здесь, рядом с практикой.</p></div></div>';
+  var soon='<div class="card"><div class="txt"><p><b>Начни с практики.</b></p><p>Решай задания №'+n+' — после каждого ответа будет подсказка и разбор.</p></div></div>';
   (theoryCache[key]?Promise.resolve(theoryCache[key]):getJSON('trainer/theory_'+key+'.json').then(function(c){theoryCache[key]=c;return c;}))
     .then(function(c){put(c&&c.length?theoryHtml(c,col):soon);}).catch(function(){put(soon);});
 }
@@ -589,7 +589,7 @@ function gameEnd(){
   var sent=window.AnikSync&&AnikSync.send(payload),link='https://t.me/'+BOT_USERNAME+'?start='+payload;
   gbox().innerHTML='<div class="fin"><div class="fs '+cls+'">'+ok+'/'+tot+'</div><p class="lead" style="margin-top:8px">'+
     (ratio>=.8?'Отлично! Навык закрепляется.':ratio>=.5?'Неплохо. Загляни в теорию и сыграй ещё раз.':'Пока трудно — прочитай теорию и попробуй снова.')+'</p></div>'+
-    (sent?'<div class="hint">Результат записан в твой прогресс — бот и репетитор его увидят.</div>':'<div class="hint">Чтобы бот учёл игру в твоём прогрессе, отправь результат.</div><button class="btn" id="gsend">Отправить результат боту</button>')+
+    (sent?'':'<button class="btn" id="gsend">Сохранить результат</button>')+
     (ratio>=.7?'<button class="btn" id="gprac">Теперь — настоящие задания №'+G.n+'</button>':'')+
     '<button class="btn'+(ratio>=.7?' sec':'')+'" id="gagain">Ещё раз</button><button class="btn sec" id="gtheory2">Теория</button><button class="btn sec" id="glist">К играм</button>';
   var sb=document.getElementById('gsend');
@@ -717,8 +717,8 @@ function finish(){
     '<div class="tn">'+esc(S.title)+' · № '+pad2(run.n)+(x?' · '+esc(x.name):'')+'</div><h2>'+ok+' из '+tot+'.</h2></div>'+
     '<p class="lead">'+(ratio>=.8?'Отлично! Тема получается.':ratio>=.5?'Неплохо. Разбери ошибки и закрепи ещё одним подходом.':'Эта тема пока трудная — ничего, повтори ещё раз.')+'</p>'+
     '<div class="stl">Ответы по порядку</div><div class="marks">'+marks+'</div>'+
-    (sent?'<div class="hint">Результат записан в твой прогресс — бот и репетитор его увидят.</div>':
-      '<div class="hint">Чтобы бот учёл подход в твоём прогрессе, отправь результат.</div><button class="btn" id="sendbtn">Отправить результат боту</button>')+
+    (sent?'':
+      '<button class="btn" id="sendbtn">Сохранить результат</button>')+
     '<div class="list">'+list+'</div>'+
     (function(){var i=S.numbers.map(function(y){return y.n;}).indexOf(run.n),nx=S.numbers[i+1];
       return ratio>=.8&&nx?'<button class="btn" id="nexttopic">Дальше: №'+nx.n+' '+esc(nx.name)+'</button>':ratio<.6?'<button class="btn" id="relearn">Повторить теорию и игры</button>':'';})()+
