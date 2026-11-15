@@ -545,7 +545,7 @@ function learnToSolo(){
     const real=shuffle(pool.filter(t=>t.r)),own=shuffle(pool.filter(t=>!t.r));
     let items=real.concat(own).slice(0,3).map(t=>Object.assign({n},t));
     if(items.length<3){const seen=new Set(items.map(t=>t.t));
-      shuffle(kindSteps(k)).forEach(x=>{if(items.length<3&&x.f&&!seen.has(x.t)){seen.add(x.t);items.push({n,t:x.t,a:[String(x.f)],k:x.k||k,g:x.g||KINDS[k].g,sk:x.sk,id:'st_'+items.length})}});}
+      shuffle(kindSteps(k)).forEach(x=>{if(items.length<3&&x.f&&!seen.has(x.t)){seen.add(x.t);items.push({n,t:x.t,a:[String(x.f)],k:x.k||k,g:x.g||KINDS[k].g,sk:x.sk,fig:x.fig,id:'st_'+items.length})}});}
     if(!items.length){packTab='practice';return setView('pack')}
     pr={items,i:0,res:[],tries:0,fb:null,gain:0,learn:true};
     setView('prac');
@@ -606,7 +606,7 @@ function pracView(){
   $('#title').textContent='Практика №'+t.n;
   let h='<div class="dots">';
   pr.items.forEach((_,k)=>{h+='<span class="dot '+(k<pr.res.length?(pr.res[k]?'ok':'bad'):(k===pr.i?'cur':''))+'"></span>'});
-  h+='</div><div class="tag">Задание '+(pr.i+1)+' из '+pr.items.length+' · №'+t.n+'</div><div class="card task">'+esc(t.t)+(t.f&&t.f.length?t.f.map(f=>'<img class="fig" src="'+f+'" alt="Рисунок к заданию">').join(''):kindFig(t.k,'Схема типа задачи (общий вид; числа — из условия)'))+'</div><div class="src">'+(t.r?esc(t.s||'Из экзаменов и сборников'):'Задание из банка Аника')+'</div>';
+  h+='</div><div class="tag">Задание '+(pr.i+1)+' из '+pr.items.length+' · №'+t.n+'</div><div class="card task">'+esc(t.t)+(t.f&&t.f.length&&Array.isArray(t.f)?t.f.map(f=>'<img class="fig" src="'+f+'" alt="Рисунок к заданию">').join(''):t.fig?'<img class="fig" src="'+t.fig+'" alt="График к заданию">':kindFig(t.k,'Схема типа задачи (общий вид; числа — из условия)'))+'</div><div class="src">'+(t.r?esc(t.s||'Из экзаменов и сборников'):'Задание из банка Аника')+'</div>';
   const rv=pr.reveal;                                           // ответ показан: остаёмся на ЭТОЙ задаче, к следующей — только по «Дальше»
   if(rv){
     h+='<div class="fb '+rv.cls+'">'+esc(rv.text).replace(/\n/g,'<br>')+'</div>';
@@ -857,7 +857,7 @@ function prepare(){
 function taskView(){
   const t=cur.t,st=t.st[cur.i];
   $('#title').textContent='Задание №'+t.n;
-  let h='<div class="card task">'+esc(t.t)+kindFig(t.k,'Схема к типу задачи (буквы — как в условии)')+'</div>'+kindTheory(t.k,cur.i===0)+'<div class="dots">';
+  let h='<div class="card task">'+esc(t.t)+(t.fig?'<img class="fig" src="'+t.fig+'" alt="График к заданию">':kindFig(t.k,'Схема к типу задачи (буквы — как в условии)'))+'</div>'+kindTheory(t.k,cur.i===0)+'<div class="dots">';
   t.st.forEach((_,k)=>{h+='<span class="dot '+(k<cur.res.length?(cur.res[k]?'ok':'bad'):(k===cur.i?'cur':''))+'"></span>'});
   h+='</div><div class="tag'+(st.rc?' think':'')+'">Шаг '+(cur.i+1)+' из '+t.st.length+(st.rc?' · сначала думаем':'')+'</div><div class="q">'+esc(st.q)+'</div>';
   if(cur.fb)h+='<div class="fb '+cur.fb.cls+'">'+esc(cur.fb.text).replace(/\n/g,'<br>')+'</div>';
