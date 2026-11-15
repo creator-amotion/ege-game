@@ -163,8 +163,21 @@ b.mark{background:var(--yellow);padding:0 3px}
 .lstep.done i{background:var(--blue);border-color:var(--blue);color:#fff}
 .lstep.cur{border-color:var(--ink);box-shadow:4px 4px 0 var(--yellow)}
 .lstep b{display:block;font-size:16px}
+.lstages{display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 12px}
+.lstages span{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:5px 10px;border:2px solid var(--line2);color:var(--muted)}
+.lstages span.on{border-color:var(--ink);color:var(--ink);background:var(--yellow)}
+.lstages span.ok{color:var(--blue);border-color:var(--blue)}
+.lsum{font-size:14px;color:var(--muted);margin:6px 0 10px}
+.lsum b{color:var(--ink)}
+.lq{font-family:var(--display);font-size:20px;font-weight:800;line-height:1.25;margin:10px 0 12px}
+.lopt{display:block;width:100%;text-align:left;margin-top:8px;min-height:50px;padding:10px 14px;border:2px solid var(--ink);background:#fff;color:var(--ink);font:inherit;font-size:16px;cursor:pointer}
+.katex{font-size:1.05em}
+.thb-fx .katex-display,.thb-fx{overflow-x:auto;overflow-y:hidden}
 .lstep small{display:block;font-size:13px;color:var(--muted)}
 </style>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
 </head>
 <body class="trainer">
 <main id="app"></main>
@@ -340,7 +353,7 @@ function topic(set,n,tab){
   var cnt=Math.min(SESSION,x.count);
   app.innerHTML='<div class="bar-top"><span class="wm">аник<i>.</i></span><a class="back" href="#'+set+'">← Номера</a></div>'+
     '<div class="hero-n sgt" style="'+AnikLook.style(c)+'">'+AnikLook.signHTML(numSign(set,n))+'<div class="tn">'+esc(S.title)+' · задание '+n+'</div><h2>'+esc(x.name)+'</h2></div>'+
-    '<div class="facts"><div class="fact"><b>'+x.count+'</b><span>заданий</span></div><div class="fact"><b>'+(sk?Math.round(sk.p*100)+'%':'—')+'</b><span>знание</span></div><div class="fact"><b>'+(stat.tot?Math.round(100*stat.ok/stat.tot)+'%':'—')+'</b><span>верно здесь</span></div></div>'+
+    '<div class="facts"><div class="fact"><b>'+(sk?Math.round(sk.p*100)+'%':'—')+'</b><span>знание</span></div><div class="fact"><b>'+(stat.tot?Math.round(100*stat.ok/stat.tot)+'%':'—')+'</b><span>верно здесь</span></div></div>'+
     '<div class="tabs2 t4" role="tablist"><button class="tab on" data-t="l">Изучить</button><button class="tab" data-t="t">Теория</button><button class="tab" data-t="g">Игры</button><button class="tab" data-t="p">Задания</button></div>'+
     '<div id="pan-l">'+learnHtml(set,n)+'</div>'+
     '<div id="pan-p" hidden>'+
@@ -355,8 +368,9 @@ function topic(set,n,tab){
     ['l','p','g','t'].forEach(function(k){document.getElementById('pan-'+k).hidden=(k!==b.dataset.t);});
     if(b.dataset.t==='t')loadTheory(set,n,col);
     if(b.dataset.t==='g')loadGames(set,n,col);
-    if(b.dataset.t==='l')document.getElementById('pan-l').innerHTML=learnHtml(set,n),wireLearn(set,n);};});
+    if(b.dataset.t==='l'){if(LRN&&LRN.set===set&&LRN.n===n)partsView();else document.getElementById('pan-l').innerHTML=learnHtml(set,n),wireLearn(set,n);}};});
   wireLearn(set,n);
+  loadParts(set,n,col);
   var want={theory:'t',games:'g',tasks:'p'}[tab];
   if(want){var tb=app.querySelector('.tabs2 [data-t='+want+']');if(tb)tb.click();}
 }
@@ -379,6 +393,136 @@ function wireLearn(set,n){
   if(nx){var S=INDEX.sets[set],i=S.numbers.map(function(x){return x.n;}).indexOf(n);nx.onclick=function(){go(set+'&n='+S.numbers[i+1].n+'&learn');};}
 }
 
+
+/* ───────── «Изучить» по частям (trainer/learn_<набор>_<номер>.json): теория → тест по теории → игра → задания части ─────────
+   Как в русском ЕГЭ и профильной математике: у каждой части своя теория, свой тест с объяснениями, игра по её темам
+   и свои настоящие задания (поле p у задания). Прогресс — anik_trl; этапы уходят боту строками l_<часть>-<этап><верно><всего>. */
+var LRN=null;
+function mathIn(el){
+  if(!el)return;
+  if(window.renderMathInElement){try{renderMathInElement(el,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false});}catch(e){}}
+  else setTimeout(function(){mathIn(el);},400);
+}
+function lpKey(){return LRN.set+'_'+LRN.n;}
+function lpOf(id){var a=lsGet('anik_trl',{});return (a[lpKey()]||{})[id]||{};}
+function lpSet(id,f){var a=lsGet('anik_trl',{}),k=lpKey();a[k]=a[k]||{};var x=a[k][id]||{};f(x);a[k][id]=x;lsSet('anik_trl',a);}
+function hasGame(p){return !!(p.cats&&p.cats.length&&LRN.games&&LRN.games.some(function(g){return g.items.some(function(x){return p.cats.indexOf(x.c)>=0;});}));}
+function partState(p){
+  var s=lpOf(p.id),t=s.test,g=s.game,r=s.pr;
+  var rc=s.rec;     // «западает» — по последним задачам части: исправился — метка уходит
+  if((rc&&rc.length>=3&&rc.reduce(function(x,y){return x+y;},0)/rc.length<0.5)||(g&&g[1]>=5&&g[0]/g[1]<0.5))return 'weak';
+  var tOk=t&&t[0]*3>=t[1]*2,gOk=!hasGame(p)||(g&&g[0]/g[1]>=0.7),rOk=r&&r[1]>=3&&r[0]/r[1]>=0.6;
+  if(tOk&&gOk&&rOk)return 'done';
+  return s.th||t||g||r?'going':'new';
+}
+var PART_LABEL={new:'не начата',going:'в процессе',done:'изучена ✓',weak:'западает'};
+function partSend(id,stage,ok,tot){if(window.AnikSync&&tot)try{AnikSync.send('l_'+id+'-'+stage+pad2(Math.min(ok,99))+pad2(Math.min(tot,99)));}catch(e){}}
+function loadParts(set,n,col){
+  LRN=null;
+  getJSON('trainer/learn_'+set+'_'+n+'.json').then(function(d){
+    if(!d||!d.parts||!d.parts.length)return;
+    LRN={set:set,n:n,col:col,parts:d.parts,games:null,cur:null};
+    var done=function(){if(location.hash.indexOf('n='+n)>=0)partsView();};
+    if(GAME_KIND[set])getJSON('trainer/games_'+set+'_'+n+'.json').then(function(g){LRN.games=g.games;done();}).catch(done);else done();
+  }).catch(function(){});
+}
+function lbox(){return document.getElementById('pan-l');}
+function partsView(openId){
+  if(!LRN)return;
+  if(openId){var q=LRN.parts.filter(function(p){return p.id===openId;})[0];if(q){openTab('l');return partOpen(q,'theory');}}
+  var a=LRN.parts,cnt={new:0,going:0,done:0,weak:0};a.forEach(function(p){cnt[partState(p)]++;});
+  var nx=a.filter(function(p){return partState(p)==='weak';})[0]||a.filter(function(p){return partState(p)!=='done';})[0];
+  var S=INDEX.sets[LRN.set],i=S.numbers.map(function(x){return x.n;}).indexOf(LRN.n),nn=S.numbers[i+1];
+  var h='<p class="lead">Тема разбита на части — от простого к сложному. В каждой части: теория → тест по теории'+(LRN.games?' → игра':'')+' → настоящие задания.</p>'+
+    '<div class="lsum">Изучено <b>'+cnt.done+'</b> из '+a.length+(cnt.weak?' · западает: '+cnt.weak:'')+'</div>';
+  if(nx)h+='<button class="btn" data-part="'+esc(nx.id)+'">'+(cnt.done||cnt.going?'Продолжить':'Начать')+': '+esc(nx.title)+'</button>';
+  else if(nn)h+='<button class="btn" id="lnext">Тема изучена. Дальше: №'+nn.n+' '+esc(nn.name)+'</button>';
+  h+=a.map(function(p,k){var st=partState(p);
+    return '<button class="lstep'+(st==='done'?' done':'')+(p===nx?' cur':'')+'" data-part="'+esc(p.id)+'"><i>'+(st==='done'?'✓':k+1)+'</i><span><b>'+esc(p.title)+'</b><small>'+['','базовый','средний','сложный'][p.lvl||1]+' уровень · '+(st==='weak'?'<span style="color:var(--red)">западает</span>':PART_LABEL[st])+'</small></span></button>';}).join('');
+  lbox().innerHTML=h;mathIn(lbox());
+  [].forEach.call(lbox().querySelectorAll('[data-part]'),function(b){b.onclick=function(){partOpen(LRN.parts.filter(function(p){return p.id===b.dataset.part;})[0],'theory');};});
+  var ln=document.getElementById('lnext');if(ln)ln.onclick=function(){go(LRN.set+'&n='+nn.n+'&learn');};
+}
+function partBar(){
+  var c=LRN.cur,s=lpOf(c.p.id),st=[['theory','Теория',s.th],['test','Тест',s.test&&s.test[0]*3>=s.test[1]*2]];
+  if(hasGame(c.p))st.push(['game','Игра',s.game&&s.game[0]/s.game[1]>=0.7]);
+  st.push(['tasks','Задания',s.pr&&s.pr[1]>=3&&s.pr[0]/s.pr[1]>=0.6]);
+  return '<div class="ph"><span><b>'+esc(c.p.title)+'</b></span><button class="back" id="lpback" style="min-height:32px;height:32px;font-size:13px">Все части</button></div>'+
+    '<div class="lstages">'+st.map(function(x){return '<span class="'+(x[0]===c.stage?'on':x[2]?'ok':'')+'">'+(x[2]?'✓ ':'')+x[1]+'</span>';}).join('')+'</div>';
+}
+function partWire(){var b=document.getElementById('lpback');if(b)b.onclick=function(){LRN.cur=null;partsView();window.scrollTo(0,0);};}
+function shuf(a){return a.slice().sort(function(){return Math.random()-.5;});}
+function partOpen(p,stage){
+  LRN.cur={p:p,stage:stage};
+  if(stage==='theory')return partTheory();
+  if(stage==='test')return partTest();
+  if(stage==='game')return partGame();
+  return partTasks();
+}
+function partTheory(){
+  var p=LRN.cur.p;lpSet(p.id,function(s){s.th=1;});
+  var fm=(p.formulas||[]).map(function(f){return Array.isArray(f)?(f[1]?f[0]+' ('+f[1]+')':f[0]):f;});
+  var h=partBar()+'<div class="card">'+AnikTheory.topic({key:p.key,rule:p.rule,formulas:fm,steps:p.steps,example:p.example,traps:p.traps},{fmt:esc,stepsLabel:'Как решать',trapLabel:'Частые ошибки'})+'</div>'+
+    (p.test&&p.test.length?'<button class="btn" id="ltest">Я прочитал(а): к тесту по теории</button>':'<button class="btn" id="ltest">Дальше</button>');
+  lbox().innerHTML=h;partWire();mathIn(lbox());window.scrollTo(0,0);
+  document.getElementById('ltest').onclick=function(){partOpen(p,p.test&&p.test.length?'test':(hasGame(p)?'game':'tasks'));};
+}
+function partTest(){
+  var c=LRN.cur;
+  if(!c.tq){c.tq=shuf(c.p.test).map(function(q){return {q:q[0],ok:q[1],opts:shuf([q[1]].concat(q[2])),r:q[3]||''};});c.ti=0;c.tok=0;c.pick=null;}
+  if(c.ti>=c.tq.length)return partTestEnd();
+  var q=c.tq[c.ti],h=partBar()+'<div class="tag">Вопрос '+(c.ti+1)+' из '+c.tq.length+'</div><div class="lq">'+esc(q.q)+'</div>';
+  if(c.pick!==null){
+    var right=q.opts[c.pick]===q.ok;
+    h+='<div class="fb '+(right?'good':'bad')+'">'+(right?'Верно!':'Не совсем. Правильно: <b>'+esc(q.ok)+'</b>')+(q.r?'<small>'+esc(q.r)+'</small>':'')+'</div><button class="btn" id="lqnext">'+(c.ti+1>=c.tq.length?'Результат':'Дальше')+'</button>';
+  }else h+=q.opts.map(function(o,i){return '<button class="lopt" data-i="'+i+'">'+esc(o)+'</button>';}).join('');
+  lbox().innerHTML=h;partWire();mathIn(lbox());
+  [].forEach.call(lbox().querySelectorAll('.lopt'),function(b){b.onclick=function(){c.pick=+b.dataset.i;if(q.opts[c.pick]===q.ok)c.tok++;partTest();};});
+  var nb=document.getElementById('lqnext');if(nb)nb.onclick=function(){c.ti++;c.pick=null;partTest();window.scrollTo(0,0);};
+}
+function partTestEnd(){
+  var c=LRN.cur,p=c.p,ok=c.tok,tot=c.tq.length,pass=ok*3>=tot*2;
+  lpSet(p.id,function(s){s.test=[ok,tot];});partSend(p.id,'t',ok,tot);c.tq=null;
+  var nxt=hasGame(p)?'game':'tasks';
+  lbox().innerHTML=partBar()+'<div class="fin"><div class="fs '+(pass?'g':'r')+'">'+ok+'/'+tot+'</div><p class="lead" style="margin-top:8px">'+
+    (pass?'Теорию знаешь. Теперь — '+(nxt==='game'?'игра по этой части.':'настоящие задания этой части.'):'Перечитай теорию и пройди тест ещё раз — без этого задачи пойдут тяжело.')+'</p></div>'+
+    (pass?'<button class="btn" id="lgo">'+(nxt==='game'?'Играть':'Решать задания')+'</button><button class="btn sec" id="lre">Перечитать теорию</button>':
+      '<button class="btn" id="lre">Перечитать теорию</button><button class="btn sec" id="lagain">Пройти тест ещё раз</button>');
+  partWire();
+  var g=document.getElementById('lgo');if(g)g.onclick=function(){partOpen(p,nxt);};
+  document.getElementById('lre').onclick=function(){partOpen(p,'theory');};
+  var a=document.getElementById('lagain');if(a)a.onclick=function(){partOpen(p,'test');};
+}
+function partGame(){
+  var p=LRN.cur.p,gi=-1;
+  LRN.games.forEach(function(g,i){if(gi<0&&g.items.some(function(x){return p.cats.indexOf(x.c)>=0;}))gi=i;});
+  if(gi<0)return partOpen(p,'tasks');
+  G={set:LRN.set,n:LRN.n,col:LRN.col,games:LRN.games,gi:gi,mode:lsGet('anik_gmode','why'),part:p.id};
+  gbox().dataset.ready='1';openTab('g');
+  startRound(p.cats);
+}
+function partGameDone(ok,tot){
+  var p=LRN.cur&&LRN.cur.p;G.part=null;G.round=null;
+  if(!p)return gamesList();
+  lpSet(p.id,function(s){if(!s.game||ok/tot>=s.game[0]/s.game[1]||ok/tot<0.5)s.game=[ok,tot];});partSend(p.id,'s',ok,tot);
+  var good=ok/tot>=0.7;
+  gbox().innerHTML='<div class="fin"><div class="fs '+(good?'g':ok/tot>=.5?'y':'r')+'">'+ok+'/'+tot+'</div><p class="lead" style="margin-top:8px">'+
+    (good?'Отлично! Теперь — настоящие задания этой части.':'Сыграй ещё раз: в игре ошибки не страшны, а в задачах они будут стоить баллов.')+'</p></div>'+
+    '<button class="btn" id="lgtask">'+(good?'Решать задания части':'Ещё раунд')+'</button><button class="btn sec" id="lgparts">К частям темы</button>';
+  document.getElementById('lgtask').onclick=function(){if(good){openTab('l');partOpen(p,'tasks');}else partGame();};
+  document.getElementById('lgparts').onclick=function(){openTab('l');LRN.cur=null;partsView();};
+}
+function partTasks(){
+  var p=LRN.cur.p;
+  start(LRN.set,LRN.n,p.id);
+}
+function partTasksDone(ok,tot){
+  if(!LRN||LRN.set!==run.set||LRN.n!==run.n)return;
+  var id=run.part;
+  lpSet(id,function(s){var r=s.pr||[0,0];s.pr=[r[0]+ok,r[1]+tot];s.rec=(s.rec||[]).concat(run.res.map(function(x){return x?1:0;})).slice(-6);});
+  partSend(id,'p',ok,tot);
+}
+
 /* ───────── теория: карточки {title, content, rules:[{r,t,ex}], tip, warn} ───────── */
 var theoryCache={};
 function theoryHtml(cards,col){
@@ -398,13 +542,13 @@ function loadTheory(set,n,col){
 }
 
 /* ───────── игры к заданию: вопросы с вариантами ответа ───────── */
-var GAME_KIND={'oge-rus':'q','oge-math':'p'};            // буква в строке результата n_… (игра, не настоящее задание)
+var GAME_KIND={'oge-rus':'q','oge-math':'p','ege-mathb':'c'};            // буква в строке результата n_… (игра, не настоящее задание)
 var G=null;
 function gbox(){return document.getElementById('pan-g');}
 function loadGames(set,n,col){
   var box=gbox();
   if(box.dataset.ready)return;
-  var soon='<div class="card"><div class="txt"><p><b>Игры и упражнения готовим.</b></p><p>Здесь появятся игры, которые подводят к этому заданию. Пока тренируйся в «Практике».</p></div></div>';
+  var soon='<div class="card"><div class="txt"><p><b>Тренируйся на заданиях.</b></p><p>По этому номеру лучше всего учиться на настоящих заданиях. Пока тренируйся в «Практике».</p></div></div>';
   if(!GAME_KIND[set]){box.innerHTML=soon;box.dataset.ready='1';return;}
   getJSON('trainer/games_'+set+'_'+n+'.json').then(function(d){
     box.dataset.ready='1';
@@ -438,7 +582,7 @@ function openGame(i){
   document.getElementById('gback').onclick=gamesList;
 }
 function startRound(cat){
-  var g=G.games[G.gi],pool=g.items.filter(function(x){return !cat||x.c===cat;});
+  var g=G.games[G.gi],pool=g.items.filter(function(x){return !cat||(Array.isArray(cat)?cat.indexOf(x.c)>=0:x.c===cat);});
   pool=pool.slice().sort(function(){return Math.random()-.5;}).slice(0,10);
   G.round={cat:cat,items:pool,i:0,ok:0,res:[],answered:false};
   gameQ();
@@ -585,6 +729,7 @@ function gameEnd(){
   setTimeout(function(){window.anikPlanDone&&anikPlanDone();},700);
   var ok=R.ok,ratio=ok/tot,cls=ratio>=.8?'g':ratio>=.5?'y':'r';
   addStats(G.set,G.n,ok,tot,'anik_trg');
+  if(G.part){partGameDone(ok,tot);return;}
   var payload='n_'+GAME_KIND[G.set]+pad2(G.n)+pad2(ok)+pad2(tot);
   var sent=window.AnikSync&&AnikSync.send(payload),link='https://t.me/'+BOT_USERNAME+'?start='+payload;
   gbox().innerHTML='<div class="fin"><div class="fs '+cls+'">'+ok+'/'+tot+'</div><p class="lead" style="margin-top:8px">'+
@@ -602,17 +747,18 @@ function gameEnd(){
 }
 
 /* ───────── подход ───────── */
-function start(set,n){
-  document.getElementById('start').disabled=true;
+function start(set,n,part){
+  var sb=document.getElementById('start');if(sb)sb.disabled=true;
   loadPack(set,n).then(function(pack){
     var seenKey='anik_seen_'+set+'_'+n,seen=lsGet(seenKey,[]);
-    var fresh=pack.tasks.filter(function(t){return seen.indexOf(t.id)<0;});
-    if(fresh.length<Math.min(SESSION,pack.tasks.length)){seen=[];fresh=pack.tasks.slice();}
+    var all=part?pack.tasks.filter(function(t){return t.p===part;}):pack.tasks,size=part?5:SESSION;
+    var fresh=all.filter(function(t){return seen.indexOf(t.id)<0;});
+    if(fresh.length<Math.min(size,all.length)){fresh=all.slice();}
     fresh.sort(function(){return Math.random()-.5;});
-    var items=fresh.slice(0,SESSION);
+    var items=fresh.slice(0,size);
     seen=seen.concat(items.map(function(t){return t.id;})).slice(-400);
     lsSet(seenKey,seen);
-    run={set:set,n:n,pack:pack,items:items,i:0,res:[],answered:false};
+    run={set:set,n:n,pack:pack,items:items,i:0,res:[],answered:false,part:part||null};
     show();
   }).catch(function(){app.innerHTML='<div class="empty">Не получилось загрузить задания. Проверь интернет и вернись назад.</div>';});
 }
@@ -707,6 +853,7 @@ function finish(){
   if(!tot){go(run.set+'&n='+run.n);return;}
   var ok=run.res.filter(Boolean).length,ratio=ok/tot,cls=ratio>=.8?'g':ratio>=.5?'y':'r';
   addStats(run.set,run.n,ok,tot);
+  if(run.part)partTasksDone(ok,tot);
   var payload=payloadOf(),sent=window.AnikSync&&AnikSync.send(payload);
   var link='https://t.me/'+BOT_USERNAME+'?start='+payload;
   var S=INDEX.sets[run.set];
@@ -722,12 +869,13 @@ function finish(){
     '<div class="list">'+list+'</div>'+
     (function(){var i=S.numbers.map(function(y){return y.n;}).indexOf(run.n),nx=S.numbers[i+1];
       return ratio>=.8&&nx?'<button class="btn" id="nexttopic">Дальше: №'+nx.n+' '+esc(nx.name)+'</button>':ratio<.6?'<button class="btn" id="relearn">Повторить теорию и игры</button>':'';})()+
-    '<button class="btn'+(ratio>=.8||ratio<.6?' sec':'')+'" id="again">Ещё подход</button><button class="btn sec" id="back">К номерам</button>';
+    (run.part?'<button class="btn" id="toparts">К частям темы</button>':'')+'<button class="btn'+(ratio>=.8||ratio<.6||run.part?' sec':'')+'" id="again">Ещё подход</button><button class="btn sec" id="back">К номерам</button>';
   var sb=document.getElementById('sendbtn');
   if(sb)sb.onclick=function(){if(TG&&TG.initData&&TG.openTelegramLink)TG.openTelegramLink(link);else window.open(link,'_blank');};
   var set=run.set,n=run.n;
   document.getElementById('again').onclick=function(){go(set+'&n='+n);setTimeout(function(){var b=document.getElementById('start');if(b)b.click();},0);};
   document.getElementById('back').onclick=function(){go(set);};
+  var tp=document.getElementById('toparts');if(tp)tp.onclick=function(){go(set+'&n='+n+'&learn');};
   var nt=document.getElementById('nexttopic');if(nt){var i2=S.numbers.map(function(y){return y.n;}).indexOf(n);nt.onclick=function(){go(set+'&n='+S.numbers[i2+1].n+'&learn');};}
   var rl=document.getElementById('relearn');if(rl)rl.onclick=function(){go(set+'&n='+n+'&learn');};
   run=null;resultShown=true;
