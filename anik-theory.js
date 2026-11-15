@@ -106,5 +106,18 @@
     return esc(s).replace(/[^\s<>]*_[^\s<>]*/g,function(w){return '<span class="thb-w">'+w.replace(/_/g,'<span class="thb-gap">_</span>')+'</span>';}).replace(/\s→\s/g,' <span class="thb-arr">→</span> ');
   }
 
-  window.AnikTheory={topic:topic,card:card,block:block,formula:formula,esc:esc,rusFmt:rusFmt,lead:lead};
+  // после KaTeX: знак препинания сразу за формулой не должен уезжать на новую строку
+  function glue(el){
+    if(!el)return;
+    [].forEach.call(el.querySelectorAll('.katex'),function(k){
+      if(k.parentElement.closest('.katex')||k.closest('.katex-display')||k.closest('.nobr'))return;
+      if(k.parentNode.childNodes.length===1&&k.parentNode.tagName==='SPAN')k=k.parentNode;   // обёртка auto-render
+      var t=k.nextSibling;if(!t||t.nodeType!==3)return;
+      var m=t.data.match(/^[.,;:!?)»]+/);if(!m)return;
+      var w=document.createElement('span');w.className='nobr';w.style.whiteSpace='nowrap';
+      k.parentNode.insertBefore(w,k);w.appendChild(k);w.appendChild(document.createTextNode(m[0]));t.data=t.data.slice(m[0].length);
+    });
+  }
+
+  window.AnikTheory={topic:topic,card:card,block:block,formula:formula,esc:esc,rusFmt:rusFmt,lead:lead,glue:glue};
 })();

@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@700;800&family=Golos+Text:wght@400..700&display=swap">
 <link rel="stylesheet" href="anik.css?v=6">
-<script src="anik-theory.js?v=1"></script>
+<script src="anik-theory.js?v=3"></script>
 <script src="anik-look.js?v=1"></script>
 <script src="anik-sync.js?v=3"></script>
 <script src="anik-nav.js?v=6" defer></script>
@@ -175,9 +175,9 @@ b.mark{background:var(--yellow);padding:0 3px}
 .thb-fx .katex-display,.thb-fx{overflow-x:auto;overflow-y:hidden}
 .lstep small{display:block;font-size:13px;color:var(--muted)}
 </style>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
-<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
-<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<link rel="stylesheet" href="vendor/katex/katex.min.css">
+<script defer src="vendor/katex/katex.min.js"></script>
+<script defer src="vendor/katex/auto-render.min.js"></script>
 </head>
 <body class="trainer">
 <main id="app"></main>
@@ -400,8 +400,8 @@ function wireLearn(set,n){
 var LRN=null;
 function mathIn(el){
   if(!el)return;
-  if(window.renderMathInElement){try{renderMathInElement(el,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false});}catch(e){}}
-  else setTimeout(function(){mathIn(el);},400);
+  if(window.renderMathInElement){try{renderMathInElement(el,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false});AnikTheory.glue(el);}catch(e){}}
+  else if((el._mt=(el._mt||0)+1)<60)setTimeout(function(){mathIn(el);},250);   // KaTeX ещё грузится — пробуем до 15 с
 }
 function lpKey(){return LRN.set+'_'+LRN.n;}
 function lpOf(id){var a=lsGet('anik_trl',{});return (a[lpKey()]||{})[id]||{};}
@@ -889,7 +889,8 @@ function finish(){
 }
 
 window.addEventListener('hashchange',route);
-if(window.AnikSync)AnikSync.onState(function(){if(INDEX&&!run&&!resultShown){var h=location.hash.replace(/^#/,'');if(SETS[h.split('&')[0]])route();}});
+function busy(){if(LRN&&LRN.cur)return true;if(G&&G.round)return true;var on=app.querySelector('.tabs2 .tab.on');return !!(on&&on.dataset.t!=='l');}   // ученик внутри части, игры или вкладки — не перерисовывать поверх
+if(window.AnikSync)AnikSync.onState(function(){if(INDEX&&!run&&!resultShown&&!busy()){var h=location.hash.replace(/^#/,'');if(SETS[h.split('&')[0]])route();}});
 route();
 </script>
 </body>

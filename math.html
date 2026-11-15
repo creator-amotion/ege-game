@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Математика: разбор по шагам</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
-<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
-<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<link rel="stylesheet" href="vendor/katex/katex.min.css">
+<script defer src="vendor/katex/katex.min.js"></script>
+<script defer src="vendor/katex/auto-render.min.js"></script>
 <style>
 :root{--bg:#0a0a14;--card:#13132a;--card2:#1a1a35;--acc:#e94560;--g:#4ecca3;--y:#ffd700;--b:#74c0fc;--txt:#eaeaea;--m:#8a90a0;--r:14px}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -61,7 +61,7 @@ h1{font-size:22px;margin:14px 0 4px;background:linear-gradient(135deg,var(--acc)
 .kth summary{cursor:pointer;font-weight:700;font-size:14.5px;line-height:1.4}
 .kth ul{margin:6px 0 0;padding-left:20px}.kth li{margin:7px 0;font-size:14.5px;line-height:1.55}
 .kth .btn{margin-top:8px}
-.tabs2{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));margin:0 0 14px;border:2px solid var(--ink,#2a2a4e);border-radius:0}
+.tabs2{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);margin:0 0 14px;border:2px solid var(--ink,#2a2a4e);border-radius:0}
 .tabs2 .tab{min-height:46px;border:0;border-right:2px solid var(--ink,#2a2a4e);background:transparent;color:var(--ink,var(--txt));font-size:12.5px;font-weight:600;cursor:pointer;padding:4px 2px;line-height:1.15}
 .tabs2 .tab:last-child{border-right:0}
 .tabs2 .tab.on{background:var(--ink,var(--b));color:var(--paper,#0a0a14)}
@@ -99,7 +99,7 @@ h1{font-size:22px;margin:14px 0 4px;background:linear-gradient(135deg,var(--acc)
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@700;800&family=Golos+Text:wght@400..700&display=swap">
 <link rel="stylesheet" href="anik.css?v=6">
 <script src="anik-look.js?v=1"></script>
-<script src="anik-theory.js?v=1"></script>
+<script src="anik-theory.js?v=3"></script>
 <script src="anik-sync.js?v=3"></script>
 <script src="anik-nav.js?v=6" defer></script>
 </head>
@@ -138,9 +138,11 @@ function badgeText(p){return p>=0.9?'мастер':p>=0.7?'уверенно':p>=
 function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
 function mathRender(){
   if(window.renderMathInElement){
-    try{renderMathInElement(app,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false})}catch(e){}
-  }else{setTimeout(()=>{if(window.renderMathInElement)mathRender()},400)}
+    try{renderMathInElement(app,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false});AnikTheory.glue(app)}catch(e){}
+    mathRender.tries=0;
+  }else if((mathRender.tries=(mathRender.tries||0)+1)<60)setTimeout(mathRender,250);   // KaTeX ещё грузится — пробуем до 15 с
 }
+window.addEventListener('load',()=>{mathRender.tries=0;mathRender()});
 
 // Теория по типу задачи (math_kinds.json): свойства, формулы, порядок действий и пример
 function kindFig(k,cap,eager){
@@ -345,11 +347,11 @@ function theoryTab(){
 function theoryGames(){
   const gs=(PACK.games||[]).filter(g=>g.id!=='calc');
   if(!gs.length)return '';
-  return '<div class="card"><div class="tag">Проверь себя по теории</div>'+gs.map(g=>'<button class="btn sec" data-g="'+g.id+'" style="text-align:left"><b>'+esc(g.title)+'</b><br><span style="font-weight:400;font-size:13px;color:var(--m)">'+esc(g.desc)+'</span></button>').join('')+'</div>';
+  return '<div class="card"><div class="tag">Проверь себя по теории</div>'+gs.map(g=>'<button class="btn sec" data-g="'+g.id+'" style="display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:4px;height:auto;min-height:64px;text-align:left;padding:12px 14px"><b>'+esc(g.title)+'</b><span style="font-weight:400;font-size:13px;line-height:1.3;color:var(--m)">'+esc(g.desc)+'</span></button>').join('')+'</div>';
 }
 function gamesTab(){
   let h='<div class="card"><div class="tag">Быстрые игры</div><b>10 вопросов, очки и звёзды</b>';
-  PACK.games.forEach(g=>{h+='<button class="btn sec" data-g="'+g.id+'" style="text-align:left"><b>'+esc(g.title)+'</b><br><span style="font-weight:400;font-size:13px;color:var(--m)">'+esc(g.desc)+'</span></button>'});
+  PACK.games.forEach(g=>{h+='<button class="btn sec" data-g="'+g.id+'" style="display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:4px;height:auto;min-height:64px;text-align:left;padding:12px 14px"><b>'+esc(g.title)+'</b><span style="font-weight:400;font-size:13px;line-height:1.3;color:var(--m)">'+esc(g.desc)+'</span></button>'});
   return h+'</div>';
 }
 
