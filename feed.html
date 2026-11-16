@@ -154,6 +154,15 @@ function learnParts(sid,n){var key=sid+'_'+n;if(LEARN[key]!==undefined)return Pr
 var st=lsGet('anik_feed',{sid:null,lvl:{},streak:0,best:0});
 st.lvl=st.lvl||{};
 var SID=SUBJ[st.sid]?st.sid:defaultSid();
+/* стартовая проверка: feed.html?diag=<предмет>[&only=1,4,7] — по одной задаче на каждый номер, без подстройки сложности.
+   Ответы уходят боту как обычно и сразу дают прогнозу «проверенные» номера */
+var DIAG=(function(){
+  var m=/[?&]diag=([a-z-]+)/.exec(location.search);if(!m||!SUBJ[m[1]])return null;
+  var o=/[?&]only=([\d,]+)/.exec(location.search),nums=SUBJ[m[1]].nums.slice();
+  if(o){var want=o[1].split(',').map(Number);var f=nums.filter(function(n){return want.indexOf(n)>=0;});if(f.length)nums=f;}
+  return {sid:m[1],queue:nums.slice(),total:nums.length,i:0,ok:0,done:0,ended:false};
+})();
+if(DIAG)SID=DIAG.sid;
 function defaultSid(){var c=lsGet('anik_choice',null),m={'ege.rus':'ege-rus','ege.math':'ege-math','ege.mathb':'ege-mathb','oge.rus':'oge-rus','oge.math':'oge-math'};
   if(c&&m[c.exam+'.'+c.subj])return m[c.exam+'.'+c.subj];
   var s=window.AnikSync&&AnikSync.state&&AnikSync.state();var e=s&&s.exam,su=s&&s.subject;
@@ -183,17 +192,40 @@ function pickNum(){
 }
 var seen=lsGet('anik_feed_seen',[]);
 function nextTask(){
-  var n=pickNum(),sid=SID;
+  if(DIAG){if(!DIAG.queue.length)return Promise.resolve(null);}
+  var n=DIAG?DIAG.queue.shift():pickNum(),sid=SID;
   return pack(sid,n).then(function(arr){
     if(!arr.length)return null;
     var fresh=arr.filter(function(t){return seen.indexOf(t.id)<0;});if(!fresh.length)fresh=arr;
     var t=fresh[Math.floor(Math.random()*fresh.length)];
+    if(DIAG){var short=fresh.filter(function(x){return String(x.t).length<450;});if(short.length)t=short[Math.floor(Math.random()*short.length)];}
     seen.push(t.id);if(seen.length>600)seen=seen.slice(-600);lsSet('anik_feed_seen',seen);
-    return {sid:sid,n:n,t:t};
+    return {sid:sid,n:n,t:t,diag:DIAG?++DIAG.i:0};
   });
 }
 
+function diagIntro(){
+  var s=document.createElement('section');s.className='slide intro';
+  var S=SUBJ[DIAG.sid],skip=DIAG.sid==='ege-rus'?'<p>Задания 1–3 и 22–26 (с длинным текстом) проверим отдельно — в тренажёре.</p>':'';
+  s.innerHTML='<div class="inner" style="justify-content:center"><h1>Стартовая проверка</h1>'+
+    '<p><b>'+esc(S.t)+'</b>: по одной задаче на каждый номер — '+DIAG.total+' '+plural(DIAG.total,'задача','задачи','задач')+', около '+Math.max(5,Math.round(DIAG.total*1.2))+' минут.</p>'+
+    '<p>Не знаешь — смело жми «Не знаю»: это тоже результат. После проверки Аник покажет честный прогноз и что подтянуть первым.</p>'+skip+
+    '<div class="hint" style="margin-top:22px"><span>↑</span> листай вверх, чтобы начать</div></div>';
+  return s;
+}
+function diagSum(){return esc(SUBJ[DIAG.sid].t)+': верно <b>'+DIAG.ok+' из '+DIAG.done+'</b>'+(DIAG.done<DIAG.total?' (ответь на оставшиеся '+(DIAG.total-DIAG.done)+' — они выше)':'')+'.';}
+function diagEnd(){
+  var s=document.createElement('section');s.className='slide intro';
+  var S=SUBJ[DIAG.sid];
+  s.innerHTML='<div class="inner" style="justify-content:center"><h1>Проверка пройдена</h1>'+
+    '<p id="diag-sum">'+diagSum()+'</p>'+
+    '<p>Результаты ушли в твой прогресс: бот и «Сегодня» уже считают прогноз по этим номерам и подскажут, что подтянуть первым.</p>'+
+    '<div class="row2" style="margin-top:16px"><a href="today.html">На «Сегодня»</a><a class="main" href="feed.html">В ленту задач</a></div></div>';
+  return s;
+}
+function plural(n,a,b,c){var m=n%10,h=n%100;return h>10&&h<15?c:m===1?a:m>1&&m<5?b:c;}
 function intro(){
+  if(DIAG)return diagIntro();
   var standalone=window.matchMedia&&matchMedia('(display-mode: standalone)').matches||navigator.standalone;
   var s=document.createElement('section');s.className='slide intro';
   s.innerHTML='<div class="inner" style="justify-content:center"><h1>Лента задач</h1>'+
@@ -215,7 +247,8 @@ function slideFor(it){
     t.a.forEach(function(a){digitsOf(a).split('').forEach(function(d){cnt=Math.max(cnt,+d);});});cnt=Math.min(9,cnt);
     for(var j=1;j<=cnt;j++)nb+='<button type="button" data-d="'+j+'">'+j+'</button>';nb='<div class="nbs" style="--cols:'+Math.min(cnt,5)+'">'+nb+'</div>';}
   var ph={num:'Ответ числом',seq:'Цифры подряд',set:'Цифры подряд',word:'Одно слово'}[t.k]||'Ответ';
-  s.innerHTML='<div class="inner"><div class="tg"><span>'+esc(S.t)+' · №'+it.n+'</span><span class="lvl" title="сложность">'+dots+'</span></div>'+
+  var tag=it.diag?'<span>Проверка · '+it.diag+' из '+DIAG.total+'</span><span>№'+it.n+'</span>':'<span>'+esc(S.t)+' · №'+it.n+'</span><span class="lvl" title="сложность">'+dots+'</span>';
+  s.innerHTML='<div class="inner"><div class="tg">'+tag+'</div>'+
     '<div class="task">'+renderText(t.t)+figs+'</div>'+nb+
     '<div class="ans"><input type="text" autocomplete="off" autocapitalize="off" spellcheck="false" inputmode="'+(t.k==='word'?'text':'decimal')+'" placeholder="'+ph+'" enterkeyhint="done"><button class="chk">Ответить</button></div>'+
     (t.k==='num'?'<div class="keys"><button type="button" data-ins="-">− минус</button><button type="button" data-ins=",">, запятая</button><button type="button" data-ins="/">/ дробь</button></div>':'')+
@@ -240,6 +273,7 @@ function slideFor(it){
     inp.disabled=true;inp.classList.add(ok?'ok':'err');s.querySelector('.chk').remove();s.querySelector('.skip').remove();
     [].forEach.call(s.querySelectorAll('.nbs button'),function(b){b.disabled=true;});
     record(it,ok,v===null);
+    if(it.diag){DIAG.done++;if(ok)DIAG.ok++;var ds=document.getElementById('diag-sum');if(ds)ds.innerHTML=diagSum();if(DIAG.done>=DIAG.total){st.lvl[DIAG.sid]=Math.round(80*DIAG.ok/DIAG.total)/100;save();flush();}}
     var out=s.querySelector('.out');
     out.innerHTML='<div class="ffb '+(ok?'good':'bad')+'">'+(ok?'Верно!'+(st.streak>=3?' '+st.streak+' подряд 🔥':''):(v===null?'Ответ':'Неверно. Ответ')+': <b>'+esc(t.a[0])+'</b>')+'<span class="key"></span></div>'+
       '<div class="row2"><a href="'+esc(S.learn(t,it.n))+'">Теория по №'+it.n+'</a><button class="main nx">Дальше ↑</button></div>';
@@ -264,7 +298,7 @@ function keyFor(it){
 /* ── результаты: копим и отправляем пачками; тренажёр видит их в своей статистике ── */
 function record(it,ok,skipped){
   if(ok){st.streak++;st.best=Math.max(st.best||0,st.streak);}else st.streak=0;
-  var L=st.lvl[it.sid]||0;st.lvl[it.sid]=Math.max(0,Math.min(1,L+(ok?0.06:skipped?-0.1:-0.08)));
+  var L=st.lvl[it.sid]||0;if(!it.diag)st.lvl[it.sid]=Math.max(0,Math.min(1,L+(ok?0.06:skipped?-0.1:-0.08)));
   save();streakBar();
   // профиль: в знание навыка (m_ — как практика на math.html) и в карту знаний по типу задачи (l_…-p); остальное — n_ тренажёра
   var keys=it.sid==='ege-math'?[it.t.sk?'m|'+it.t.sk:'',it.t.kind?'l_'+it.t.kind+'-p':''].filter(Boolean):[it.sid+'|'+it.n];
@@ -294,7 +328,7 @@ function ensure(){
   if(ahead>=3)return;
   busy=true;var sid=SID;
   nextTask().then(function(it){busy=false;if(sid!==SID)return;
-    if(!it){return;}
+    if(!it){if(DIAG&&!DIAG.ended){DIAG.ended=true;var e=diagEnd();feed.appendChild(e);slides.push(e);}return;}
     var s=slideFor(it);feed.appendChild(s);slides.push(s);ensure();
   }).catch(function(){busy=false;if(!slides.length)feed.innerHTML='<section class="slide"><div class="empty">Не получилось загрузить задачи. Проверь интернет.</div></section>';});
 }
@@ -302,6 +336,7 @@ function current(){var h=feed.clientHeight||1;return Math.round(feed.scrollTop/h
 feed.addEventListener('scroll',function(){ensure();},{passive:true});
 function restart(){feed.innerHTML='';slides=[];var i=intro();feed.appendChild(i);slides.push(i);feed.scrollTop=0;busy=false;ensure();}
 
+if(DIAG)document.getElementById('subj').style.display='none';
 subjBar();streakBar();layout();restart();
 window.addEventListener('load',layout);setTimeout(layout,300);
 </script>

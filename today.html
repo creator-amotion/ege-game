@@ -114,6 +114,7 @@ h1{font-family:var(--display);font-size:38px;font-weight:800;letter-spacing:-1.5
 .aim-flag{position:absolute;right:-24px;top:50%;transform:translateY(-55%);font-size:18px}
 .aim-t{font-size:15px;line-height:1.4}.aim-t .up{color:#2E7D4F;font-weight:700}.aim-t .down{color:var(--red);font-weight:700}
 .aim-w{font-size:13px;color:var(--muted);margin-top:4px}
+.aim-go{display:block;margin-top:10px;padding:10px 12px;border:2px solid var(--ink);background:var(--yellow);color:var(--ink);font-weight:700;text-decoration:none;font-size:14px}
 .rcard .k{font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--muted)}
 .rcard .v{font-family:var(--display);font-size:20px;font-weight:800;letter-spacing:-.4px;line-height:1.1;margin:2px 0}
 .rcard .s{font-size:13px;color:var(--muted);margin-bottom:8px}
@@ -305,7 +306,8 @@ function aimHTML(s){
   if(a.d){var up=a.d>0,v=(up?'+':'')+String(a.d).replace('.',',');d=' · <span class="'+(up?'up':'down')+'">'+v+' перв.'+(a.dd>=7?' за неделю':' за '+a.dd+' '+plural(a.dd,'день','дня','дней'))+'</span>';}
   h+='<div class="aim-t">'+(a.r?'Прогноз на уровне цели — теперь держим темп и повторяем.':'Прогноз '+now+' · '+a.pc+'% пути')+d+'</div>';
   if(a.x)h+='<div class="aim-w" style="color:var(--red)">Заданий Аника не хватит на эту цель: нужна ещё часть «'+esc(a.e)+'». Поменяй допущение или цель в боте.</div>';
-  if(a.m&&a.m[0]<a.m[1])h+='<div class="aim-w">Проверено номеров: '+a.m[0]+' из '+a.m[1]+'. Непроверенные в прогнозе пока 0 — реши по 2–3 задания, и прогноз уточнится.</div>';
+  if(a.m&&a.m[0]<a.m[1])h+='<div class="aim-w">Проверено номеров: '+a.m[0]+' из '+a.m[1]+'. Непроверенные в прогнозе пока 0 — реши хотя бы по одной задаче, и прогноз уточнится.</div>'+
+    '<a class="aim-go" href="feed.html?diag='+a.s.replace('.','-')+(a.td&&a.td.length?'&only='+a.td.join(','):'')+'">Проверить непроверенные номера →</a>';
   if(!a.r&&a.w&&a.w.length)h+='<div class="aim-w">Больше всего даст: '+a.w.map(function(n){return '№'+n;}).join(', ')+'</div>';
   if(a.e)h+='<div class="aim-w">'+esc(a.e.charAt(0).toUpperCase()+a.e.slice(1))+' — в Анике пока нет, в прогнозе по допущению: '+a.as+' перв.</div>';
   return h+'</div>';
