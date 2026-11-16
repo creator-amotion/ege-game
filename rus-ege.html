@@ -226,7 +226,7 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:12px 1
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@700;800&family=Golos+Text:wght@400..700&display=swap">
-<link rel="stylesheet" href="anik.css?v=6">
+<link rel="stylesheet" href="anik.css?v=7">
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script src="anik-look.js?v=1"></script>
 <script src="anik-theory.js?v=3"></script>
@@ -529,7 +529,7 @@ function renderLearn(num){
   if(fresh&&canDiag)h+=`<button class="btp" style="margin:10px 0 0" onclick="diagStart(${num})">Сначала проверить, что я уже знаю (до 12 вопросов)</button><p class="lp-sum">Пропустишь части, которые уже получаются, и начнёшь с того, что нужно.</p>`;
   if(nx)h+=`<button class="${fresh&&canDiag?'bts':'btp'}" style="margin:10px 0;${fresh&&canDiag?'width:100%':''}" onclick="learnStart(${num},'${nx.id}')">${cnt.done+cnt.going+cnt.weak?'Изучать дальше':'Начать изучение'}: ${nx.name}</button>`;
   if(!fresh&&canDiag)h+=`<button class="bts" style="margin:0 0 10px;width:100%" onclick="diagStart(${num})">Проверить себя по всей теме ещё раз</button>`;
-  else h+=`<div class="cg-hint on" style="margin:10px 0">Все части темы изучены. Теперь — настоящие задания №${num}.</div><button class="btp" onclick="sTab(1)">Задания №${num} из экзамена</button>`;
+  if(!nx)h+=`<div class="cg-hint on" style="margin:10px 0">Все части темы изучены. Теперь — настоящие задания №${num}.</div><button class="btp" onclick="sTab(1)">Задания №${num} из экзамена</button>`;
   h+=a.map((x,i)=>{const st=aspState(num,x.id),s=(LP[num]||{})[x.id]||{};
     const det=[s.test?`тест ${s.test[0]}/${s.test[1]}`:'',s.game?`игра ${s.game[0]}/${s.game[1]}`:''].filter(Boolean).join(' · ');
     return `<button class="lp-row ${st}" onclick="learnStart(${num},'${x.id}')"><i>${st==='done'?'✓':i+1}</i><span><b>${x.name}</b><small>${ASP_LABEL[st]}${det?' · '+det:''}</small></span></button>`;}).join('');
@@ -727,7 +727,7 @@ function showPTask(num){
   }
   c.innerHTML=`${window._pWarn?`<div class="pwarn">Ты можешь порешать настоящее задание, но ещё не изучил части темы, которые в нём встречаются: <b>${window._pWarn.slice(0,3).map(x=>x.name).join('; ')}${window._pWarn.length>3?` и ещё ${window._pWarn.length-3}`:''}</b>.<br><button onclick="sTab(3);learnStart(${num},'${window._pWarn[0].id}')">Изучить: ${window._pWarn[0].name}</button></div>`:''}<div class="ph"><span class="pi">Вопрос ${pidx+1}/${tasks.length}</span><span class="ps">${pscore} верно</span></div>
 <div class="ptrack"><div class="pfill" style="width:${pct}%"></div></div>
-<div class="tsk"><div class="tsk-txt">${fmt(task.text)}</div>${task.s?`<div style="font-size:11px;color:var(--m);margin-top:8px">Источник: ${task.s}</div>`:''}</div>
+<div class="tsk"><div class="tsk-txt">${fmt(task.text)}</div>${task.s?`<div style="font-size:12px;color:var(--m);margin-top:8px">Источник: ${task.s}</div>`:''}</div>
 ${ansHTML}
 <div class="res" id="resBox"></div>
 <button class="cbtn" id="chk" onclick="checkAns(${num})">Проверить</button>
@@ -935,7 +935,7 @@ const ROUND_SIZES=[10,20,40,0];
 function roundSize(cg){let v=null;try{v=localStorage.getItem('ege_round');}catch(e){}return v===null?(cg.roundSize||20):(+v||100000);}
 function roundPicker(num){
   const cur=roundSize(CUSTOM_GAMES[num]);
-  return `<p style="color:var(--m);font-size:12px;margin:0 0 6px">Вопросов в раунде:</p><div class="cat-chips" style="margin-bottom:14px">${ROUND_SIZES.map(n=>`<button class="cat-chip${(n||100000)===cur?' mix':''}" onclick="setRound(${n},${num})">${n||'все'}</button>`).join('')}</div>`;
+  return `<p style="color:var(--m);font-size:13px;margin:0 0 6px">Вопросов в раунде:</p><div class="cat-chips" style="margin-bottom:14px">${ROUND_SIZES.map(n=>`<button class="cat-chip${(n||100000)===cur?' mix':''}" onclick="setRound(${n},${num})">${n||'все'}</button>`).join('')}</div>`;
 }
 function setRound(n,num){try{localStorage.setItem('ege_round',String(n));}catch(e){}renderGameTab(num);}
 

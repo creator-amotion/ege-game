@@ -102,7 +102,7 @@ h1{font-size:22px;margin:14px 0 4px;background:linear-gradient(135deg,var(--acc)
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@700;800&family=Golos+Text:wght@400..700&display=swap">
-<link rel="stylesheet" href="anik.css?v=6">
+<link rel="stylesheet" href="anik.css?v=7">
 <script src="anik-look.js?v=1"></script>
 <script src="anik-theory.js?v=3"></script>
 <script src="anik-sync.js?v=5"></script>
@@ -467,7 +467,7 @@ function startLearn(k){L={k,stage:'theory',tq:null};lk(k).th=1;saveLearn();setVi
 function stageBar(){
   const S=[['theory','Теория'],['test','Тест'],['steps','Разбор'],['solo','Сам']];
   const i=S.findIndex(x=>x[0]===L.stage);
-  return '<div class="dots" style="gap:6px;margin-bottom:10px">'+S.map((s,j)=>'<span class="tag" style="padding:3px 9px;border-radius:12px;'+(j===i?'background:var(--b);color:#0a0a14':j<i?'opacity:.9':'opacity:.5')+'">'+(j<i?'✓ ':'')+s[1]+'</span>').join('')+'</div>';
+  return '<div class="dots stages">'+S.map((s,j)=>'<span class="'+(j===i?'on':j<i?'past':'')+'">'+(j<i?'✓ ':'')+s[1]+'</span>').join('')+'</div>';
 }
 // подписанная формула [формула, словами] → строка «$…$ (словами)» для блока «Формулы»
 function fmStr(f){return Array.isArray(f)?(f[1]?f[0]+' ('+f[1]+')':f[0]):f}
