@@ -348,3 +348,42 @@ body.has-tabs{padding-bottom:calc(78px + env(safe-area-inset-bottom))}
   .thb-steps>li{padding-left:36px}
 }
 .thb-wrap .thb-list,.thb-wrap .thb-steps{padding:0;margin:0}
+
+/* ══ Единый вид всех экранов (подключается последним правилом файла; body-префикс — чтобы перебить стили страниц) ══ */
+/* 1. Кнопки «назад» и в шапке: одна высота 44, рамка 2px, 14px, без подчёркивания */
+body .nbtn,body.math .nb,body .back,body .exc-back{min-height:44px;height:44px;border:2px solid var(--ink);border-radius:0;font-size:14px;font-weight:600;text-decoration:none;line-height:1}
+body.math.in-pack nav .nb{border-color:var(--ink)}
+/* 2. Вкладки: один сегментный ряд — рамка 2px, разделители 2px, высота 48, 14px; открытая — чёрная */
+body.rus .tabs,body .tabs2{display:flex;gap:2px;margin:14px 0 16px;padding:0;border:2px solid var(--ink);background:var(--ink);border-radius:0}
+body.rus .tabs .tab,body .tabs2 .tab{flex:1 1 0;min-width:0;min-height:48px;padding:4px 2px;border:0;border-radius:0;background:var(--paper);color:var(--ink);font-size:14px;font-weight:600;line-height:1.15;cursor:pointer}
+body.rus .tabs .tab.on,body .tabs2 .tab.on{background:var(--ink);color:var(--paper)}
+body.trainer .tabs2{margin:0 0 16px}
+@media (max-width:360px){body.rus .tabs .tab,body .tabs2 .tab{font-size:13px}}
+/* 3. Этапы изучения (русский, математика, тренажёр): одинаковые плашки — пройден ✓ синим, текущий чёрный, дальше серым */
+body .lp-stages,body .lstages,body .dots.stages{display:flex;flex-wrap:wrap;gap:4px;margin:4px 0 14px;max-width:none}
+body .lp-stages span,body .lstages span,body .dots.stages span{flex:1 1 auto;display:flex;align-items:center;justify-content:center;min-height:34px;padding:4px 8px;border:2px solid var(--line);border-radius:0;background:transparent;color:var(--muted);opacity:1;font-size:12px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;text-align:center;line-height:1.15}
+body .lp-stages span.on,body .lstages span.on,body .dots.stages span.on{border-color:var(--ink);background:var(--ink);color:var(--paper)}
+body .lp-stages span.past,body .lstages span.ok,body .dots.stages span.past{border-color:var(--blue);color:var(--blue);background:#fff}
+/* 4. Фишки-фильтры: квадратные, рамка 2px, высота 40, 14px; выбранная — чёрная */
+body .chip,body .cat-chip{min-height:40px;padding:0 12px;border:2px solid var(--ink);border-radius:0;background:transparent;color:var(--ink);font-size:14px;font-weight:600;line-height:1.2}
+body .chip.on{background:var(--ink);border-color:var(--ink);color:var(--paper)}
+body .chip.link{border:0;background:none;color:var(--muted);min-height:36px}
+body .cat-chips{justify-content:flex-start}
+/* 5. Мелкий текст: подписи-метки не меньше 12px, пояснения не меньше 13px */
+body .eyebrow,body .stl,body .albl,body .tag,body .sgt .tn,body .hero-n .tn,body .big-n .l,body .aim-k,body .rcard .k,body .setcard .tn,body .tile .tn,body.rus #s-topic .th .sub,body .sheet .sh .tn,body .stat .k,body .res-hero .tn{font-size:12px}
+body .src,body .lp-row small,body .legend,body .pitem .s,body .cal .h,body .lp-sum,body .lp-intro{font-size:13px}
+body .lp-intro,body .lp-sum{line-height:1.5}
+/* 6. Заголовки особых экранов русского — слева, как у остальных */
+body.rus #s-stress .th,body.rus #s-exc .th{text-align:left;padding:18px 0 6px}
+body.rus #s-stress .th .sub,body.rus #s-exc .th .sub{font-size:15px;color:var(--muted)}
+body .game-hero{text-align:left;padding:14px 0}
+/* 7. Тест по теории и входная проверка: вопрос и длинные варианты читаются слева */
+body .lt-q{text-align:left;font-size:18px;line-height:1.4}
+body .lp-opt,body .dg-opt{display:block;text-align:left;padding:12px 14px;line-height:1.4;margin-top:8px}
+/* 8. Тренажёр: кнопка «назад» не залезает на цветную шапку темы */
+body.trainer .bar-top+.hero-n{margin-top:0}
+body.math .tabs2{margin-top:0}
+body .lt-q{color:var(--ink)}
+body .chip{text-align:left}
+/* раскрывающиеся блоки математики — без скруглений, как всё остальное */
+body .kth,body .help,body .rulebox,body .fig{border-radius:0}
