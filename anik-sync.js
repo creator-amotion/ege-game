@@ -122,9 +122,9 @@
       '<b>Свяжи приложение с ботом</b><br><span style="font-size:14px;color:#4A463E">Тогда прогресс один: бот, приложение и лента видят одно и то же, решённое здесь не пропадёт. ' +
       'В боте нажми «Меню» → «Аник на телефоне» и введи код.</span>' +
       '<div style="display:flex;gap:8px;margin-top:10px"><input id="anik-code" placeholder="Код из бота" autocomplete="one-time-code" autocapitalize="characters" spellcheck="false" ' +
-      'style="flex:1;min-width:0;height:46px;border:2px solid #111;padding:0 10px;font:700 18px Golos Text,system-ui,sans-serif;letter-spacing:2px;text-transform:uppercase;border-radius:0">' +
-      '<button id="anik-link" style="height:46px;padding:0 14px;border:2px solid #111;background:#111;color:#F3EEE2;font:700 15px Golos Text,system-ui,sans-serif;cursor:pointer">Связать</button></div>' +
-      (navigator.clipboard && navigator.clipboard.readText ? '<button id="anik-paste" style="margin-top:8px;width:100%;height:42px;border:2px solid #111;background:#F6CE2E;color:#111;font:700 15px Golos Text,system-ui,sans-serif;cursor:pointer">📋 Вставить код из буфера</button>' : '') +
+      'style="flex:1;min-width:0;height:44px;border:2px solid #111;padding:0 10px;font:700 18px Golos Text,system-ui,sans-serif;letter-spacing:2px;text-transform:uppercase;border-radius:0">' +
+      '<button id="anik-link" style="height:44px;padding:0 14px;border:2px solid #111;background:#111;color:#F3EEE2;font:700 15px Golos Text,system-ui,sans-serif;cursor:pointer">Связать</button></div>' +
+      (navigator.clipboard && navigator.clipboard.readText ? '<button id="anik-paste" style="margin-top:8px;width:100%;height:44px;border:2px solid #111;background:#F6CE2E;color:#111;font:700 15px Golos Text,system-ui,sans-serif;cursor:pointer">Вставить код из буфера</button>' : '') +
       '<div id="anik-link-msg" style="font-size:14px;margin-top:6px"></div></div>';
     var btn = el.querySelector('#anik-link'), inp = el.querySelector('#anik-code'), msg = el.querySelector('#anik-link-msg');
     var paste = el.querySelector('#anik-paste');
