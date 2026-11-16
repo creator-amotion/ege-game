@@ -114,6 +114,10 @@ h1{font-family:var(--display);font-size:38px;font-weight:800;letter-spacing:-1.5
 .aim-flag{position:absolute;right:-24px;top:50%;transform:translateY(-55%);font-size:18px}
 .aim-t{font-size:15px;line-height:1.4}.aim-t .up{color:#2E7D4F;font-weight:700}.aim-t .down{color:var(--red);font-weight:700}
 .aim-w{font-size:13px;color:var(--muted);margin-top:4px}
+.aim-subj,.aim-opts{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.aim-subj button{min-height:32px;padding:0 10px;border:2px solid var(--ink);background:transparent;font:600 12px var(--body);color:var(--ink);cursor:pointer}
+.aim-subj button.on{background:var(--ink);color:var(--paper)}
+.aim-opts button{flex:1;min-width:52px;height:44px;border:2px solid var(--ink);background:var(--yellow);font:800 17px var(--display);color:var(--ink);cursor:pointer}
 .aim-go{display:block;margin-top:10px;padding:10px 12px;border:2px solid var(--ink);background:var(--yellow);color:var(--ink);font-weight:700;text-decoration:none;font-size:14px}
 .rcard .k{font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--muted)}
 .rcard .v{font-family:var(--display);font-size:20px;font-weight:800;letter-spacing:-.4px;line-height:1.1;margin:2px 0}
@@ -294,12 +298,44 @@ function reportsHTML(){
 /* ───────── Сегодня ───────── */
 // путь к цели на экзамене (бот: goals.py, снимок: aim) — полоска от старта до флажка цели
 var AIM_NAME={'ege.rus':'ЕГЭ · русский','ege.math':'ЕГЭ · профиль','ege.mathb':'ЕГЭ · база','oge.rus':'ОГЭ · русский','oge.math':'ОГЭ · математика'};
+// выбор цели прямо здесь, если её ещё нет: уходит боту событием a_<предмет>_<значение> (бот: goals.py, _goal_from_app)
+var AIM_CODE={'ege.rus':'er','ege.math':'ep','ege.mathb':'eb','oge.rus':'or','oge.math':'om'};
+var AIM_OPT={'ege.rus':[60,70,80,90,100],'ege.math':[50,60,70,80,90],'ege.mathb':[3,4,5],'oge.rus':[3,4,5],'oge.math':[3,4,5]};
+var aimPick=null;
+function aimDefault(s){
+  if(s&&s.aim&&AIM_NAME[s.aim.s])return s.aim.s;
+  try{var c=JSON.parse(localStorage.getItem('anik_choice')||'null');if(c&&AIM_NAME[c.exam+'.'+c.subj])return c.exam+'.'+c.subj;}catch(e){}
+  return s&&s.exam==='oge'?'oge.rus':'ege.rus';
+}
+function aimAskHTML(s){
+  var pend=null;try{pend=JSON.parse(localStorage.getItem('anik_goal_pending')||'null');}catch(e){}
+  if(pend&&Date.now()-pend.t<10*60*1000&&!(s&&s.aim&&s.aim.t)){
+    var pl=AIM_OPT[pend.s][0]<10?'«'+pend.v+'»':pend.v+' '+plural(pend.v,'балл','балла','баллов');
+    return '<div class="aim"><div class="aim-k"><span>Путь к цели · '+AIM_NAME[pend.s]+'</span><b>'+pl+'</b></div><div class="aim-t">Цель сохранена. Путь к ней появится здесь, как только бот пересчитает прогноз — обычно за минуту.</div></div>';
+  }
+  var sub=aimPick||aimDefault(s),grade=AIM_OPT[sub][0]<10;
+  var h='<div class="aim"><div class="aim-k"><span>Путь к цели</span></div>'+
+    '<div class="aim-t" style="margin:6px 0 8px"><b>'+(grade?'На какую оценку идёшь?':'Сколько баллов хочешь набрать?')+'</b> Покажу, где ты сейчас и что быстрее всего приблизит к цели.</div>'+
+    '<div class="aim-subj">'+Object.keys(AIM_NAME).map(function(k){return '<button class="'+(k===sub?'on':'')+'" data-aims="'+k+'">'+AIM_NAME[k]+'</button>';}).join('')+'</div>'+
+    '<div class="aim-opts">'+AIM_OPT[sub].map(function(v){return '<button data-aimv="'+v+'">'+(grade?'«'+v+'»':v)+'</button>';}).join('')+'</div>';
+  return h+'<div class="aim-w" id="aimmsg"></div></div>';
+}
+function bindAim(){
+  [].forEach.call(app.querySelectorAll('[data-aims]'),function(b){b.onclick=function(){aimPick=b.dataset.aims;today();};});
+  [].forEach.call(app.querySelectorAll('[data-aimv]'),function(b){b.onclick=function(){
+    var sub=aimPick||aimDefault(snap()),v=+b.dataset.aimv;
+    var ok=window.AnikSync&&AnikSync.send('a_'+AIM_CODE[sub]+'_'+v);
+    if(!ok&&!(window.AnikSync&&!AnikSync.inTelegram())){var m=document.getElementById('aimmsg');if(m)m.textContent='Не получилось отправить: открой Аника из бота или свяжи приложение с ботом.';return;}
+    try{localStorage.setItem('anik_goal_pending',JSON.stringify({s:sub,v:v,t:Date.now()}));}catch(e){}
+    today();
+  };});
+}
 function aimHTML(s){
-  var a=s&&s.aim;if(!a||!AIM_NAME[a.s])return '';
+  var a=s&&s.aim;
+  if(!a||!AIM_NAME[a.s]||!a.t)return aimAskHTML(s);
   var lab=function(v){return a.u==='g'?'«'+v+'»':v+' '+plural(v,'балл','балла','баллов');};
   var now=a.u==='g'?lab(a.n):'≈ '+a.n;
   var h='<div class="aim"><div class="aim-k"><span>Путь к цели · '+AIM_NAME[a.s]+'</span>'+(a.t?'<b>'+lab(a.t)+'</b>':'')+'</div>';
-  if(!a.t)return h+'<div class="aim-t">Сейчас по оценке '+now+'. Выбери цель в боте — «Моя цель», и здесь появится путь к ней.</div></div>';
   var pc=a.r?100:Math.max(2,Math.min(100,a.pc||0));
   h+='<div class="aim-bar"><i style="width:'+pc+'%"></i><span class="aim-me" style="left:'+pc+'%"></span><span class="aim-flag" aria-hidden="true">🏁</span></div>';
   var d='';
@@ -351,6 +387,7 @@ function today(){
   app.innerHTML=html;
   if(needLink)AnikSync.linkCard(document.getElementById('linkbox'),function(){setTimeout(today,800);});
   bindProfile();
+  bindAim();
   var mx=document.getElementById('mix');
   if(mx)mx.onchange=function(){try{localStorage.setItem('anik_mix',mx.checked?'1':'0');}catch(e){}today();};
 }

@@ -25,6 +25,15 @@ body{font-family:'Golos Text',system-ui,sans-serif;background:#F3EEE2;color:#111
 .top .r1{display:flex;align-items:center;gap:10px;max-width:560px;margin:0 auto}
 .wm{font-family:'Inter Tight',system-ui,sans-serif;font-weight:800;font-size:24px;letter-spacing:-.8px;text-decoration:none;color:#111}
 .wm i{font-style:normal;color:#E5332A}
+.climb{position:relative;max-width:560px;margin:8px auto 0;height:36px}
+.climb svg{position:absolute;inset:0 24px 0 0;width:calc(100% - 24px);height:36px;display:block}
+.cl-flag{position:absolute;right:0;top:-6px;font-size:20px}
+.cl-me{position:absolute;width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;background:#E5332A;border:2px solid #111;transition:left .6s,top .6s}
+.cl-t{position:absolute;left:0;top:0;font:700 12px 'Golos Text',system-ui,sans-serif;background:#F3EEE2;padding:0 4px}
+.rest{justify-content:center;text-align:center}
+.rest .view{font-size:64px;line-height:1;margin-bottom:10px;letter-spacing:4px}
+.rest h1{font-family:'Inter Tight',system-ui,sans-serif;font-weight:800;font-size:30px;letter-spacing:-.8px;margin:0 0 10px}
+.rest p{font-size:16px;line-height:1.45;color:#4A463E;margin:0 0 8px}
 .streak{margin-left:auto;font-family:'Inter Tight',system-ui,sans-serif;font-weight:800;font-size:14px;background:#F6CE2E;padding:5px 10px;white-space:nowrap}
 .subj{display:flex;gap:6px;overflow-x:auto;max-width:560px;margin:8px auto 0;scrollbar-width:none;-webkit-overflow-scrolling:touch}
 .subj::-webkit-scrollbar{display:none}
@@ -75,6 +84,11 @@ body{font-family:'Golos Text',system-ui,sans-serif;background:#F3EEE2;color:#111
 <div class="top" id="top">
   <div class="r1"><a class="wm" href="index.html">аник<i>.</i></a><span style="font-weight:700">Лента</span><span class="streak" id="streak">0 подряд</span></div>
   <div class="subj" id="subj"></div>
+  <div class="climb" id="climb" aria-label="Подъём дня"><svg viewBox="0 0 300 36" preserveAspectRatio="none" aria-hidden="true">
+    <path id="cl-mt" d="M0 36 L300 4 L300 36 Z" fill="#E9E2D2"/><path id="cl-done" d="" fill="#F6CE2E"/>
+    <path id="cl-line" d="M0 36 L300 4" stroke="#111" stroke-width="2" fill="none" vector-effect="non-scaling-stroke"/></svg>
+    <span class="cl-flag" aria-hidden="true">🚩</span><span class="cl-me" id="cl-me" aria-hidden="true"></span>
+    <span class="cl-t" id="cl-t"></span></div>
 </div>
 <div id="feed"></div>
 <script>
@@ -273,9 +287,10 @@ function slideFor(it){
     inp.disabled=true;inp.classList.add(ok?'ok':'err');s.querySelector('.chk').remove();s.querySelector('.skip').remove();
     [].forEach.call(s.querySelectorAll('.nbs button'),function(b){b.disabled=true;});
     record(it,ok,v===null);
+    if(!it.diag)climbAfter(s,it,ok);
     if(it.diag){DIAG.done++;if(ok)DIAG.ok++;var ds=document.getElementById('diag-sum');if(ds)ds.innerHTML=diagSum();if(DIAG.done>=DIAG.total){st.lvl[DIAG.sid]=Math.round(80*DIAG.ok/DIAG.total)/100;save();flush();}}
     var out=s.querySelector('.out');
-    out.innerHTML='<div class="ffb '+(ok?'good':'bad')+'">'+(ok?'Верно!'+(st.streak>=3?' '+st.streak+' подряд 🔥':''):(v===null?'Ответ':'Неверно. Ответ')+': <b>'+esc(t.a[0])+'</b>')+'<span class="key"></span></div>'+
+    out.innerHTML='<div class="ffb '+(ok?'good':'bad')+'">'+(ok?'Верно! Шаг вверх'+(st.streak>=3?' · '+st.streak+' подряд 🔥':''):(v===null?'Честно — это тоже шаг: теперь знаешь. Ответ':'Здесь скользко — следующая будет проще. Ответ')+': <b>'+esc(t.a[0])+'</b>')+'<span class="key"></span></div>'+
       '<div class="row2"><a href="'+esc(S.learn(t,it.n))+'">Теория по №'+it.n+'</a><button class="main nx">Дальше ↑</button></div>';
     out.querySelector('.nx').onclick=function(){var i=slides.indexOf(s);if(slides[i+1])slides[i+1].scrollIntoView({behavior:'smooth'});};
     keyFor(it).then(function(k){if(k){var el=out.querySelector('.key');el.innerHTML='<b>Главное</b>'+esc(k);mathIn(el);}});
@@ -295,10 +310,62 @@ function keyFor(it){
   return Promise.resolve('');
 }
 
+/* ── «Восхождение»: каждый день — подъём на свою гору. Вершина — цель дня. Верный ответ — шаг вверх (на трудных номерах
+   шаг крупнее, а склон круче). Ошибка и «Не знаю» — шага нет, но и отката нет: путь никогда не уменьшается.
+   Каждые REST верных — привал (можно спокойно закончить), на вершине — экран «Вершина дня взята». Без жизней и угроз
+   (маркетинг: «лента-игра.md» в Штабе). ── */
+var REST=8;
+function todayKey(){var d=new Date();return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();}
+function climbState(){var c=lsGet('anik_climb',null);if(!c||c.d!==todayKey())c={d:todayKey(),steps:0,ok:0,tot:0,rests:0,summit:false,best:0,run:0};return c;}
+function climbGoal(){var s=window.AnikSync&&AnikSync.state&&AnikSync.state();return Math.max(5,(s&&s.goal)||10);}
+function climbDraw(){
+  var c=climbState(),g=climbGoal(),f=Math.min(1,c.steps/g),L=st.lvl[SID]||0;
+  var y0=36,y1=Math.round(18-14*L);                        // склон тем круче, чем выше уровень сложности
+  var mt=document.getElementById('cl-mt');if(!mt)return;
+  mt.setAttribute('d','M0 36 Q150 '+(36-(36-y1)*0.35)+' 300 '+y1+' L300 36 Z');
+  document.getElementById('cl-line').setAttribute('d','M0 36 Q150 '+(36-(36-y1)*0.35)+' 300 '+y1);
+  var x=300*f,cy=function(t){var a=36,b=36-(36-y1)*0.35,e=y1;return (1-t)*(1-t)*a+2*(1-t)*t*b+t*t*e;};
+  var pts='M0 36';for(var i=0;i<=20;i++){var t=f*i/20;pts+=' L'+(300*t).toFixed(1)+' '+cy(t).toFixed(1);}pts+=' L'+x.toFixed(1)+' 36 Z';
+  document.getElementById('cl-done').setAttribute('d',pts);
+  var me=document.getElementById('cl-me'),box=document.getElementById('climb'),w=box.clientWidth-24;
+  me.style.left=(w*f)+'px';me.style.top=(cy(f)/36*36)+'px';
+  document.getElementById('cl-t').textContent=c.summit?'🏔 вершина взята · '+Math.floor(c.steps)+' '+plural(Math.floor(c.steps),'шаг','шага','шагов'):'⛰ '+Math.floor(c.steps)+' из '+g+' до вершины';
+}
+// после ответа: шаг, привал или вершина — отдельным слайдом сразу за этой задачей
+function climbAfter(slide,it,ok){
+  var c=climbState(),g=climbGoal(),L=st.lvl[it.sid]||0;
+  c.tot++;
+  if(ok){c.ok++;c.run++;c.best=Math.max(c.best,c.run);c.steps+=1+Math.round(L*2)/2;}else c.run=0;
+  var special=null;
+  if(ok&&!c.summit&&c.steps>=g){c.summit=true;special='summit';}
+  else if(ok&&c.ok%REST===0&&c.ok>0){c.rests++;special='rest';}
+  lsSet('anik_climb',c);climbDraw();
+  if(special){var el=specialSlide(special,c,g),i=slides.indexOf(slide);
+    if(i>=0){if(slides[i+1])feed.insertBefore(el,slides[i+1]);else feed.appendChild(el);slides.splice(i+1,0,el);}}
+}
+var VIEWS=['🏔️🌲⛺','🌄🏕️🌲','🗻🌤️🦅','⛰️🌲🌲'];
+function specialSlide(kind,c,g){
+  var s=document.createElement('section');s.className='slide rest';
+  var aim=window.AnikSync&&AnikSync.state&&AnikSync.state(),a=aim&&aim.aim;
+  var aimLine=a&&a.t?'<p>Ещё один день пути '+(a.u==='g'?'к оценке «'+a.t+'»':'к '+a.t+' баллам')+' ✓</p>':'';
+  if(kind==='summit')
+    s.innerHTML='<div class="inner" style="justify-content:center"><div class="view">🏔️🚩</div><h1>Вершина дня взята</h1>'+
+      '<p>Сегодня верно <b>'+c.ok+' из '+c.tot+'</b>, лучшая серия — '+c.best+'.</p>'+aimLine+
+      '<p>Можно остановиться на этом — или пройти бонусный хребет: задачи дальше, без обязательств.</p>'+
+      '<div class="row2" style="margin-top:14px"><a href="today.html">На сегодня хватит</a><button class="main up">Бонусный хребет ↑</button></div></div>';
+  else
+    s.innerHTML='<div class="inner" style="justify-content:center"><div class="view">'+VIEWS[c.rests%VIEWS.length]+'</div><h1>Привал</h1>'+
+      '<p>Пройдено '+Math.floor(c.steps)+' из '+g+' до вершины. Сегодня верно <b>'+c.ok+' из '+c.tot+'</b>.</p>'+
+      '<p>Хорошее место, чтобы перевести дух. Остановиться сейчас — тоже правильно: завтра подъём продолжится.</p>'+
+      '<div class="row2" style="margin-top:14px"><a href="today.html">На сегодня хватит</a><button class="main up">Дальше вверх ↑</button></div></div>';
+  s.querySelector('.up').onclick=function(){var i=slides.indexOf(s);if(slides[i+1])slides[i+1].scrollIntoView({behavior:'smooth'});};
+  return s;
+}
+
 /* ── результаты: копим и отправляем пачками; тренажёр видит их в своей статистике ── */
 function record(it,ok,skipped){
-  if(ok){st.streak++;st.best=Math.max(st.best||0,st.streak);}else st.streak=0;
-  var L=st.lvl[it.sid]||0;if(!it.diag)st.lvl[it.sid]=Math.max(0,Math.min(1,L+(ok?0.06:skipped?-0.1:-0.08)));
+  if(ok){st.streak++;st.best=Math.max(st.best||0,st.streak);}else if(!skipped)st.streak=0;   // «Не знаю» — честно, серию не рвёт
+  var L=st.lvl[it.sid]||0;if(!it.diag)st.lvl[it.sid]=Math.max(0,Math.min(1,L+(ok?0.06:-0.08)));
   save();streakBar();
   // профиль: в знание навыка (m_ — как практика на math.html) и в карту знаний по типу задачи (l_…-p); остальное — n_ тренажёра
   var keys=it.sid==='ege-math'?[it.t.sk?'m|'+it.t.sk:'',it.t.kind?'l_'+it.t.kind+'-p':''].filter(Boolean):[it.sid+'|'+it.n];
@@ -336,8 +403,9 @@ function current(){var h=feed.clientHeight||1;return Math.round(feed.scrollTop/h
 feed.addEventListener('scroll',function(){ensure();},{passive:true});
 function restart(){feed.innerHTML='';slides=[];var i=intro();feed.appendChild(i);slides.push(i);feed.scrollTop=0;busy=false;ensure();}
 
-if(DIAG)document.getElementById('subj').style.display='none';
-subjBar();streakBar();layout();restart();
+if(DIAG){document.getElementById('subj').style.display='none';document.getElementById('climb').style.display='none';}
+subjBar();streakBar();climbDraw();layout();restart();
+window.addEventListener('resize',climbDraw);if(window.AnikSync)AnikSync.onState(function(){climbDraw();});
 window.addEventListener('load',layout);setTimeout(layout,300);
 </script>
 </body>
