@@ -43,6 +43,8 @@ body{font-family:'Golos Text',system-ui,sans-serif;background:#F3EEE2;color:#111
 .ans input{flex:1;min-width:0;height:50px;border:2px solid #111;padding:0 12px;font:600 18px 'Golos Text',system-ui,sans-serif;background:#fff;color:#111;border-radius:0}
 .ans input.ok{border-color:#2E7D4F;background:#E3F3E8}.ans input.err{border-color:#E5332A;background:#FBE3E0}
 .ans button,.btn{height:50px;padding:0 16px;border:2px solid #111;background:#111;color:#F3EEE2;font:700 15px 'Golos Text',system-ui,sans-serif;cursor:pointer}
+.keys{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:6px}
+.keys button{height:38px;border:2px solid #111;background:#fff;color:#111;font:700 15px 'Golos Text',system-ui,sans-serif;cursor:pointer}
 .nbs{display:grid;grid-template-columns:repeat(var(--cols,5),1fr);gap:6px;margin-bottom:8px}
 .nbs button{height:40px;border:2px solid #111;background:#fff;font:700 16px 'Golos Text',system-ui,sans-serif;color:#111}
 .nbs button.on{background:#2E55C9;color:#fff;border-color:#2E55C9}
@@ -66,7 +68,7 @@ body{font-family:'Golos Text',system-ui,sans-serif;background:#F3EEE2;color:#111
 </style>
 <link rel="stylesheet" href="anik.css?v=6">
 <script src="anik-theory.js?v=3"></script>
-<script src="anik-sync.js?v=3"></script>
+<script src="anik-sync.js?v=4"></script>
 <script src="anik-nav.js?v=6" defer></script>
 </head>
 <body>
@@ -86,6 +88,10 @@ function lsGet(k,d){try{var v=JSON.parse(localStorage.getItem(k));return v==null
 function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
 function pad2(n){return (n<10?'0':'')+n;}
 function getJSON(u){return fetch(u).then(function(r){if(!r.ok)throw new Error(u);return r.json();});}
+// код навыка для m_…: тот же, что у практики профиля (math.html: fnv → два знака base62)
+var B62='0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+function fnv(str){var h=0x811c9dc5;for(var i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,0x01000193)>>>0;}return h>>>0;}
+function b62(n,w){var o='';for(var i=0;i<w;i++){o=B62[n%62]+o;n=Math.floor(n/62);}return o;}
 function range(a,b){var r=[];for(var i=a;i<=b;i++)r.push(i);return r;}
 
 /* ── проверка ответа: те же правила, что в тренажёре и у бота ── */
@@ -123,7 +129,7 @@ function mathIn(el,k){
 /* ── предметы ленты: какие номера берём (короткие задания без длинного текста) и как их читать ── */
 var SUBJ={
   'ege-math':{t:'ЕГЭ профиль',nums:range(1,12),file:function(n){return 'trainer/ege-math_'+n+'.json';},
-    task:function(x){return {id:x.id,t:x.t,a:x.a,k:'num',f:x.f,s:x.s,kind:x.k};},
+    task:function(x){return {id:x.id,t:x.t,a:x.a,k:'num',f:x.f,s:x.s,kind:x.k,sk:x.sk};},
     learn:function(t){return t.kind?'math.html#learn='+t.kind:'math.html';}},
   'ege-mathb':{t:'ЕГЭ база',nums:range(1,21),code:'b',file:function(n){return 'trainer/ege-mathb_'+n+'.json';},
     task:function(x){return x;},learn:function(t,n){return 'trainer.html#ege-mathb&n='+n+'&learn';}},
@@ -194,7 +200,8 @@ function intro(){
     '<p>Одна задача — один экран. Ответил — листай вверх, следующая уже ждёт.</p>'+
     '<p>Начинаем с простых номеров. Решаешь верно — задачи становятся труднее, ошибаешься — возвращаемся к простым.</p>'+
     (!(TG&&TG.initData)&&!standalone?'<div class="install"><b>Поставь Аника на телефон.</b><br>iPhone: «Поделиться» → «На экран „Домой“». Android: меню браузера ⋮ → «Установить приложение» или «Добавить на главный экран».</div>':'')+
-    '<div class="hint" style="margin-top:22px"><span>↑</span> листай вверх</div></div>';
+    '<div id="linkbox"></div><div class="hint" style="margin-top:22px"><span>↑</span> листай вверх</div></div>';
+  if(window.AnikSync&&AnikSync.linkCard&&!AnikSync.inTelegram()&&!AnikSync.linked())AnikSync.linkCard(s.querySelector('#linkbox'));
   return s;
 }
 
@@ -211,12 +218,20 @@ function slideFor(it){
   s.innerHTML='<div class="inner"><div class="tg"><span>'+esc(S.t)+' · №'+it.n+'</span><span class="lvl" title="сложность">'+dots+'</span></div>'+
     '<div class="task">'+renderText(t.t)+figs+'</div>'+nb+
     '<div class="ans"><input type="text" autocomplete="off" autocapitalize="off" spellcheck="false" inputmode="'+(t.k==='word'?'text':'decimal')+'" placeholder="'+ph+'" enterkeyhint="done"><button class="chk">Ответить</button></div>'+
+    (t.k==='num'?'<div class="keys"><button type="button" data-ins="-">− минус</button><button type="button" data-ins=",">, запятая</button><button type="button" data-ins="/">/ дробь</button></div>':'')+
     '<div class="out"></div><button class="skip">Не знаю — показать ответ</button></div>';
   if(t.k==='seq'||t.k==='set')s.querySelector('input').setAttribute('inputmode','numeric');
   var inp=s.querySelector('input'),done=false;
   [].forEach.call(s.querySelectorAll('.nbs button'),function(b){b.onclick=function(){if(done)return;var d=b.dataset.d,v=digitsOf(inp.value);v=v.indexOf(d)>=0?v.replace(d,''):v+d;if(t.k==='set')v=v.split('').sort().join('');inp.value=v;sync();};});
   function sync(){[].forEach.call(s.querySelectorAll('.nbs button'),function(b){b.classList.toggle('on',inp.value.indexOf(b.dataset.d)>=0);});}
   inp.addEventListener('input',sync);
+  // на телефонной цифровой клавиатуре нет минуса и дробной черты — вставляем их кнопками туда, где курсор
+  [].forEach.call(s.querySelectorAll('.keys button'),function(b){
+    b.onmousedown=function(e){e.preventDefault();};
+    b.onclick=function(){if(done)return;var c=b.dataset.ins,v=inp.value,a=inp.selectionStart==null?v.length:inp.selectionStart,z=inp.selectionEnd==null?v.length:inp.selectionEnd;
+      if(c==='-'&&a===0&&v.charAt(0)==='-'){inp.value=v.slice(1);return;}            // повторное нажатие на минус в начале — убрать
+      inp.value=v.slice(0,a)+c+v.slice(z);try{inp.setSelectionRange(a+1,a+1);}catch(e){}};
+  });
   function answer(v){
     if(done)return;
     if(v!==null&&!shaped(t,v)){s.querySelector('.out').innerHTML='<div class="ffb bad">'+(t.k==='num'?'Напиши ответ числом, например 0,35 или 3/7.':t.k==='word'?'Напиши ответ словом.':'Напиши цифры ответа, например 134.')+'</div>';return;}
@@ -251,20 +266,22 @@ function record(it,ok,skipped){
   if(ok){st.streak++;st.best=Math.max(st.best||0,st.streak);}else st.streak=0;
   var L=st.lvl[it.sid]||0;st.lvl[it.sid]=Math.max(0,Math.min(1,L+(ok?0.06:skipped?-0.1:-0.08)));
   save();streakBar();
-  var key=it.sid==='ege-math'?'l_'+(it.t.kind||'')+'-p':it.sid+'|'+it.n;
-  if(it.sid==='ege-math'&&!it.t.kind)return;
-  var b=pending[key]||(pending[key]=[0,0]);b[1]++;if(ok)b[0]++;
+  // профиль: в знание навыка (m_ — как практика на math.html) и в карту знаний по типу задачи (l_…-p); остальное — n_ тренажёра
+  var keys=it.sid==='ege-math'?[it.t.sk?'m|'+it.t.sk:'',it.t.kind?'l_'+it.t.kind+'-p':''].filter(Boolean):[it.sid+'|'+it.n];
+  keys.forEach(function(key){var b=pending[key]||(pending[key]=[0,0]);b[1]++;if(ok)b[0]++;});
   if(it.sid!=='ege-math'&&it.sid!=='ege-rus'){var all=lsGet('anik_tr',{}),k=it.sid+'_'+it.n,x=all[k]||{ok:0,tot:0};x.ok+=ok?1:0;x.tot++;x.d=Date.now();all[k]=x;lsSet('anik_tr',all);}
   if(++sinceFlush>=5)flush();
 }
 function flush(){
   sinceFlush=0;
   var keys=Object.keys(pending);if(!keys.length||!window.AnikSync)return;
-  var nums='';
+  var nums='',m='';
   keys.forEach(function(k){var b=pending[k];
-    if(k.indexOf('l_')===0){try{AnikSync.send(k+pad2(Math.min(b[0],99))+pad2(Math.min(b[1],99)));}catch(e){}}
+    if(k.indexOf('m|')===0){var tot=Math.min(9,b[1]);m+=b62(fnv(k.slice(2))%3844,2)+Math.min(tot,b[0])+tot;}
+    else if(k.indexOf('l_')===0){try{AnikSync.send(k+pad2(Math.min(b[0],99))+pad2(Math.min(b[1],99)));}catch(e){}}
     else{var p=k.split('|');nums+=SUBJ[p[0]].code+pad2(+p[1])+pad2(Math.min(b[0],99))+pad2(Math.min(b[1],99));}});
   if(nums){try{AnikSync.send('n_'+nums);}catch(e){}}
+  if(m){try{AnikSync.send('m_'+m);}catch(e){}}
   pending={};
 }
 document.addEventListener('visibilitychange',function(){if(document.hidden)flush();});

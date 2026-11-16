@@ -1,19 +1,24 @@
 /* Аник — связь игры с ботом через облако (бот: sync_client.py, облако: sync_worker/worker.js).
    Игра кладёт результат в очередь и отправляет его сама, без кнопки; бот присылает снимок прогресса
    (знание, дни занятий, серия, марки, план на сегодня), который игра показывает.
-   Пока API пуст или приложение открыто не из Telegram, ничего не происходит, и игры отправляют результат кнопкой, как раньше. */
+   Пока API пуст или приложение открыто не из Telegram, ничего не происходит, и игры отправляют результат кнопкой, как раньше.
+   Вне Telegram (браузер, приложение на экране «Домой») ученик один раз вводит код из бота (AnikSync.link) — устройство
+   получает ключ (anik_dev), и прогресс общий с ботом. Ответы, решённые до связки, копятся в очереди и уходят после неё. */
 (function () {
   var API = 'https://2-29-119-233.sslip.io';    // почтовый ящик бота на сервере (deploy/server/enable_app_link.sh)
   var QUEUE = 'anik_q', STATE = 'anik_state';
   var tg = window.Telegram && window.Telegram.WebApp;
   var initData = (tg && tg.initData) || '';       // из кнопки на клавиатуре бота подписи нет — там остаётся старый путь
+  var DEV = 'anik_dev';
   var dead = false, busy = false, listeners = [];
 
   function read(key, fallback) { try { return JSON.parse(localStorage.getItem(key)) || fallback; } catch (e) { return fallback; } }
   function write(key, value) { try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) {} }
   var state = read(STATE, null);
 
-  function enabled() { return !!(API && initData && !dead); }
+  function device() { try { return localStorage.getItem(DEV) || ''; } catch (e) { return ''; } }
+  function outside() { return !initData && !(tg && tg.platform && tg.platform !== 'unknown'); }   // не внутри Telegram
+  function enabled() { return !!(API && (initData || device()) && !dead); }
   function newId() {
     var a = new Uint8Array(10);
     (window.crypto || { getRandomValues: function (x) { for (var i = 0; i < x.length; i++) x[i] = Math.random() * 256; } }).getRandomValues(a);
@@ -25,7 +30,11 @@
     write(STATE, s);
     listeners.forEach(function (fn) { try { fn(s); } catch (e) {} });
   }
-  function headers() { return { 'Content-Type': 'application/json', 'X-Init-Data': initData }; }
+  function headers() {
+    return initData ? { 'Content-Type': 'application/json', 'X-Init-Data': initData }
+                    : { 'Content-Type': 'application/json', 'X-Device-Token': device() };
+  }
+  function lost() { dead = true; if (!initData) { try { localStorage.removeItem(DEV); } catch (e) {} } }   // ключ отозван — связать заново
 
   function flush() {
     if (busy || !enabled()) return;
@@ -35,7 +44,7 @@
     busy = true;
     fetch(API + '/api/events', { method: 'POST', headers: headers(), body: JSON.stringify({ events: batch }) })
       .then(function (r) {
-        if (r.status === 401) { dead = true; throw new Error('auth'); }      // подпись устарела: до перезапуска приложения не пытаемся
+        if (r.status === 401) { lost(); throw new Error('auth'); }          // подпись устарела: до перезапуска приложения не пытаемся
         if (!r.ok) throw new Error('http');
         return r.json();
       })
@@ -60,7 +69,15 @@
 
   function send(payload) {
     if (payload) markDay();                       // календарь занятий работает и без облака
-    if (!enabled() || !payload) return false;
+    if (!payload) return false;
+    if (!enabled()) {
+      if (API && outside()) {                     // вне Telegram и ещё не связано: копим, уйдёт после связки с ботом
+        var w = read(QUEUE, []);
+        w.push({ id: newId(), p: payload, ts: Math.floor(Date.now() / 1000) });
+        write(QUEUE, w.slice(-200));
+      }
+      return false;
+    }
     var q = read(QUEUE, []);
     q.push({ id: newId(), p: payload, ts: Math.floor(Date.now() / 1000) });
     write(QUEUE, q.slice(-200));
@@ -71,7 +88,7 @@
   function refresh() {
     if (!enabled()) return;
     fetch(API + '/api/state', { headers: headers() })
-      .then(function (r) { if (r.status === 401) dead = true; return r.ok ? r.json() : null; })
+      .then(function (r) { if (r.status === 401) lost(); return r.ok ? r.json() : null; })
       .then(function (j) { if (j) setState(j.state); })
       .catch(function () {});
   }
@@ -81,8 +98,54 @@
   setInterval(flush, 60000);
   if (enabled()) { flush(); refresh(); }
 
+  /** Связать это устройство с учеником по коду из бота (8 знаков). Promise<true|сообщение об ошибке>. */
+  function link(code) {
+    code = String(code || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (code.length !== 8) return Promise.resolve('В коде 8 знаков — проверь и попробуй ещё раз.');
+    return fetch(API + '/api/link', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: code }) })
+      .then(function (r) { return r.json().then(function (j) { return [r.status, j]; }); })
+      .then(function (x) {
+        if (x[0] === 429) return 'Слишком много попыток. Подожди минуту.';
+        if (x[0] !== 200 || !x[1].token) return 'Код не подошёл: он действует 15 минут и один раз. Попроси в боте новый.';
+        try { localStorage.setItem(DEV, x[1].token); } catch (e) { return 'Браузер не даёт сохранить связку. Выключи режим инкогнито.'; }
+        dead = false;
+        if (x[1].state) setState(x[1].state);
+        flush(); refresh();
+        return true;
+      })
+      .catch(function () { return 'Нет связи с сервером. Проверь интернет.'; });
+  }
+  /** Карточка «Связать с ботом» для страниц вне Telegram: поле для кода и кнопка. done() — после удачной связки. */
+  function linkCard(el, done) {
+    if (!el) return;
+    el.innerHTML = '<div style="border:2px solid #111;background:#fff;padding:12px 14px;margin:12px 0;text-align:left;font:15px/1.4 Golos Text,system-ui,sans-serif;color:#111">' +
+      '<b>Свяжи приложение с ботом</b><br><span style="font-size:14px;color:#4A463E">Тогда прогресс один: бот, приложение и лента видят одно и то же, решённое здесь не пропадёт. ' +
+      'В боте нажми «Меню» → «Аник на телефоне» и введи код.</span>' +
+      '<div style="display:flex;gap:8px;margin-top:10px"><input id="anik-code" placeholder="Код из бота" autocomplete="one-time-code" autocapitalize="characters" spellcheck="false" ' +
+      'style="flex:1;min-width:0;height:46px;border:2px solid #111;padding:0 10px;font:700 18px Golos Text,system-ui,sans-serif;letter-spacing:2px;text-transform:uppercase;border-radius:0">' +
+      '<button id="anik-link" style="height:46px;padding:0 14px;border:2px solid #111;background:#111;color:#F3EEE2;font:700 15px Golos Text,system-ui,sans-serif;cursor:pointer">Связать</button></div>' +
+      '<div id="anik-link-msg" style="font-size:14px;margin-top:6px"></div></div>';
+    var btn = el.querySelector('#anik-link'), inp = el.querySelector('#anik-code'), msg = el.querySelector('#anik-link-msg');
+    var go = function () {
+      btn.disabled = true; msg.textContent = 'Проверяю…';
+      link(inp.value).then(function (r) {
+        btn.disabled = false;
+        if (r === true) { el.innerHTML = '<div style="border:2px solid #111;background:#E3F3E8;padding:12px 14px;margin:12px 0;font:600 15px Golos Text,system-ui,sans-serif">Готово: приложение связано с ботом, прогресс общий.</div>'; if (done) done(); }
+        else msg.textContent = r;
+      });
+    };
+    btn.onclick = go;
+    inp.onkeydown = function (e) { if (e.key === 'Enter') { e.preventDefault(); go(); } };
+  }
+  function unlink() { try { localStorage.removeItem(DEV); } catch (e) {} }
+
   window.AnikSync = {
     enabled: enabled,
+    link: link,
+    unlink: unlink,
+    linkCard: linkCard,
+    linked: function () { return !!initData || !!device(); },
+    inTelegram: function () { return !outside(); },
     send: send,
     flush: flush,
     refresh: refresh,

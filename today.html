@@ -16,7 +16,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@700;800&family=Golos+Text:wght@400..700&display=swap">
 <link rel="stylesheet" href="anik.css?v=5">
 <script src="anik-look.js?v=1"></script>
-<script src="anik-sync.js?v=3"></script>
+<script src="anik-sync.js?v=4"></script>
 <script src="anik-nav.js?v=6" defer></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -302,9 +302,12 @@ function aimHTML(s){
   var pc=a.r?100:Math.max(2,Math.min(100,a.pc||0));
   h+='<div class="aim-bar"><i style="width:'+pc+'%"></i><span class="aim-me" style="left:'+pc+'%"></span><span class="aim-flag" aria-hidden="true">🏁</span></div>';
   var d='';
-  if(a.d){var up=a.d>0,v=(up?'+':'')+String(a.d).replace('.',',');d=' · <span class="'+(up?'up':'down')+'">'+v+(a.u==='g'?' перв. балла':'')+(a.dd>=7?' за неделю':' за '+a.dd+' '+plural(a.dd,'день','дня','дней'))+'</span>';}
-  h+='<div class="aim-t">'+(a.r?'Ты на уровне цели — теперь держим темп и повторяем.':'Сейчас '+now+' · '+a.pc+'% пути')+d+'</div>';
-  if(!a.r&&a.w&&a.w.length)h+='<div class="aim-w">Ближе всего к цели приведут: '+a.w.map(function(n){return '№'+n;}).join(', ')+'</div>';
+  if(a.d){var up=a.d>0,v=(up?'+':'')+String(a.d).replace('.',',');d=' · <span class="'+(up?'up':'down')+'">'+v+' перв.'+(a.dd>=7?' за неделю':' за '+a.dd+' '+plural(a.dd,'день','дня','дней'))+'</span>';}
+  h+='<div class="aim-t">'+(a.r?'Прогноз на уровне цели — теперь держим темп и повторяем.':'Прогноз '+now+' · '+a.pc+'% пути')+d+'</div>';
+  if(a.x)h+='<div class="aim-w" style="color:var(--red)">Заданий Аника не хватит на эту цель: нужна ещё часть «'+esc(a.e)+'». Поменяй допущение или цель в боте.</div>';
+  if(a.m&&a.m[0]<a.m[1])h+='<div class="aim-w">Проверено номеров: '+a.m[0]+' из '+a.m[1]+'. Непроверенные в прогнозе пока 0 — реши по 2–3 задания, и прогноз уточнится.</div>';
+  if(!a.r&&a.w&&a.w.length)h+='<div class="aim-w">Больше всего даст: '+a.w.map(function(n){return '№'+n;}).join(', ')+'</div>';
+  if(a.e)h+='<div class="aim-w">'+esc(a.e.charAt(0).toUpperCase()+a.e.slice(1))+' — в Анике пока нет, в прогнозе по допущению: '+a.as+' перв.</div>';
   return h+'</div>';
 }
 function today(){
@@ -316,6 +319,8 @@ function today(){
     '<h1>Сегодня</h1>'+profileHTML(prof);
   html+='<div class="row"><div class="big-n red"><span class="g" aria-hidden="true">'+streak+'</span><div class="l">серия</div><div class="t">'+plural(streak,'день','дня','дней')+'<br>подряд</div></div>'+
     '<div class="big-n blue"><span class="g" aria-hidden="true">'+(s?done:0)+'</span><div class="l">цель дня · '+goal+'</div><div class="t">'+plural(s?done:0,'ответ','ответа','ответов')+'<br>сегодня</div>'+(s?'<div class="goalbar"><i style="width:'+Math.min(100,Math.round(100*done/goal))+'%"></i></div>':'')+'</div></div>';
+  var needLink=window.AnikSync&&AnikSync.linkCard&&!AnikSync.inTelegram()&&!AnikSync.linked();
+  if(needLink)html+='<div id="linkbox"></div>';
   html+=aimHTML(s);
   html+=trainingHTML(s,prof);
   // календарь: пять недель, неделя с понедельника
@@ -342,6 +347,7 @@ function today(){
   var km=s&&s.kmap?String(s.kmap):'';
   html+='<a class="btn" href="map.html'+(km?'?k='+encodeURIComponent(km):'')+'">Моя карта знаний</a><a class="btn" href="index.html">Выбрать задание</a><a class="btn" href="today.html#stamps">Мои марки</a>';
   app.innerHTML=html;
+  if(needLink)AnikSync.linkCard(document.getElementById('linkbox'),function(){setTimeout(today,800);});
   bindProfile();
   var mx=document.getElementById('mix');
   if(mx)mx.onchange=function(){try{localStorage.setItem('anik_mix',mx.checked?'1':'0');}catch(e){}today();};
