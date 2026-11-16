@@ -105,6 +105,15 @@ h1{font-family:var(--display);font-size:38px;font-weight:800;letter-spacing:-1.5
 .mix input{width:18px;height:18px;accent-color:var(--ink)}
 .lead2{font-size:15px;line-height:1.45;margin:0 0 10px}
 .rcard{background:#fff;padding:12px 14px;border-left:6px solid var(--red)}
+.aim{margin:14px 0 4px;border:2px solid var(--ink);background:#fff;padding:12px 14px}
+.aim-k{display:flex;justify-content:space-between;gap:8px;align-items:baseline;font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--muted)}
+.aim-k b{font-family:var(--display);font-size:20px;letter-spacing:-.4px;text-transform:none;color:var(--ink)}
+.aim-bar{position:relative;height:14px;margin:12px 22px 8px 0;background:var(--chip);border:2px solid var(--ink)}
+.aim-bar i{display:block;height:100%;background:var(--yellow);transition:width .6s}
+.aim-me{position:absolute;top:50%;width:14px;height:14px;margin:-7px 0 0 -7px;background:var(--red);border:2px solid var(--ink);border-radius:50%}
+.aim-flag{position:absolute;right:-24px;top:50%;transform:translateY(-55%);font-size:18px}
+.aim-t{font-size:15px;line-height:1.4}.aim-t .up{color:#2E7D4F;font-weight:700}.aim-t .down{color:var(--red);font-weight:700}
+.aim-w{font-size:13px;color:var(--muted);margin-top:4px}
 .rcard .k{font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--muted)}
 .rcard .v{font-family:var(--display);font-size:20px;font-weight:800;letter-spacing:-.4px;line-height:1.1;margin:2px 0}
 .rcard .s{font-size:13px;color:var(--muted);margin-bottom:8px}
@@ -140,7 +149,7 @@ var ZSNAP=(function(){
   String(c.y||'').split('').forEach(function(ch,i){if(ch==='1'){var d=new Date(t0);d.setDate(t0.getDate()-(34-i));days.push(iso(d));}});
   return {v:1,from:'bot',today:c.t,exam:c.e||'ege',streak:c.s,goal:c.g,done_today:c.d,days:days,stamps:[],skills:{},
     plan:(c.p||[]).map(function(p){return {skill:p[0],number:p[1],why:p[2],link:p[3],name:p[4],count:10,minutes:5};}),
-    rules:(c.r||[]).map(function(r){return {n:r[0],cat:r[1],name:r[2],tw:r[3],ta:r[4],gw:r[5]};}),kmap:c.k||''};
+    rules:(c.r||[]).map(function(r){return {n:r[0],cat:r[1],name:r[2],tw:r[3],ta:r[4],gw:r[5]};}),kmap:c.k||'',aim:c.a||null};
 })();
 function snap(){
   var st=window.AnikSync&&AnikSync.state()||null;
@@ -282,6 +291,22 @@ function reportsHTML(){
 }
 
 /* ───────── Сегодня ───────── */
+// путь к цели на экзамене (бот: goals.py, снимок: aim) — полоска от старта до флажка цели
+var AIM_NAME={'ege.rus':'ЕГЭ · русский','ege.math':'ЕГЭ · профиль','ege.mathb':'ЕГЭ · база','oge.rus':'ОГЭ · русский','oge.math':'ОГЭ · математика'};
+function aimHTML(s){
+  var a=s&&s.aim;if(!a||!AIM_NAME[a.s])return '';
+  var lab=function(v){return a.u==='g'?'«'+v+'»':v+' '+plural(v,'балл','балла','баллов');};
+  var now=a.u==='g'?lab(a.n):'≈ '+a.n;
+  var h='<div class="aim"><div class="aim-k"><span>Путь к цели · '+AIM_NAME[a.s]+'</span>'+(a.t?'<b>'+lab(a.t)+'</b>':'')+'</div>';
+  if(!a.t)return h+'<div class="aim-t">Сейчас по оценке '+now+'. Выбери цель в боте — «Моя цель», и здесь появится путь к ней.</div></div>';
+  var pc=a.r?100:Math.max(2,Math.min(100,a.pc||0));
+  h+='<div class="aim-bar"><i style="width:'+pc+'%"></i><span class="aim-me" style="left:'+pc+'%"></span><span class="aim-flag" aria-hidden="true">🏁</span></div>';
+  var d='';
+  if(a.d){var up=a.d>0,v=(up?'+':'')+String(a.d).replace('.',',');d=' · <span class="'+(up?'up':'down')+'">'+v+(a.u==='g'?' перв. балла':'')+(a.dd>=7?' за неделю':' за '+a.dd+' '+plural(a.dd,'день','дня','дней'))+'</span>';}
+  h+='<div class="aim-t">'+(a.r?'Ты на уровне цели — теперь держим темп и повторяем.':'Сейчас '+now+' · '+a.pc+'% пути')+d+'</div>';
+  if(!a.r&&a.w&&a.w.length)h+='<div class="aim-w">Ближе всего к цели приведут: '+a.w.map(function(n){return '№'+n;}).join(', ')+'</div>';
+  return h+'</div>';
+}
 function today(){
   var s=snap(),now=new Date(),todayIso=(s&&s.today)||iso(now),set=daysSet();
   var streak=s&&typeof s.streak==='number'?s.streak:streakFrom(set,todayIso);
@@ -291,6 +316,7 @@ function today(){
     '<h1>Сегодня</h1>'+profileHTML(prof);
   html+='<div class="row"><div class="big-n red"><span class="g" aria-hidden="true">'+streak+'</span><div class="l">серия</div><div class="t">'+plural(streak,'день','дня','дней')+'<br>подряд</div></div>'+
     '<div class="big-n blue"><span class="g" aria-hidden="true">'+(s?done:0)+'</span><div class="l">цель дня · '+goal+'</div><div class="t">'+plural(s?done:0,'ответ','ответа','ответов')+'<br>сегодня</div>'+(s?'<div class="goalbar"><i style="width:'+Math.min(100,Math.round(100*done/goal))+'%"></i></div>':'')+'</div></div>';
+  html+=aimHTML(s);
   html+=trainingHTML(s,prof);
   // календарь: пять недель, неделя с понедельника
   var end=new Date(todayIso+'T12:00:00'),startMon=new Date(end);
