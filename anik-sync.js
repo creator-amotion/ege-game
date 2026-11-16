@@ -124,8 +124,18 @@
       '<div style="display:flex;gap:8px;margin-top:10px"><input id="anik-code" placeholder="Код из бота" autocomplete="one-time-code" autocapitalize="characters" spellcheck="false" ' +
       'style="flex:1;min-width:0;height:46px;border:2px solid #111;padding:0 10px;font:700 18px Golos Text,system-ui,sans-serif;letter-spacing:2px;text-transform:uppercase;border-radius:0">' +
       '<button id="anik-link" style="height:46px;padding:0 14px;border:2px solid #111;background:#111;color:#F3EEE2;font:700 15px Golos Text,system-ui,sans-serif;cursor:pointer">Связать</button></div>' +
+      (navigator.clipboard && navigator.clipboard.readText ? '<button id="anik-paste" style="margin-top:8px;width:100%;height:42px;border:2px solid #111;background:#F6CE2E;color:#111;font:700 15px Golos Text,system-ui,sans-serif;cursor:pointer">📋 Вставить код из буфера</button>' : '') +
       '<div id="anik-link-msg" style="font-size:14px;margin-top:6px"></div></div>';
     var btn = el.querySelector('#anik-link'), inp = el.querySelector('#anik-code'), msg = el.querySelector('#anik-link-msg');
+    var paste = el.querySelector('#anik-paste');
+    try { var le = sessionStorage.getItem('anik_link_err'); if (le) { msg.textContent = 'Ссылка не сработала: ' + le; sessionStorage.removeItem('anik_link_err'); } } catch (e) {}
+    if (paste) paste.onclick = function () {
+      navigator.clipboard.readText().then(function (t) {
+        var c = String(t || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+        if (c.length !== 8) { msg.textContent = 'В буфере нет кода. Нажми в боте «Скопировать код».'; return; }
+        inp.value = c.slice(0, 4) + '-' + c.slice(4); go();
+      }).catch(function () { msg.textContent = 'Не получилось вставить — зажми поле и выбери «Вставить».'; });
+    };
     var go = function () {
       btn.disabled = true; msg.textContent = 'Проверяю…';
       link(inp.value).then(function (r) {
@@ -139,12 +149,43 @@
   }
   function unlink() { try { localStorage.removeItem(DEV); } catch (e) {} }
 
+  /* связка по ссылке из бота: …/feed.html#link=КОД — код убирается из адреса, связка идёт сама, страница перезагружается */
+  (function () {
+    var m = /[#&]link=([A-Za-z0-9-]{8,9})/.exec(location.hash);
+    if (!m) {                                       // после перезагрузки — короткое «готово»
+      var done = false;
+      try { done = !!sessionStorage.getItem('anik_linked_now'); sessionStorage.removeItem('anik_linked_now'); } catch (e) {}
+      if (done) document.addEventListener('DOMContentLoaded', function () {
+        var t = document.createElement('div');
+        t.setAttribute('role', 'status');
+        t.textContent = 'Готово: приложение связано с ботом, прогресс общий ✓';
+        t.style.cssText = 'position:fixed;left:16px;right:16px;top:16px;max-width:488px;margin:0 auto;z-index:60;padding:12px 14px;background:#E3F3E8;border:2px solid #111;color:#111;font:600 15px/1.4 Golos Text,system-ui,sans-serif';
+        document.body.appendChild(t);
+        setTimeout(function () { t.remove(); }, 4500);
+      });
+      return;
+    }
+    if (!API) return;
+    try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
+    if (initData) return;                         // внутри Telegram и так всё общее
+    link(m[1]).then(function (r) {
+      if (r === true) { try { sessionStorage.setItem('anik_linked_now', '1'); } catch (e) {} location.reload(); }
+      else {
+        var box = document.getElementById('anik-link-msg');
+        if (box) box.textContent = 'Ссылка не сработала: ' + r;
+        else { try { sessionStorage.setItem('anik_link_err', r); } catch (e) {} }
+      }
+    });
+  })();
+
   window.AnikSync = {
     enabled: enabled,
     link: link,
     unlink: unlink,
     linkCard: linkCard,
     linked: function () { return !!initData || !!device(); },
+    justLinked: function () { try { var v = sessionStorage.getItem('anik_linked_now'); sessionStorage.removeItem('anik_linked_now'); return !!v; } catch (e) { return false; } },
+    linkError: function () { try { var v = sessionStorage.getItem('anik_link_err'); sessionStorage.removeItem('anik_link_err'); return v || ''; } catch (e) { return ''; } },
     inTelegram: function () { return !outside(); },
     send: send,
     flush: flush,
