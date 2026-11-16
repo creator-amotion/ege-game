@@ -1,0 +1,21 @@
+{
+  "name": "Аник — подготовка к ЕГЭ и ОГЭ",
+  "short_name": "Аник",
+  "description": "Задачи ЕГЭ и ОГЭ по образцу ФИПИ: лента задач, теория, игры и тренажёр.",
+  "lang": "ru",
+  "start_url": "feed.html?src=app",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#F3EEE2",
+  "theme_color": "#F3EEE2",
+  "icons": [
+    {"src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png"},
+    {"src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png"},
+    {"src": "icons/icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+  ],
+  "shortcuts": [
+    {"name": "Лента задач", "url": "feed.html"},
+    {"name": "Сегодня", "url": "today.html"},
+    {"name": "Все задания", "url": "index.html"}
+  ]
+}

@@ -3,6 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Аник">
 <meta name="theme-color" content="#F3EEE2">
 <title>Аник — подготовка к ЕГЭ и ОГЭ</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
@@ -53,6 +58,9 @@ h1{font-family:var(--display);font-size:38px;font-weight:800;letter-spacing:-1.5
 .go{width:100%}
 .go:disabled{background:var(--ink);color:var(--paper)}
 .hint{color:var(--muted);font-size:13px;line-height:1.5;text-align:center}
+.feedlink{display:flex;flex-direction:column;position:relative;margin-top:10px;padding:12px 44px 12px 14px;border:2px solid var(--ink);background:var(--yellow);color:var(--ink);text-decoration:none}
+.feedlink b{font-family:var(--display);font-size:17px}.feedlink span{font-size:13px;color:var(--muted);margin-top:2px}
+.feedlink i{position:absolute;right:14px;top:50%;transform:translateY(-50%);font-style:normal;font-weight:800;font-size:22px}
 </style>
 </head>
 <body class="hub">
@@ -75,6 +83,7 @@ h1{font-family:var(--display);font-size:38px;font-weight:800;letter-spacing:-1.5
 
   <div class="sp"></div>
   <button class="go" id="go" disabled>Выбери экзамен и предмет</button>
+  <a class="feedlink" href="feed.html"><b>Лента задач</b><span>Листай и решай, как короткие видео: одна задача на экран</span><i aria-hidden="true">↑</i></a>
   <p class="hint"></p>
 </main>
 
