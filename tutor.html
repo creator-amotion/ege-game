@@ -10,8 +10,9 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@700;800&family=Golos+Text:wght@400..700&display=swap">
 <link rel="stylesheet" href="anik.css?v=7">
-<link rel="stylesheet" href="tutor.css?v=1">
-<script src="tutor-api.js?v=1"></script>
+<link rel="stylesheet" href="tutor.css?v=2">
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="tutor-api.js?v=2"></script>
 </head>
 <body>
 <header class="bar"><span class="wm">Аник<i>.</i> кабинет</span><span class="who" id="who"></span></header>
@@ -36,23 +37,44 @@
     }
     api.get('/api/tutor/me').then(function (m) {
       me = m;
-      who.innerHTML = esc(m.name) + ' · <a href="#" id="out">выйти</a>';
-      document.getElementById('out').onclick = function (e) { e.preventDefault(); api.logout(); start(); };
+      who.innerHTML = esc(m.name) + (api.ownLogin() ? ' · <a href="#" id="out">выйти</a>' : '');
+      var out = document.getElementById('out'); if (out) out.onclick = function (e) { e.preventDefault(); api.logout(); start(); };
       render();
     }).catch(function (e) {
-      if (e.status === 403) { app.innerHTML = '<div class="login"><h1>Нет доступа</h1><p class="lead">Этот код — не от репетитора. Попросите администратора добавить вас (/addtutor), затем войдите снова.</p><p><button class="b sec" id="re">Войти другим кодом</button></p></div>'; document.getElementById('re').onclick = function () { api.logout(); start(); }; return; }
+      if (e.status === 403) {                      // не репетитор: кабинета нет, ничего о других людях не показываем
+        app.innerHTML = '<div class="login"><h1>Кабинет только для репетиторов</h1><p class="lead">Этот вход — не репетитора. Если вы репетитор, попросите администратора Аника подключить вас, затем войдите кодом из бота (/app).</p>' +
+          '<p class="row" style="margin-top:14px"><button class="b sec" id="re">Войти кодом репетитора</button><a class="b sec" href="today.html">В приложение</a></p></div>';
+        document.getElementById('re').onclick = function () { api.logout(); A.loginForm(api, app, 'Вход репетитора', 'Отправьте боту <b>/app</b> и введите код.', start); };
+        return;
+      }
       if (e.status === 401) return start();
       app.innerHTML = '<div class="empty">Сервер не ответил. Обновите страницу чуть позже.</div>';
     });
   }
 
+  function callState() { return me.call_url ? (/telemost/.test(me.call_url) ? 'Телемост подключён' : 'своя ссылка на звонок') : '<span style="color:var(--red)">ссылка не задана</span>'; }
+
   function render() {
     var h = '<h1>Ученики и задания</h1><p class="lead">Код приглашения: <b>' + esc(me.code) + '</b> — ученик отправляет боту <b>/start t_' + esc(me.code) + '</b> и подтверждает доступ.</p>';
+    h += '<details class="card prof"' + (me.call_url ? '' : ' open') + '><summary><b>Звонки на уроке</b> · <span id="pst">' + callState() + '</span></summary>' +
+      '<p class="muted" style="margin-top:6px">Создайте в Яндекс Телемосте постоянную встречу и вставьте ссылку. На уроке у вас и у ученика будет кнопка «Позвонить в Телемост», ученик получит ссылку вместе с приглашением.</p>' +
+      '<form class="row" id="pf" style="margin-top:8px"><label class="sr" for="curl">Моя ссылка на Телемост</label><input class="inp" id="curl" style="flex:1;min-width:220px" placeholder="https://telemost.yandex.ru/j/…" value="' + esc(me.call_url) + '" inputmode="url">' +
+      '<button class="b">Сохранить</button></form><p class="msg" id="pmsg" role="status"></p></details>';
     h += '<div class="tabs" role="tablist">' + [['students', 'Ученики'], ['builder', 'Конструктор ДЗ']].map(function (t) {
       return '<button role="tab" data-tab="' + t[0] + '" aria-selected="' + (tab === t[0]) + '">' + t[1] + (t[0] === 'builder' && basket.length ? ' · ' + basket.length : '') + '</button>'; }).join('') + '</div>';
     h += '<div id="pane"></div>';
     app.innerHTML = h;
     app.querySelectorAll('[data-tab]').forEach(function (b) { b.onclick = function () { tab = b.dataset.tab; render(); }; });
+    document.getElementById('pf').onsubmit = function (e) {
+      e.preventDefault();
+      var msg = document.getElementById('pmsg');
+      api.post('/api/tutor/profile', { call_url: document.getElementById('curl').value }).then(function (r) {
+        me.call_url = r.call_url;
+        document.getElementById('pst').innerHTML = callState();
+        msg.style.color = r.warning ? 'var(--red)' : 'var(--blue)';
+        msg.textContent = r.warning ? 'Сохранено. ' + r.warning : (r.call_url ? 'Сохранено: ссылка на Телемост.' : 'Ссылка удалена.');
+      }).catch(function (err) { msg.style.color = 'var(--red)'; msg.textContent = err.status === 400 ? 'Нужна ссылка, начинающаяся с https:// — например https://telemost.yandex.ru/j/…' : 'Не сохранилось.'; });
+    };
     if (tab === 'students') renderStudents(); else renderBuilder();
   }
 
@@ -170,7 +192,7 @@
       if (w) w.location = mine;
       document.getElementById('roomlink').innerHTML = '<div class="card" style="margin-top:10px;background:var(--yellow-t)"><b>Урок создан.</b> Ссылка для ученика (откроет у себя, войдя своим кодом из бота):' +
         '<div class="row" style="margin-top:6px"><input class="inp" style="flex:1;min-width:200px" readonly value="' + esc(theirs) + '" aria-label="Ссылка для ученика"><button class="b sm" id="cp">Копировать</button>' +
-        '<a class="b sm sec" href="' + esc(mine) + '" target="_blank" rel="noopener">Открыть доску</a></div><p class="muted" style="margin-top:4px">Ученик также увидит урок у себя на странице «Домашка».</p></div>';
+        '<a class="b sm sec" href="' + esc(mine) + '" target="_blank" rel="noopener">Открыть доску</a></div><p class="muted" style="margin-top:4px">Ученику уже ушло приглашение в бот' + (me.call_url ? ' со ссылкой на звонок' : '') + ', и урок появился у него в приложении на «Сегодня».</p></div>';
       document.getElementById('cp').onclick = function () { navigator.clipboard && navigator.clipboard.writeText(theirs).then(function () { toast('Скопировано'); }); };
     }).catch(function (e) { if (w) w.close(); fail(e); });
   }

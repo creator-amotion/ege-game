@@ -2,64 +2,125 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex">
-<title>Аник — домашка от репетитора</title>
-<link rel="icon" href="icons/icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<meta name="theme-color" content="#F3EEE2">
+<title>Аник — задания от репетитора</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@700;800&family=Golos+Text:wght@400..700&display=swap">
 <link rel="stylesheet" href="anik.css?v=7">
-<link rel="stylesheet" href="tutor.css?v=1">
-<script src="tutor-api.js?v=1"></script>
-<style>.wrap{max-width:640px}.task form{margin-top:8px}.task .inp{width:160px}.verdict{font-weight:700;margin-top:6px}</style>
+<link rel="stylesheet" href="vendor/katex/katex.min.css">
+<script defer src="vendor/katex/katex.min.js"></script>
+<script defer src="vendor/katex/auto-render.min.js"></script>
+<script src="anik-sync.js?v=7"></script>
+<script src="anik-nav.js?v=6" defer></script>
+<script src="tutor-api.js?v=2"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{min-height:100vh}
+main{max-width:520px;margin:0 auto;padding:18px 16px 24px}
+.top{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:6px}
+.back{font-size:14px;font-weight:600;color:var(--ink)}
+h1{font-family:var(--display);font-size:38px;font-weight:800;letter-spacing:-1.5px;line-height:.98;margin:12px 0 6px}
+.lead{font-size:15px;line-height:1.5}
+.stl{margin:24px 0 10px;padding-top:8px;border-top:2px solid var(--ink);font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;display:flex;justify-content:space-between;gap:10px}
+.room{background:var(--yellow);padding:12px 14px}
+.room b{font-family:var(--display);font-size:20px;font-weight:800;display:block}
+.rowb{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.b{min-height:44px;padding:0 16px;border:2px solid var(--ink);background:var(--ink);color:var(--paper);font-weight:600;font-size:15px;cursor:pointer;display:inline-flex;align-items:center;text-decoration:none;font-family:inherit}
+.b.sec{background:transparent;color:var(--ink)}
+.b:disabled{opacity:.4}
+.note{background:var(--blue-t);padding:8px 12px;font-size:14px;margin-bottom:6px}
+.task{background:#fff;padding:12px 14px;margin-bottom:8px;scroll-margin-top:12px}
+.task.cur{outline:3px solid var(--blue)}
+.task .h{font-weight:700;font-size:14px}
+.task .tx{white-space:pre-wrap;font-size:15px;line-height:1.5;margin:6px 0}
+.task form{display:flex;gap:8px;margin-top:6px}
+.task input{flex:1;min-width:0;min-height:44px;padding:0 12px;border:2px solid var(--ink);font-size:16px;font-family:inherit;background:#fff}
+.verdict{font-weight:700;margin-top:6px}
+.ok{color:var(--blue)}.bad{color:var(--red)}
+.sum{background:var(--blue);color:#fff;padding:12px 14px;font-weight:600}
+.mini{background:#fff;padding:10px 12px;margin-bottom:6px;font-size:14px}
+.empty{background:#fff;padding:14px;font-size:15px}
+</style>
 </head>
 <body>
-<header class="bar"><a class="wm" href="index.html" style="text-decoration:none">Аник<i>.</i></a><span class="who" id="who"></span></header>
-<main class="wrap" id="app"><div class="empty">Загружаю…</div></main>
+<main id="app"><div class="empty">Загружаю…</div></main>
 <script>
 (function () {
-  var A = window.AnikTutor, esc = A.esc, api = new A.Api('student');
-  var app = document.getElementById('app');
+  var A = window.AnikTutor, esc = A.esc, api = new A.Api('student'), app = document.getElementById('app');
+  var focus = +((/hw=(\d+)/.exec(location.hash) || [])[1] || 0);
+  function head() { return '<div class="top"><span class="wm">аник<i>.</i></span><a class="back" href="today.html">← Сегодня</a></div><h1>Задания от репетитора</h1>'; }
 
   function start() {
-    if (!api.token()) return A.loginForm(api, app, 'Домашка от репетитора', 'Отправь боту «Аник» команду <b>/app</b> и введи код. Если ты уже входил в приложение на этом устройстве, вход сохранён.', start);
-    Promise.all([api.get('/api/hw/mine'), api.get('/api/room/mine'), api.get('/api/room/notes')]).then(function (r) { draw(r[0].homework, r[1].rooms, r[2].notes); })
-      .catch(function (e) { if (e.status === 401) return start(); app.innerHTML = '<div class="empty">Сервер не ответил. Обнови страницу чуть позже.</div>'; });
+    if (!api.token()) {
+      app.innerHTML = head() + '<p class="lead">Свяжи приложение с ботом — и задания репетитора появятся здесь.</p><div id="linkbox" style="margin-top:12px"></div>';
+      if (window.AnikSync && AnikSync.linkCard) AnikSync.linkCard(document.getElementById('linkbox'), function () { setTimeout(start, 600); });
+      return;
+    }
+    Promise.all([api.get('/api/me'), api.get('/api/room/notes')]).then(function (r) { draw(r[0], r[1].notes); })
+      .catch(function (e) { if (e.status === 401) return start(); app.innerHTML = head() + '<div class="empty">Сервер не ответил. Обнови страницу чуть позже.</div>'; });
   }
 
-  function draw(hws, rooms, notes) {
-    var h = '<h1>Домашка</h1>';
-    if (rooms.length) h += '<div class="stl"><span>Урок идёт</span></div>' + rooms.map(function (r) {
-      return '<div class="card" style="background:var(--yellow)"><b>' + esc(r.tutor) + '</b> ждёт на уроке <a class="b sm" style="margin-left:8px" href="lesson.html?r=' + encodeURIComponent(r.room) + '&as=s">Войти на доску</a></div>'; }).join('');
-    if (!hws.length) h += '<div class="empty" style="margin-top:12px">Заданий от репетитора сейчас нет.</div>';
-    hws.forEach(function (hw) {
-      h += '<div class="stl"><span>' + esc(hw.title) + '</span><span>' + hw.done + ' из ' + hw.total + ' · до ' + esc(hw.due) + '</span></div>';
-      if (hw.note) h += '<div class="tip" style="background:var(--blue-t);padding:8px 12px">' + esc(hw.note) + '</div>';
+  function draw(m, notes) {
+    var h = head();
+    if (!m.has_tutor) {
+      app.innerHTML = h + '<div class="empty">У тебя пока нет подключённого репетитора. Если он есть — попроси у него ссылку-приглашение в бот.</div>';
+      return;
+    }
+    h += '<p class="lead">' + esc(m.tutors.join(', ')) + '</p>';
+    (m.rooms || []).forEach(function (r) {
+      h += '<div class="stl"><span>Урок</span></div><div class="room" role="status"><b>Урок начался</b>' + esc(r.tutor) + ' ждёт тебя на доске.' +
+        '<div class="rowb"><a class="b" href="lesson.html?r=' + encodeURIComponent(r.room) + '&as=s">Открыть доску</a>' +
+        (r.call_url ? '<button class="b sec" data-call="' + esc(r.call_url) + '">' + (/telemost/.test(r.call_url) ? 'Позвонить в Телемост' : 'Позвонить') + '</button>' : '') + '</div></div>';
+    });
+    if (!m.homework.length) h += '<div class="stl"><span>Задания</span></div><div class="empty">Сейчас заданий нет.</div>';
+    m.homework.forEach(function (hw) {
+      h += '<div class="stl" id="hw' + hw.id + '"><span>' + esc(hw.title) + '</span><span>' + hw.done + ' из ' + hw.total + ' · до ' + esc(hw.due) + '</span></div>';
+      if (hw.note) h += '<div class="note">' + esc(hw.note) + '</div>';
+      var first = true;
       hw.items.forEach(function (it) {
-        h += '<article class="task" id="t' + it.id + '"><b>' + it.seq + '. ' + esc(it.topic) + '</b><div class="tx">' + esc(it.text) + '</div>' +
-          (it.status === 'todo' ? '<form data-id="' + it.id + '" class="row"><input class="inp" aria-label="Ответ на задание ' + it.seq + '" placeholder="Ответ" maxlength="200"><button class="b sm">Ответить</button></form><div class="verdict" role="status"></div>'
-            : '<div class="verdict" style="color:' + (it.ok ? 'var(--blue)' : 'var(--red)') + '">' + (it.status === 'skipped' ? 'Пропущено' : (it.ok ? '✓ Верно' : '✗ Неверно') + ': ' + esc(it.answer)) + '</div>') + '</article>';
+        var cur = it.status === 'todo' && first; if (cur) first = false;
+        h += '<article class="task' + (cur && hw.id === focus ? ' cur' : '') + '" id="t' + it.id + '"><div class="h">' + it.seq + '. ' + esc(it.topic) + '</div><div class="tx">' + esc(it.text) + '</div>' +
+          (it.status === 'todo' ? '<form data-id="' + it.id + '"><input aria-label="Ответ на задание ' + it.seq + '" placeholder="Ответ" maxlength="200" autocomplete="off"><button class="b">Ответить</button></form><div class="verdict" role="status"></div>'
+            : '<div class="verdict ' + (it.ok ? 'ok' : 'bad') + '">' + (it.status === 'skipped' ? 'Пропущено' : (it.ok ? '✓ Верно' : '✗ Неверно') + ': ' + esc(it.answer)) + '</div>') + '</article>';
       });
     });
     if (notes.length) h += '<div class="stl"><span>Конспекты уроков</span></div>' + notes.map(function (n) {
-      return '<div class="mini"><a href="lesson.html?note=' + n.id + '">' + esc(n.title) + '</a> <span class="muted">' + esc(n.created) + '</span></div>'; }).join('');
-    h += '<p class="muted" style="margin-top:20px">Эти же задания есть в боте: /homework. Ответ, данный здесь, засчитывается и там.</p>';
+      return '<div class="mini"><a href="lesson.html?note=' + n.id + '">' + esc(n.title) + '</a></div>'; }).join('');
+    h += '<p class="lead" style="margin-top:18px;font-size:13px;color:var(--muted)">Эти же задания есть в боте: /homework. Ответ, данный здесь, засчитывается и там.</p>';
     app.innerHTML = h;
-    app.querySelectorAll('form[data-id]').forEach(function (f) {
-      f.onsubmit = function (e) {
-        e.preventDefault();
-        var v = f.querySelector('input').value.trim(), out = f.nextElementSibling;
-        if (!v) return;
-        f.querySelector('button').disabled = true;
-        api.post('/api/hw/answer', { item: +f.dataset.id, answer: v }).then(function (r) {
-          f.remove();
-          out.style.color = r.correct ? 'var(--blue)' : 'var(--red)';
-          out.textContent = r.correct ? '✓ Верно' : '✗ Неверно. Правильный ответ: ' + r.right;
-          if (r.done >= r.total) out.textContent += ' · Домашка выполнена, репетитор получит результаты.';
-        }).catch(function (e) { f.querySelector('button').disabled = false; out.textContent = e.message === 'done' ? 'Уже отвечено.' : 'Не отправилось, попробуй ещё раз.'; });
-      };
-    });
+    A.math(app);
+    app.querySelectorAll('[data-call]').forEach(function (b) { b.onclick = function () { A.openCall(b.dataset.call); }; });
+    app.querySelectorAll('form[data-id]').forEach(bind);
+    var f = focus && (document.querySelector('#hw' + focus + ' ~ .task.cur') || document.getElementById('hw' + focus));
+    if (f) f.scrollIntoView({ block: 'start' });
+  }
+
+  function bind(f) {
+    f.onsubmit = function (e) {
+      e.preventDefault();
+      var v = f.querySelector('input').value.trim(), out = f.nextElementSibling;
+      if (!v) return;
+      f.querySelector('button').disabled = true;
+      api.post('/api/hw/answer', { item: +f.dataset.id, answer: v }).then(function (r) {
+        f.remove();
+        out.className = 'verdict ' + (r.correct ? 'ok' : 'bad');
+        out.textContent = r.correct ? '✓ Верно' : '✗ Неверно. Правильный ответ: ' + r.right;
+        if (r.done >= r.total) {
+          var s = document.createElement('div'); s.className = 'sum'; s.setAttribute('role', 'status');
+          s.textContent = 'Задание выполнено: ' + r.done + ' из ' + r.total + '. Репетитор увидит результат.';
+          out.parentNode.after(s);
+        } else {
+          var next = out.parentNode.nextElementSibling;
+          if (next && next.classList.contains('task')) { var i = next.querySelector('input'); if (i) { next.scrollIntoView({ block: 'center', behavior: 'smooth' }); i.focus({ preventScroll: true }); } }
+        }
+      }).catch(function (e) { f.querySelector('button').disabled = false; out.textContent = e.message === 'done' ? 'Уже отвечено.' : 'Не отправилось, попробуй ещё раз.'; });
+    };
   }
   start();
 })();

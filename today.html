@@ -16,8 +16,9 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@700;800&family=Golos+Text:wght@400..700&display=swap">
 <link rel="stylesheet" href="anik.css?v=7">
 <script src="anik-look.js?v=1"></script>
-<script src="anik-sync.js?v=6"></script>
+<script src="anik-sync.js?v=7"></script>
 <script src="anik-nav.js?v=6" defer></script>
+<script src="anik-tutor.js?v=1" defer></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{min-height:100vh}
@@ -360,6 +361,7 @@ function today(){
     '<div class="big-n blue"><span class="g" aria-hidden="true">'+(s?done:0)+'</span><div class="l">цель дня · '+goal+'</div><div class="t">'+plural(s?done:0,'ответ','ответа','ответов')+'<br>сегодня</div>'+(s?'<div class="goalbar"><i style="width:'+Math.min(100,Math.round(100*done/goal))+'%"></i></div>':'')+'</div></div>';
   var needLink=window.AnikSync&&AnikSync.linkCard&&!AnikSync.inTelegram()&&!AnikSync.linked();
   if(needLink)html+='<div id="linkbox"></div>';
+  html+='<div id="tutorbox"></div>';                       // задания от репетитора и урок — только если репетитор подключён (anik-tutor.js)
   html+=aimHTML(s);
   html+=trainingHTML(s,prof);
   // календарь: пять недель, неделя с понедельника
@@ -387,6 +389,7 @@ function today(){
   html+='<a class="btn" href="map.html'+(km?'?k='+encodeURIComponent(km):'')+'">Моя карта знаний</a><a class="btn" href="index.html">Выбрать задание</a><a class="btn" href="today.html#stamps">Мои марки</a>';
   app.innerHTML=html;
   if(needLink)AnikSync.linkCard(document.getElementById('linkbox'),function(){setTimeout(today,800);});
+  if(window.AnikTutorBox)AnikTutorBox(document.getElementById('tutorbox'));else window.addEventListener('load',function(){if(window.AnikTutorBox)AnikTutorBox(document.getElementById('tutorbox'));});
   bindProfile();
   bindAim();
   var mx=document.getElementById('mix');

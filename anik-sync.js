@@ -5,7 +5,8 @@
    Вне Telegram (браузер, приложение на экране «Домой») ученик один раз вводит код из бота (AnikSync.link) — устройство
    получает ключ (anik_dev), и прогресс общий с ботом. Ответы, решённые до связки, копятся в очереди и уходят после неё. */
 (function () {
-  var API = 'https://2-29-119-233.sslip.io';    // почтовый ящик бота на сервере (deploy/server/enable_app_link.sh)
+  var API = /^(127\.0\.0\.1|localhost)$/.test(location.hostname) ? location.origin   // локально — свой сервер (bot/tutor_demo.py), не боевой
+          : 'https://2-29-119-233.sslip.io';    // почтовый ящик бота на сервере (deploy/server/enable_app_link.sh)
   var QUEUE = 'anik_q', STATE = 'anik_state';
   var tg = window.Telegram && window.Telegram.WebApp;
   var initData = (tg && tg.initData) || '';       // из кнопки на клавиатуре бота подписи нет — там остаётся старый путь
@@ -194,5 +195,7 @@
     pending: function () { return read(QUEUE, []).length; },
     localDays: function () { return read('anik_days', []); },
     onState: function (fn) { listeners.push(fn); if (state) fn(state); },
+    api: API,
+    authHeaders: function () { return initData ? { 'X-Init-Data': initData } : (device() ? { 'X-Device-Token': device() } : null); },
   };
 })();
