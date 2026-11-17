@@ -137,7 +137,22 @@
     start: function (urls, names) { planWrite({ urls: urls, names: names || [], i: 0, t: Date.now() }); go(urls[0]); },
     active: function () { return !!planRead(); },
   };
-  window.anikPlanDone = function () { planBar('done'); };   // страница вызывает, когда шаг пройден (итог игры, конец подхода)
+  /* выполненные сегодня шаги (страница + раздел хеша): «Сегодня» сразу отмечает пункт плана, не дожидаясь пересчёта у бота */
+  window.anikStepsDone = function () {
+    try {
+      var d = JSON.parse(localStorage.getItem('anik_plan_done') || 'null'), t = new Date().toDateString();
+      return d && d.d === t ? d.keys : [];
+    } catch (e) { return []; }
+  };
+  window.anikPlanDone = function () {
+    try {
+      var t = new Date().toDateString(), keys = window.anikStepsDone(), k = here();
+      if (keys.indexOf(k) < 0) keys.push(k);
+      localStorage.setItem('anik_plan_done', JSON.stringify({ d: t, keys: keys.slice(-60) }));
+    } catch (e) {}
+    planBar('done');
+  };
+  window.anikStepKey = stepKey;   // страница вызывает, когда шаг пройден (итог игры, конец подхода)
 
   function mount() {
     if (document.getElementById('anik-tabs')) return;

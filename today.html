@@ -17,7 +17,7 @@
 <link rel="stylesheet" href="anik.css?v=7">
 <script src="anik-look.js?v=1"></script>
 <script src="anik-sync.js?v=7"></script>
-<script src="anik-nav.js?v=6" defer></script>
+<script src="anik-nav.js?v=7" defer></script>
 <script src="anik-tutor.js?v=1" defer></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -106,6 +106,8 @@ h1{font-family:var(--display);font-size:38px;font-weight:800;letter-spacing:-1.5
 .mix input{width:18px;height:18px;accent-color:var(--ink)}
 .lead2{font-size:15px;line-height:1.45;margin:0 0 10px}
 .rcard{background:#fff;padding:12px 14px;border-left:6px solid var(--red)}
+.pitem.pdone{background:var(--chip);color:var(--muted);border:2px solid var(--line);min-height:0;padding:10px 14px}
+.pitem.pdone .nm{font-size:16px;color:var(--muted)}
 .aim{margin:14px 0 4px;border:2px solid var(--ink);background:#fff;padding:12px 14px}
 .aim-k{display:flex;justify-content:space-between;gap:8px;align-items:baseline;font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--muted)}
 .aim-k b{font-family:var(--display);font-size:20px;letter-spacing:-.4px;text-transform:none;color:var(--ink)}
@@ -154,7 +156,7 @@ var ZSNAP=(function(){
   var days=[],t0=new Date(c.t+'T12:00:00');
   String(c.y||'').split('').forEach(function(ch,i){if(ch==='1'){var d=new Date(t0);d.setDate(t0.getDate()-(34-i));days.push(iso(d));}});
   return {v:1,from:'bot',today:c.t,exam:c.e||'ege',streak:c.s,goal:c.g,done_today:c.d,days:days,stamps:[],skills:{},
-    plan:(c.p||[]).map(function(p){return {skill:p[0],number:p[1],why:p[2],link:p[3],name:p[4],count:10,minutes:5};}),
+    plan:(c.p||[]).map(function(p){return {skill:p[0],number:p[1],why:p[2],link:p[3],name:p[4],done:!!p[5],count:10,minutes:5};}),subs:c.u||null,
     rules:(c.r||[]).map(function(r){return {n:r[0],cat:r[1],name:r[2],tw:r[3],ta:r[4],gw:r[5]};}),kmap:c.k||'',aim:c.a||null};
 })();
 function snap(){
@@ -193,6 +195,8 @@ var editingProfile=false,draft=[];
 function getProfile(){try{var p=JSON.parse(localStorage.getItem('anik_profile'));return Array.isArray(p)?p.filter(function(k){return DEFAULT_URL[k];}):[];}catch(e){return [];}}
 function setProfile(p){try{localStorage.setItem('anik_profile',JSON.stringify(p));}catch(e){}}
 function profileSets(){
+  var s=snap();                                              // предметы из бота — главнее выбранных здесь
+  if(s&&s.subs&&s.subs.length){var b=s.subs.filter(function(k){return DEFAULT_URL[k];});if(b.length)return b;}
   var p=getProfile();if(p.length)return p;
   try{var c=JSON.parse(localStorage.getItem('anik_choice')||'null');if(c&&DEFAULT_URL[c.exam+'.'+c.subj])return [c.exam+'.'+c.subj];}catch(e){}
   return [];
@@ -213,7 +217,17 @@ function bindProfile(){
   if(box){
     if(!editingProfile)draft=[];
     Array.prototype.forEach.call(box.querySelectorAll('.chip'),function(b){b.onclick=function(){var k=b.dataset.k,i=draft.indexOf(k);if(i<0)draft.push(k);else draft.splice(i,1);b.classList.toggle('on');};});
-    document.getElementById('pok').onclick=function(){if(!draft.length){try{localStorage.setItem('anik_profile_skip','1');}catch(e){}}else setProfile(draft);editingProfile=false;today();};
+    document.getElementById('pok').onclick=function(){
+      if(!draft.length){try{localStorage.setItem('anik_profile_skip','1');}catch(e){}}
+      else{
+        setProfile(draft);
+        // бот узнаёт предметы — план на день будет по ним (один экзамен: по первому выбранному)
+        var CODE={'ege.rus':'er','ege.math':'ep','ege.mathb':'eb','oge.rus':'or','oge.math':'om'},ex=draft[0].split('.')[0];
+        var codes=draft.filter(function(k){return k.split('.')[0]===ex&&CODE[k];}).map(function(k){return CODE[k];});
+        if(codes.length&&window.AnikSync)AnikSync.send('s_'+codes.join('.'));
+        var s=snap();if(s&&s.subs)s.subs=draft.slice();
+      }
+      editingProfile=false;today();};
   }
   var ed=document.getElementById('pedit');
   if(ed)ed.onclick=function(){editingProfile=true;draft=getProfile().length?getProfile():profileSets();today();};
@@ -255,7 +269,16 @@ function trainingHTML(s,prof){
   var items=[];
   ((s&&s.plan)||[]).forEach(function(p){if(!prof.length||prof.indexOf(setOf(p.skill))>=0)items.push({kind:'plan',set:setOf(p.skill),p:p});});
   ((s&&s.rules)||[]).forEach(function(r){if(!prof.length||prof.indexOf('ege.rus')>=0)items.push({kind:'rule',set:'ege.rus',r:r});});
+  // пункт выполнен: бот засчитал (5 ответов по теме) или здесь пройдены все его шаги сегодня
+  var stepsDone=(window.anikStepsDone&&anikStepsDone())||[],key=window.anikStepKey||function(u){return u;};
+  items.forEach(function(it){
+    if(it.kind!=='plan')return;
+    var st=stepsFor(it.p);
+    it.done=!!it.p.done||(st.length&&st.every(function(x){return stepsDone.indexOf(key(x.url))>=0;}));
+  });
   var mix=mixOn(),list=ordered(items,mix);
+  list=list.filter(function(it){return !it.done;}).concat(list.filter(function(it){return it.done;}));
+  var nDone=list.filter(function(it){return it.done;}).length;
   var html='<div class="stl"><span>Сегодня тренируем</span><label class="mix"><input type="checkbox" id="mix"'+(mix?' checked':'')+'>вперемешку</label></div>';
   if(!list.length){
     if(s){html+='<div class="empty"><b>На сегодня всё.</b> План собран по твоим слабым местам. Если хочешь ещё — выбери предмет ниже.</div>';}
@@ -264,7 +287,9 @@ function trainingHTML(s,prof){
     html+=base.map(function(k){return '<a class="pick" href="'+DEFAULT_URL[k]+'">'+esc(setName(k))+'</a>';}).join('');
     return html;
   }
-  var names=list.slice(0,3).map(function(it){return it.kind==='plan'?it.p.name:it.r.name;}),mins=list.reduce(function(a,it){return a+(it.kind==='plan'?(it.p.minutes||5):5);},0);
+  if(nDone&&nDone===list.length)html+='<div class="empty" style="border-color:var(--blue)"><b>План на сегодня выполнен 🎉</b> Можно отдохнуть или решать дальше — в ленте или любой номер.</div>';
+  else if(nDone)html+='<p class="lead2">Сделано <b>'+nDone+' из '+list.length+'</b> — так держать.</p>';
+  var names=list.filter(function(it){return !it.done;}).slice(0,3).map(function(it){return it.kind==='plan'?it.p.name:it.r.name;}),mins=list.reduce(function(a,it){return a+(it.kind==='plan'?(it.p.minutes||5):5);},0);
   html+='<p class="lead2">Сегодня: <b>'+esc(names.join(' + '))+'</b> · около '+mins+' мин. По каждой теме: изучи теорию и пройди тест по ней, закрепи в игре или разборе, реши задания из экзамена. '+(mix?'Предметы чередуются.':'Сначала один предмет, потом другой.')+'</p>';
   html+='<div class="plan">'+list.map(function(it,i){
     if(it.kind==='rule'){
@@ -274,6 +299,7 @@ function trainingHTML(s,prof){
     }
     var p=it.p,sk=REG&&REG.skills.filter(function(x){return x.id===p.skill;})[0],c=sk?skinOf(sk):AnikLook.ramp(1)[0];
     var href=p.link||(sk?linkFor(sk):'index.html'),st=stepsFor(p);
+    if(it.done)return '<div class="pitem pdone"><div class="tn">✓ сделано · '+esc(SUBJ[setOf(p.skill)]||'')+' · № '+pad(p.number)+'</div><div class="nm">'+esc(p.name)+'</div></div>';
     if(st.length>1)return '<div class="pitem sgt" style="'+AnikLook.style(c)+'">'+AnikLook.signHTML(sk?signFor(sk):String(p.number))+'<div class="tn">'+(i+1)+' · '+esc(SUBJ[setOf(p.skill)]||'')+' · № '+pad(p.number)+' · '+(WHY[p.why]||'тема').toLowerCase()+'</div><div class="nm">'+esc(p.name)+'</div>'+
       '<div class="steps">'+st.map(function(x,k){return '<a href="'+esc(x.url)+'"><i>'+(k+1)+'</i>'+esc(x.name)+'</a>';}).join('')+'</div></div>';
     return '<a class="pitem sgt" style="'+AnikLook.style(c)+'" href="'+esc(href)+'">'+AnikLook.signHTML(sk?signFor(sk):String(p.number))+'<div class="tn">'+(i+1)+' · № '+pad(p.number)+' · '+(WHY[p.why]||'тема').toLowerCase()+'</div><div class="nm">'+esc(p.name)+'</div><div class="s">'+(p.count||10)+' заданий · '+(p.minutes||5)+' мин</div></a>';
