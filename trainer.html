@@ -177,6 +177,7 @@ b.mark{background:var(--yellow);padding:0 3px}
 .lq{font-family:var(--display);font-size:20px;font-weight:800;line-height:1.25;margin:10px 0 12px}
 .lopt{display:block;width:100%;text-align:left;margin-top:8px;min-height:50px;padding:10px 14px;border:2px solid var(--ink);background:#fff;color:var(--ink);font:inherit;font-size:16px;cursor:pointer}
 .katex{font-size:1.05em}
+.sol summary{cursor:pointer;font-weight:700}.solol{margin:8px 0 0;padding-left:22px;line-height:1.5}.solol li{margin:4px 0}
 .thb-fx .katex-display,.thb-fx{overflow-x:auto;overflow-y:hidden}
 .lstep small{display:block;font-size:13px;color:var(--muted)}
 </style>
@@ -849,6 +850,12 @@ function reveal(v){
   Array.prototype.forEach.call(app.querySelectorAll('.nbs button'),function(b){b.disabled=true;});
   var last=run.i+1>=run.items.length;
   document.getElementById('fb').innerHTML=ok?'<div class="fb good">Верно</div>':'<div class="fb bad">'+(v===null?'Пропущено':'Неверно')+'. Правильный ответ: '+esc(t.a[0])+(t.a.length>1&&t.k!=='word'?'<small>Подходят также: '+esc(t.a.slice(1,4).join(', '))+'</small>':'')+'</div>';
+  if(t.sol&&t.sol.length){                                      // решение по шагам (методисты: sol у задания); после ошибки — сразу открыто
+    var fb=document.getElementById('fb');
+    fb.insertAdjacentHTML('beforeend','<details class="card sol"'+(ok?'':' open')+'><summary>'+(ok?'Посмотреть решение':'Решение по шагам')+'</summary><ol class="solol">'+
+      t.sol.map(function(x){return '<li>'+esc(x)+'</li>';}).join('')+'</ol></details>');
+    mathIn(fb);
+  }
   document.getElementById('acts').innerHTML='<button class="btn" id="nx">'+(last?'Итог':'Дальше')+'</button>';
   document.getElementById('nx').onclick=function(){run.i++;run.answered=false;show();};
   var dots=document.querySelector('.dots');if(dots)dots.outerHTML=dotsHtml();

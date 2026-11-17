@@ -629,7 +629,7 @@ function pracView(){
     h+='<button class="btn" id="pnext">'+(pr.i+1>=pr.items.length?'Итог':'Дальше')+'</button>';
     app.innerHTML=h;
     $('#pnext').onclick=pracNext;
-    const ps0=$('#pstep');if(ps0)ps0.onclick=()=>startKind(rv.k);
+    const ps0=$('#pstep');if(ps0)ps0.onclick=()=>startKind(rv.k,t);
     $('#psim').onclick=()=>loadPractice(t.n).then(list=>{
       const s=similarPick(t,list,pr.items.map(x=>x.id));
       if(!s){$('#psim').textContent='Похожих задач этого типа больше нет';$('#psim').disabled=true;return}
@@ -852,8 +852,20 @@ function startTask(t,keepTab){
 }
 function topicSteps(gid){return PACK.tasks.filter(t=>t.g===gid)}
 function kindSteps(k){return k&&PACK?PACK.tasks.filter(t=>t.k===k):[]}
-function startKind(k){
-  const pool=kindSteps(k);if(!pool.length)return;
+// «Разобрать похожую по шагам»: тот же тип и уровень не ниже исходной задачи. Экзаменационная (ФИПИ, СтатГрад, сборники)
+// → задачи по шагам уровня 2–3 (поле lv от методистов); пока уровней нет — самые многошаговые и длинные задачи типа
+function stepLevel(x){return x.lv||0}
+function startKind(k,src){
+  let pool=kindSteps(k);if(!pool.length)return;
+  const exam=src&&(src.r||/ФИПИ|СтатГрад|ЕГКР|Ященко|досроч/i.test(src.s||''));
+  if(exam){
+    const hard=pool.filter(x=>stepLevel(x)>=2);
+    if(hard.length)pool=hard;
+    else if(pool.length>3){
+      const w=x=>(x.st?x.st.length:0)*40+String(x.t).length;
+      pool=pool.slice().sort((a,b)=>w(b)-w(a)).slice(0,Math.max(3,Math.ceil(pool.length*0.35)));
+    }
+  }
   const t=pool[Math.floor(Math.random()*pool.length)];
   pracGroup=t.g||pracGroup;pracSkill='';
   startTask(t,true);
