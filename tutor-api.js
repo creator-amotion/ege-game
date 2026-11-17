@@ -62,6 +62,12 @@
       api.link(f.querySelector('input').value).then(onDone).catch(function (err) { msg.textContent = err.message; });
     };
     f.querySelector('input').focus();
+    var m = /[#&]tl=([A-Za-z0-9]{8})/.exec(location.hash);     // ссылка из бота «Открыть кабинет»: код уже в адресе
+    if (m) {
+      try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
+      f.querySelector('input').value = m[1];
+      f.onsubmit({ preventDefault: function () {} });
+    }
   }
 
   /* формулы $…$ как на сайте (vendor/katex); без KaTeX — просто текст */
