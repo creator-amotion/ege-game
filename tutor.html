@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Аник — кабинет репетитора</title>
+<link rel="icon" href="icons/icon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@700;800&family=Golos+Text:wght@400..700&display=swap">
+<link rel="stylesheet" href="anik.css?v=7">
+<link rel="stylesheet" href="tutor.css?v=1">
+<script src="tutor-api.js?v=1"></script>
+</head>
+<body>
+<header class="bar"><span class="wm">Аник<i>.</i> кабинет</span><span class="who" id="who"></span></header>
+<main class="wrap" id="app"><div class="empty">Загружаю…</div></main>
+<script>
+(function () {
+  var A = window.AnikTutor, esc = A.esc, api = new A.Api('tutor');
+  var app = document.getElementById('app'), who = document.getElementById('who');
+  var LEVEL = ['не начато', 'познакомился', 'знает теорию', 'решает с опорой', 'решает сам', 'устойчиво'];
+  var LVL = { own: 'тренировочная', fipi: 'ФИПИ', hard: 'трудная' };
+  var me = null, cur = null, card = null, meta = null, tab = 'students';
+  var basket = [], found = { items: [], total: 0 }, filt = { subject: 'ege.rus', n: '', topic: '', level: '', q: '', offset: 0 };
+
+  function toast(t) { var d = document.createElement('div'); d.className = 'toast'; d.setAttribute('role', 'status'); d.textContent = t; document.body.appendChild(d); setTimeout(function () { d.remove(); }, 3000); }
+  function fail(e) { if (e.status === 401) return start(); toast('Не получилось: ' + e.message); }
+
+  function start() {
+    if (!api.token()) {
+      who.textContent = '';
+      return A.loginForm(api, app, 'Кабинет репетитора',
+        'Откройте бота «Аник», отправьте <b>/app</b> и введите код. Кабинет доступен репетиторам, которых подключил администратор; ученики появляются после того, как подтвердят доступ.', start);
+    }
+    api.get('/api/tutor/me').then(function (m) {
+      me = m;
+      who.innerHTML = esc(m.name) + ' · <a href="#" id="out">выйти</a>';
+      document.getElementById('out').onclick = function (e) { e.preventDefault(); api.logout(); start(); };
+      render();
+    }).catch(function (e) {
+      if (e.status === 403) { app.innerHTML = '<div class="login"><h1>Нет доступа</h1><p class="lead">Этот код — не от репетитора. Попросите администратора добавить вас (/addtutor), затем войдите снова.</p><p><button class="b sec" id="re">Войти другим кодом</button></p></div>'; document.getElementById('re').onclick = function () { api.logout(); start(); }; return; }
+      if (e.status === 401) return start();
+      app.innerHTML = '<div class="empty">Сервер не ответил. Обновите страницу чуть позже.</div>';
+    });
+  }
+
+  function render() {
+    var h = '<h1>Ученики и задания</h1><p class="lead">Код приглашения: <b>' + esc(me.code) + '</b> — ученик отправляет боту <b>/start t_' + esc(me.code) + '</b> и подтверждает доступ.</p>';
+    h += '<div class="tabs" role="tablist">' + [['students', 'Ученики'], ['builder', 'Конструктор ДЗ']].map(function (t) {
+      return '<button role="tab" data-tab="' + t[0] + '" aria-selected="' + (tab === t[0]) + '">' + t[1] + (t[0] === 'builder' && basket.length ? ' · ' + basket.length : '') + '</button>'; }).join('') + '</div>';
+    h += '<div id="pane"></div>';
+    app.innerHTML = h;
+    app.querySelectorAll('[data-tab]').forEach(function (b) { b.onclick = function () { tab = b.dataset.tab; render(); }; });
+    if (tab === 'students') renderStudents(); else renderBuilder();
+  }
+
+  // ───────── ученики ─────────
+  function renderStudents() {
+    var pane = document.getElementById('pane');
+    if (!me.students.length) { pane.innerHTML = '<div class="empty" style="margin-top:14px">Пока нет учеников с подтверждённым доступом.</div>'; return; }
+    var h = '<div class="layout"><nav class="slist" aria-label="Ученики">' + me.students.map(function (s, i) {
+      return '<button class="sbtn" data-i="' + i + '" aria-current="' + (cur === s.id) + '"><b>' + esc(s.name) + '</b>' +
+        '<span class="muted">серия ' + s.streak + ' · дней за 2 нед.: ' + s.days14 + (s.hw_open ? ' · ДЗ: ' + s.hw_open : '') + '</span></button>'; }).join('') +
+      '</nav><section id="card" aria-live="polite"></section></div>';
+    pane.innerHTML = h;
+    pane.querySelectorAll('.sbtn').forEach(function (b) { b.onclick = function () { cur = me.students[+b.dataset.i].id; renderStudents(); }; });
+    if (!cur) cur = me.students[0].id;
+    loadCard();
+  }
+
+  function loadCard() {
+    var el = document.getElementById('card');
+    el.innerHTML = '<div class="empty">Загружаю карточку…</div>';
+    api.post('/api/tutor/student', { sid: cur }).then(function (c) { card = c; drawCard(); }).catch(fail);
+  }
+
+  function daysGrid(days) {
+    var set = {}, out = '', d = new Date();
+    days.forEach(function (x) { set[x] = 1; });
+    for (var k = 29; k >= 0; k--) {
+      var t = new Date(d.getFullYear(), d.getMonth(), d.getDate() - k);
+      var iso = t.getFullYear() + '-' + String(t.getMonth() + 1).padStart(2, '0') + '-' + String(t.getDate()).padStart(2, '0');
+      out += '<i class="' + (set[iso] ? 'on' : '') + (k === 0 ? ' today' : '') + '" title="' + iso + (set[iso] ? ': занимался' : '') + '"></i>';
+    }
+    return '<div class="days" aria-label="Активность за 30 дней">' + out + '</div>';
+  }
+
+  function drawCard() {
+    var c = card, el = document.getElementById('card');
+    var acc = c.answers14 + c.math14 ? Math.round(100 * (c.correct14 + c.math_ok14) / (c.answers14 + c.math14)) + '%' : '—';
+    var openHw = c.homework.filter(function (h) { return h.done < h.total; }).length;
+    var h = '<div class="row" style="justify-content:space-between"><h2>' + esc(c.name) + '</h2><div class="row">' +
+      '<button class="b blue" id="lesson">Начать урок на доске</button><button class="b sec" id="give">Дать ДЗ</button></div></div>';
+    h += '<p class="muted">' + (c.exam === 'oge' ? 'ОГЭ' : 'ЕГЭ') + (c.exam_date ? ' · экзамен ' + esc(c.exam_date) : '') + '</p>';
+    h += '<div id="roomlink"></div>';
+    h += '<div class="kpis" style="margin-top:10px"><div class="kpi yel"><div class="n">' + c.streak + '</div><div class="l">серия, дней</div></div>' +
+      '<div class="kpi"><div class="n">' + c.days.filter(function (d) { return d >= new Date(Date.now() - 13 * 864e5).toISOString().slice(0, 10); }).length + '</div><div class="l">дней за 2 недели</div></div>' +
+      '<div class="kpi"><div class="n">' + (c.answers14 + c.math14) + '</div><div class="l">ответов за 2 нед.</div></div>' +
+      '<div class="kpi blue"><div class="n">' + acc + '</div><div class="l">верно</div></div>' +
+      '<div class="kpi pink"><div class="n">' + openHw + '</div><div class="l">ДЗ в работе</div></div></div>';
+    h += '<div class="stl"><span>Активность по дням</span><span>30 дней</span></div>' + daysGrid(c.days);
+
+    h += '<div class="stl"><span>Путь к цели</span><span>прогноз</span></div>';
+    c.paths.forEach(function (p) {
+      h += '<div class="path"><div class="row" style="justify-content:space-between"><h3>' + esc(p.name) + '</h3><span class="tag ' + (p.reached ? 'blue' : 'yel') + '">' +
+        (p.target ? 'цель ' + esc(p.target_label) : 'цель не задана') + '</span></div>' +
+        '<div class="big">' + esc(p.now_label) + '</div><div class="muted">прогноз сейчас: измерено ' + p.measured + ' из ' + p.measured_max + ' перв. баллов' +
+        (p.assume ? ' + допущение ' + p.assume + ' за «' + esc(p.extra) + '»' : '') + (p.delta != null ? ' · за неделю ' + (p.delta >= 0 ? '+' : '') + p.delta : '') + '</div>';
+      if (p.target) h += '<div class="meter" style="margin-top:8px" role="img" aria-label="Пройдено ' + p.pct + '% пути"><i style="width:' + p.pct + '%;background:var(--blue)"></i></div>' +
+        '<div class="muted">пройдено ' + p.pct + '% пути · нужно ' + p.need + ' перв. баллов в том, что проверяет Аник' + (p.reachable ? '' : ' — цель выше, чем даёт проверяемая часть, остальное — в развёрнутых ответах') + '</div>';
+      if (p.gains.length) h += '<div style="margin-top:6px"><b style="font-size:13px">Что даст больше всего:</b><br>' + p.gains.map(function (g) {
+        return '<span class="gain">№' + g.n + ' — до +' + g.plus + (g.fresh ? ' · ещё не проверен' : '') + '</span>'; }).join('') + '</div>';
+      if (p.todo && p.todo.length) h += '<div class="muted" style="margin-top:4px">Ещё не решал: №' + p.todo.slice(0, 14).join(', №') + (p.todo.length > 14 ? '…' : '') + '</div>';
+      h += '</div>';
+    });
+
+    h += '<div class="two"><div>';
+    var km = c.kmap;
+    h += '<div class="stl"><span>Карта знаний</span><span>уровни 0–5</span></div>';
+    if (!km || !Object.keys(km.subjects).length) h += '<div class="empty">Карта пока пустая.</div>';
+    else {
+      Object.keys(km.subjects).forEach(function (k) {
+        var s = km.subjects[k];
+        h += '<div class="card" style="margin-top:6px"><b>' + esc(s.name) + ' · ' + s.pct + '%</b><div class="muted">начато частей ' + s.started + ' из ' + s.total + '</div>' +
+          '<div class="meter" style="margin-top:6px"><i style="width:' + s.pct + '%;background:var(--blue)"></i></div></div>';
+        h += '<div class="km" style="margin-top:4px">' + s.numbers.filter(function (n) { return n.level > 0; }).map(function (n) {
+          return '<div class="kn"><span class="nn">№' + n.n + '</span><span class="nm">' + esc(n.name) + '</span><span class="cells">' + n.parts.map(function (p) {
+            return '<i class="l' + p.level + (p.weak ? ' w' : '') + '" title="' + esc(p.title) + ': ' + LEVEL[p.level] + (p.weak ? ', западает' : p.review ? ', пора повторить' : '') + '"></i>'; }).join('') + '</span></div>'; }).join('') + '</div>';
+      });
+      var lab = function (w) { return '№' + w.n + ' ' + esc(w.title); };
+      if (km.weak.length) h += '<div class="stl"><span>Западает</span></div>' + km.weak.map(function (w) { return '<div class="flag weak">' + lab(w) + '</div>'; }).join('');
+      if (km.review.length) h += '<div class="stl"><span>Пора повторить</span></div>' + km.review.map(function (w) { return '<div class="flag rev">' + lab(w) + '</div>'; }).join('');
+      if (km.next.length) h += '<div class="stl"><span>Что дать дальше</span></div>' + km.next.map(function (w) { return '<div class="flag next">' + lab(w) + ' <span class="muted">· сейчас ' + LEVEL[w.level] + '</span></div>'; }).join('');
+    }
+    h += '</div><div>';
+    h += '<div class="stl"><span>Последние ответы</span><span>' + c.errors.length + ' ошибок</span></div>';
+    h += c.recent.length ? c.recent.slice(0, 15).map(function (r) {
+      return '<div class="res"><span class="muted">' + esc(r.when) + '</span><span>' + (r.subject.indexOf('rus') > 0 ? 'Рус.' : 'Мат.') + (r.n ? ' №' + r.n : '') + '</span><span>' + esc(r.what) + '</span>' +
+        '<span class="ok ' + (r.ok ? 'y' : 'n') + '" aria-label="' + (r.ok ? 'верно' : 'ошибка') + '">' + (r.ok ? '✓' : '✗') + '</span></div>'; }).join('') : '<div class="empty">Ответов пока нет.</div>';
+    if (c.weak_ru.length || c.weak_math.length) h += '<div class="muted" style="margin-top:6px">Слабые места по модели знаний: ' + esc(c.weak_ru.map(function (n) { return 'рус. №' + n; }).concat(c.weak_math).join(', ')) + '</div>';
+    h += '<div class="stl"><span>Домашние задания</span><span>' + c.homework.length + '</span></div>';
+    h += c.homework.length ? c.homework.map(hwBlock).join('') : '<div class="empty">ДЗ ещё не было. Соберите вариант во вкладке «Конструктор ДЗ».</div>';
+    h += '<div class="stl"><span>Конспекты уроков</span></div><div id="notes" class="muted">…</div>';
+    h += '</div></div>';
+    el.innerHTML = h;
+    document.getElementById('give').onclick = function () { tab = 'builder'; render(); };
+    document.getElementById('lesson').onclick = startLesson;
+    api.post('/api/tutor/notes', { sid: cur }).then(function (r) {
+      document.getElementById('notes').innerHTML = r.notes.length ? r.notes.map(function (n) {
+        return '<div class="mini"><a href="lesson.html?note=' + n.id + '" target="_blank" rel="noopener">' + esc(n.title) + '</a> <span class="muted">' + esc(n.created) + '</span></div>'; }).join('') : 'Пока нет: на уроке нажмите «Сохранить конспект».';
+    }).catch(function () {});
+  }
+
+  function hwBlock(hw) {
+    var st = hw.done >= hw.total ? '<span class="tag blue">выполнено ' + hw.ok + '/' + hw.total + '</span>' : '<span class="tag yel">' + hw.done + ' из ' + hw.total + '</span>';
+    return '<details class="hw"><summary><span><b>' + esc(hw.title) + '</b><br><span class="muted">до ' + esc(hw.due) + (hw.note ? ' · ' + esc(hw.note) : '') + '</span></span>' + st + '</summary>' +
+      hw.items.map(function (i) {
+        var s = i.status === 'todo' ? '…' : i.status === 'skipped' ? '—' : i.ok ? '✓' : '✗';
+        return '<div class="hwi"><span class="st" style="color:' + (i.ok ? 'var(--blue)' : i.status === 'done' ? 'var(--red)' : 'var(--muted)') + '">' + s + '</span>' +
+          '<span><b>' + esc(i.topic) + '</b><br>' + esc(i.text.slice(0, 180)) + '</span><span class="muted">ответ: ' + esc(i.answer || '—') + '<br>верно: ' + esc(i.correct) + '</span></div>'; }).join('') + '</details>';
+  }
+
+  function startLesson() {
+    var w = window.open('about:blank', '_blank');
+    api.post('/api/tutor/room', { sid: cur }).then(function (r) {
+      var base = location.href.replace(/[^/]*$/, '');
+      var mine = base + 'lesson.html?r=' + r.room, theirs = mine + '&as=s';
+      if (w) w.location = mine;
+      document.getElementById('roomlink').innerHTML = '<div class="card" style="margin-top:10px;background:var(--yellow-t)"><b>Урок создан.</b> Ссылка для ученика (откроет у себя, войдя своим кодом из бота):' +
+        '<div class="row" style="margin-top:6px"><input class="inp" style="flex:1;min-width:200px" readonly value="' + esc(theirs) + '" aria-label="Ссылка для ученика"><button class="b sm" id="cp">Копировать</button>' +
+        '<a class="b sm sec" href="' + esc(mine) + '" target="_blank" rel="noopener">Открыть доску</a></div><p class="muted" style="margin-top:4px">Ученик также увидит урок у себя на странице «Домашка».</p></div>';
+      document.getElementById('cp').onclick = function () { navigator.clipboard && navigator.clipboard.writeText(theirs).then(function () { toast('Скопировано'); }); };
+    }).catch(function (e) { if (w) w.close(); fail(e); });
+  }
+
+  // ───────── конструктор ДЗ ─────────
+  function renderBuilder() {
+    var pane = document.getElementById('pane');
+    if (!meta) { pane.innerHTML = '<div class="empty" style="margin-top:14px">Загружаю банк…</div>'; api.get('/api/tutor/bank/meta').then(function (m) { meta = m; renderBuilder(); search(); }).catch(fail); return; }
+    var subj = meta.subjects[filt.subject], num = subj.numbers.filter(function (n) { return String(n.n) === String(filt.n); })[0];
+    var h = '<div class="builder" style="margin-top:14px"><div>';
+    h += '<div class="filters" role="search">' +
+      sel('subject', 'Экзамен и предмет', Object.keys(meta.subjects).map(function (k) { return [k, meta.subjects[k].name]; })) +
+      sel('n', 'Номер', [['', 'все номера']].concat(subj.numbers.map(function (n) { return [n.n, '№' + n.n + ' (' + n.count + ')']; }))) +
+      sel('topic', 'Тема', [['', 'все темы']].concat(num ? num.topics.map(function (t) { return [t.t, t.t + ' (' + t.count + ')']; }) : [])) +
+      sel('level', 'Уровень', [['', 'любой уровень']].concat(Object.keys(meta.levels).map(function (k) { return [k, meta.levels[k]]; }))) +
+      '<input class="inp" id="q" placeholder="Поиск по тексту" aria-label="Поиск по тексту" value="' + esc(filt.q) + '" style="flex:1;min-width:140px"></div>';
+    h += '<p class="muted" style="margin-top:8px" id="cnt"></p><div id="found"></div><div id="more"></div></div>';
+    h += '<aside class="basket" aria-label="Вариант"><h3>Вариант · <span id="bn">' + basket.length + '</span> зад.</h3><ol id="bl"></ol>' +
+      '<input class="inp" id="title" placeholder="Название (необязательно)" style="width:100%;margin-top:4px">' +
+      '<div class="stl"><span>Кому</span></div>' + me.students.map(function (s) {
+        return '<label class="chk"><input type="checkbox" value="' + s.id + '"' + (s.id === cur ? ' checked' : '') + '> ' + esc(s.name) + '</label>'; }).join('') +
+      '<div class="row" style="margin-top:8px"><label class="muted" for="days">Срок, дней</label><select class="inp" id="days">' + [1, 2, 3, 5, 7, 14].map(function (d) { return '<option' + (d === 7 ? ' selected' : '') + '>' + d + '</option>'; }).join('') + '</select></div>' +
+      '<textarea class="inp" id="note" placeholder="Комментарий ученику" style="margin-top:8px" maxlength="300"></textarea>' +
+      '<button class="b blue" id="send" style="width:100%;margin-top:8px;justify-content:center">Отправить ученику</button>' +
+      '<p class="muted" style="margin-top:6px">Задания придут в бот (/homework) и на страницу «Домашка» в приложении. Кто что решил — в карточке ученика.</p></aside></div>';
+    pane.innerHTML = h;
+    ['subject', 'n', 'topic', 'level'].forEach(function (k) {
+      document.getElementById('f-' + k).onchange = function (e) {
+        filt[k] = e.target.value; filt.offset = 0;
+        if (k === 'subject') { filt.n = ''; filt.topic = ''; }
+        if (k === 'n') filt.topic = '';
+        renderBuilder(); search();
+      };
+    });
+    var t; document.getElementById('q').oninput = function (e) { clearTimeout(t); t = setTimeout(function () { filt.q = e.target.value; filt.offset = 0; search(); }, 300); };
+    document.getElementById('send').onclick = send;
+    drawBasket(); drawFound();
+  }
+
+  function sel(k, label, opts) {
+    return '<select class="inp" id="f-' + k + '" aria-label="' + label + '">' + opts.map(function (o) {
+      return '<option value="' + esc(o[0]) + '"' + (String(o[0]) === String(filt[k]) ? ' selected' : '') + '>' + esc(o[1]) + '</option>'; }).join('') + '</select>';
+  }
+
+  function search(more) {
+    api.post('/api/tutor/bank', { subject: filt.subject, n: filt.n ? +filt.n : null, topic: filt.topic, level: filt.level, q: filt.q, offset: filt.offset })
+      .then(function (r) { found = more ? { items: found.items.concat(r.items), total: r.total } : r; drawFound(); }).catch(fail);
+  }
+
+  function inBasket(it) { return basket.some(function (b) { return b.id === it.id && b.subject === it.subject; }); }
+
+  function drawFound() {
+    var el = document.getElementById('found'); if (!el) return;
+    document.getElementById('cnt').textContent = 'Найдено задач: ' + (found.total || 0);
+    el.innerHTML = found.items.map(function (it, i) {
+      return '<article class="task' + (inBasket(it) ? ' picked' : '') + '"><div class="row" style="justify-content:space-between"><span><b>№' + it.n + '</b> ' +
+        (it.topic ? '<span class="tag">' + esc(it.topic) + '</span> ' : '') + '<span class="tag ' + (it.level === 'hard' ? 'red' : it.level === 'fipi' ? 'yel' : '') + '">' + LVL[it.level] + '</span></span>' +
+        '<button class="b sm ' + (inBasket(it) ? 'sec' : '') + '" data-i="' + i + '">' + (inBasket(it) ? 'Убрать' : '+ В вариант') + '</button></div>' +
+        '<div class="tx">' + esc(it.text) + '</div>' + (it.fig ? '<img src="' + esc(it.fig) + '" alt="Рисунок к задаче" loading="lazy">' : '') +
+        '<div class="ans">Ответ: <b>' + esc(it.answer) + '</b> · ' + esc(it.id) + '</div></article>'; }).join('') || '<div class="empty">Ничего не нашлось — измените фильтры.</div>';
+    el.querySelectorAll('[data-i]').forEach(function (b) {
+      b.onclick = function () {
+        var it = found.items[+b.dataset.i];
+        if (inBasket(it)) basket = basket.filter(function (x) { return !(x.id === it.id && x.subject === it.subject); });
+        else if (basket.length < 60) basket.push(it);
+        drawFound(); drawBasket();
+      };
+    });
+    document.getElementById('more').innerHTML = found.items.length < found.total ? '<button class="b sec" style="margin-top:10px" id="mb">Показать ещё</button>' : '';
+    var mb = document.getElementById('mb'); if (mb) mb.onclick = function () { filt.offset = found.items.length; search(true); };
+  }
+
+  function drawBasket() {
+    document.getElementById('bn').textContent = basket.length;
+    document.getElementById('bl').innerHTML = basket.map(function (b, i) {
+      return '<li>' + (b.subject.indexOf('oge') === 0 ? 'ОГЭ ' : '') + '№' + b.n + ' ' + esc(b.text.slice(0, 60)) + '… <a href="#" data-x="' + i + '" aria-label="Убрать из варианта">×</a></li>'; }).join('') || '<li class="muted" style="list-style:none;margin-left:-20px">Добавьте задачи из списка слева.</li>';
+    document.querySelectorAll('[data-x]').forEach(function (a) { a.onclick = function (e) { e.preventDefault(); basket.splice(+a.dataset.x, 1); drawBasket(); drawFound(); }; });
+    var tb = document.querySelector('[data-tab=builder]'); if (tb) tb.textContent = 'Конструктор ДЗ' + (basket.length ? ' · ' + basket.length : '');
+  }
+
+  function send() {
+    var sids = [].map.call(document.querySelectorAll('.basket input[type=checkbox]:checked'), function (c) { return +c.value; });
+    if (!basket.length) return toast('Вариант пустой');
+    if (!sids.length) return toast('Отметьте ученика');
+    var btn = document.getElementById('send'); btn.disabled = true;
+    api.post('/api/tutor/hw', { sids: sids, items: basket.map(function (b) { return { subject: b.subject, id: b.id }; }),
+      days: +document.getElementById('days').value, note: document.getElementById('note').value, title: document.getElementById('title').value })
+      .then(function (r) {
+        toast('Отправлено: ' + r.items + ' зад. × ' + r.homeworks.length + ' учен.');
+        basket = []; tab = 'students';
+        return api.get('/api/tutor/me').then(function (m) { me = m; render(); });
+      }).catch(function (e) { btn.disabled = false; fail(e); });
+  }
+
+  start();
+})();
+</script>
+</body>
+</html>

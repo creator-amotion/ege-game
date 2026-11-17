@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Аник — домашка от репетитора</title>
+<link rel="icon" href="icons/icon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@700;800&family=Golos+Text:wght@400..700&display=swap">
+<link rel="stylesheet" href="anik.css?v=7">
+<link rel="stylesheet" href="tutor.css?v=1">
+<script src="tutor-api.js?v=1"></script>
+<style>.wrap{max-width:640px}.task form{margin-top:8px}.task .inp{width:160px}.verdict{font-weight:700;margin-top:6px}</style>
+</head>
+<body>
+<header class="bar"><a class="wm" href="index.html" style="text-decoration:none">Аник<i>.</i></a><span class="who" id="who"></span></header>
+<main class="wrap" id="app"><div class="empty">Загружаю…</div></main>
+<script>
+(function () {
+  var A = window.AnikTutor, esc = A.esc, api = new A.Api('student');
+  var app = document.getElementById('app');
+
+  function start() {
+    if (!api.token()) return A.loginForm(api, app, 'Домашка от репетитора', 'Отправь боту «Аник» команду <b>/app</b> и введи код. Если ты уже входил в приложение на этом устройстве, вход сохранён.', start);
+    Promise.all([api.get('/api/hw/mine'), api.get('/api/room/mine'), api.get('/api/room/notes')]).then(function (r) { draw(r[0].homework, r[1].rooms, r[2].notes); })
+      .catch(function (e) { if (e.status === 401) return start(); app.innerHTML = '<div class="empty">Сервер не ответил. Обнови страницу чуть позже.</div>'; });
+  }
+
+  function draw(hws, rooms, notes) {
+    var h = '<h1>Домашка</h1>';
+    if (rooms.length) h += '<div class="stl"><span>Урок идёт</span></div>' + rooms.map(function (r) {
+      return '<div class="card" style="background:var(--yellow)"><b>' + esc(r.tutor) + '</b> ждёт на уроке <a class="b sm" style="margin-left:8px" href="lesson.html?r=' + encodeURIComponent(r.room) + '&as=s">Войти на доску</a></div>'; }).join('');
+    if (!hws.length) h += '<div class="empty" style="margin-top:12px">Заданий от репетитора сейчас нет.</div>';
+    hws.forEach(function (hw) {
+      h += '<div class="stl"><span>' + esc(hw.title) + '</span><span>' + hw.done + ' из ' + hw.total + ' · до ' + esc(hw.due) + '</span></div>';
+      if (hw.note) h += '<div class="tip" style="background:var(--blue-t);padding:8px 12px">' + esc(hw.note) + '</div>';
+      hw.items.forEach(function (it) {
+        h += '<article class="task" id="t' + it.id + '"><b>' + it.seq + '. ' + esc(it.topic) + '</b><div class="tx">' + esc(it.text) + '</div>' +
+          (it.status === 'todo' ? '<form data-id="' + it.id + '" class="row"><input class="inp" aria-label="Ответ на задание ' + it.seq + '" placeholder="Ответ" maxlength="200"><button class="b sm">Ответить</button></form><div class="verdict" role="status"></div>'
+            : '<div class="verdict" style="color:' + (it.ok ? 'var(--blue)' : 'var(--red)') + '">' + (it.status === 'skipped' ? 'Пропущено' : (it.ok ? '✓ Верно' : '✗ Неверно') + ': ' + esc(it.answer)) + '</div>') + '</article>';
+      });
+    });
+    if (notes.length) h += '<div class="stl"><span>Конспекты уроков</span></div>' + notes.map(function (n) {
+      return '<div class="mini"><a href="lesson.html?note=' + n.id + '">' + esc(n.title) + '</a> <span class="muted">' + esc(n.created) + '</span></div>'; }).join('');
+    h += '<p class="muted" style="margin-top:20px">Эти же задания есть в боте: /homework. Ответ, данный здесь, засчитывается и там.</p>';
+    app.innerHTML = h;
+    app.querySelectorAll('form[data-id]').forEach(function (f) {
+      f.onsubmit = function (e) {
+        e.preventDefault();
+        var v = f.querySelector('input').value.trim(), out = f.nextElementSibling;
+        if (!v) return;
+        f.querySelector('button').disabled = true;
+        api.post('/api/hw/answer', { item: +f.dataset.id, answer: v }).then(function (r) {
+          f.remove();
+          out.style.color = r.correct ? 'var(--blue)' : 'var(--red)';
+          out.textContent = r.correct ? '✓ Верно' : '✗ Неверно. Правильный ответ: ' + r.right;
+          if (r.done >= r.total) out.textContent += ' · Домашка выполнена, репетитор получит результаты.';
+        }).catch(function (e) { f.querySelector('button').disabled = false; out.textContent = e.message === 'done' ? 'Уже отвечено.' : 'Не отправилось, попробуй ещё раз.'; });
+      };
+    });
+  }
+  start();
+})();
+</script>
+</body>
+</html>
