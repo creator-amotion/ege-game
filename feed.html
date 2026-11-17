@@ -178,6 +178,13 @@ var DIAG=(function(){
   return {sid:m[1],queue:nums.slice(),total:nums.length,i:0,ok:0,done:0,ended:false};
 })();
 if(DIAG)SID=DIAG.sid;
+/* «закрепить сегодняшнее»: feed.html?nums=<предмет>:3,5,9 — лента только по этим номерам (сложность по-прежнему подстраивается) */
+var ONLY=(function(){
+  var m=/[?&]nums=([a-z-]+):([\d,]+)/.exec(location.search);if(!m||!SUBJ[m[1]])return null;
+  var want=m[2].split(',').map(Number),nums=SUBJ[m[1]].nums.filter(function(n){return want.indexOf(n)>=0;});
+  return nums.length?{sid:m[1],nums:nums}:null;
+})();
+if(ONLY&&!DIAG){SID=ONLY.sid;SUBJ[SID].nums=ONLY.nums;}
 function defaultSid(){var c=lsGet('anik_choice',null),m={'ege.rus':'ege-rus','ege.math':'ege-math','ege.mathb':'ege-mathb','oge.rus':'oge-rus','oge.math':'oge-math'};
   if(c&&m[c.exam+'.'+c.subj])return m[c.exam+'.'+c.subj];
   var s=window.AnikSync&&AnikSync.state&&AnikSync.state();var e=s&&s.exam,su=s&&s.subject;
