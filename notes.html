@@ -16,6 +16,7 @@
 <script src="anik-sync.js?v=7"></script>
 <script src="anik-nav.js?v=6" defer></script>
 <script src="tutor-api.js?v=4"></script>
+<script src="anik-notes-store.js?v=1"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{min-height:100vh}
@@ -25,13 +26,15 @@ main{max-width:520px;margin:0 auto;padding:18px 16px 24px}
 h1{font-family:var(--display);font-size:38px;font-weight:800;letter-spacing:-1.5px;line-height:.98;margin:12px 0 6px}
 .lead{font-size:15px;line-height:1.5}
 .stl{margin:24px 0 10px;padding-top:8px;border-top:2px solid var(--ink);font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;display:flex;justify-content:space-between;gap:10px}
-.note{background:#fff;padding:12px 14px;margin-bottom:8px;display:grid;grid-template-columns:1fr auto;gap:4px 10px;align-items:center}
+.note{background:#fff;padding:12px 14px;margin-bottom:8px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 10px;align-items:center}
 .note .t{font-weight:700;font-size:16px}
 .note .m{font-size:13px;color:var(--muted);grid-column:1}
 .note .acts{grid-column:1/-1;display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
 .b{min-height:40px;padding:0 14px;border:2px solid var(--ink);background:var(--ink);color:var(--paper);font-weight:600;font-size:14px;cursor:pointer;display:inline-flex;align-items:center;text-decoration:none;font-family:inherit}
 .b.sec{background:transparent;color:var(--ink)}
 .empty{background:#fff;padding:14px;font-size:15px}
+.badge{grid-column:1/-1;justify-self:start;font-size:12.5px;font-weight:600;padding:3px 8px;max-width:100%;overflow-wrap:anywhere}
+.badge.ok{background:var(--blue-t)}.badge.warn{background:var(--yellow)}.badge.local{background:var(--pink-t)}
 </style>
 </head>
 <body>
@@ -41,27 +44,43 @@ h1{font-family:var(--display);font-size:38px;font-weight:800;letter-spacing:-1.5
   var A = window.AnikTutor, esc = A.esc, api = new A.Api('student'), app = document.getElementById('app');
   var MONTHS = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
   function head() { return '<div class="top"><span class="wm">аник<i>.</i></span><a class="back" href="today.html">← Сегодня</a></div><h1>Мои конспекты</h1>' +
-    '<p class="lead">Всё, что было на доске на уроках с репетитором. Конспект сохраняется сам, когда урок заканчивается.</p>'; }
+    '<p class="lead">Всё, что было на доске на уроках с репетитором. На сервере конспект хранится 120 дней, а открытый хотя бы раз — сохраняется на этом устройстве и открывается без интернета.</p>'; }
+  var local = window.AnikNotes ? AnikNotes : { list: function () { return Promise.resolve([]); }, setOwner: function () {} };
   function start() {
     if (!api.token()) {
-      app.innerHTML = head() + '<div id="linkbox" style="margin-top:12px"></div>';
-      if (window.AnikSync && AnikSync.linkCard) AnikSync.linkCard(document.getElementById('linkbox'), function () { setTimeout(start, 600); });
-      return;
+      return local.list().then(function (mine) {             // без связки — только то, что уже сохранено на устройстве
+        app.innerHTML = head() + '<div id="linkbox" style="margin-top:12px"></div>';
+        if (window.AnikSync && AnikSync.linkCard) AnikSync.linkCard(document.getElementById('linkbox'), function () { setTimeout(start, 600); });
+        if (mine.length) draw([], mine, true, true);
+      });
     }
-    api.get('/api/room/notes').then(function (r) { draw(r.notes); })
-      .catch(function (e) { if (e.status === 401) return start(); app.innerHTML = head() + '<div class="empty">Сервер не ответил. Обнови страницу чуть позже.</div>'; });
+    api.get('/api/room/notes').then(function (r) { local.setOwner(r.owner); return local.list(r.owner).then(function (mine) { draw(r.notes, mine, false); }); })
+      .catch(function (e) {
+        if (e.status === 401) return start();
+        local.list().then(function (mine) { draw([], mine, true); });          // нет связи — копии с устройства
+      });
   }
-  function draw(notes) {
-    var h = head();
+  function draw(server, mine, offline, append) {
+    var h = append ? '' : head(), have = {}, notes = [];
+    mine.forEach(function (m) { have[m.id] = m; });
+    server.forEach(function (n) { n.saved = !!have[n.id]; notes.push(n); delete have[n.id]; });
+    Object.keys(have).forEach(function (k) { var m = have[k]; m.localOnly = true; notes.push(m); });
+    notes.sort(function (a, b) { return b.id - a.id; });
+    if (offline) h += '<div class="empty" style="margin-top:12px;background:var(--pink-t)">Нет связи с сервером — показаны конспекты, сохранённые на этом устройстве.</div>';
     if (!notes.length) { app.innerHTML = h + '<div class="empty" style="margin-top:14px">Конспектов пока нет. Они появятся после первого урока на доске.</div>'; return; }
-    var month = '';
+    var month = '', soon = Date.now() + 8 * 864e5;
     notes.forEach(function (n) {
       var d = new Date(String(n.created).replace(' ', 'T')), m = isNaN(d) ? '' : MONTHS[d.getMonth()] + ' ' + d.getFullYear();
       if (m !== month) { month = m; h += '<div class="stl"><span>' + esc(m || 'Уроки') + '</span></div>'; }
-      h += '<article class="note"><span class="t">' + esc(n.title) + '</span><span class="m">' + esc(n.tutor) + (isNaN(d) ? '' : ' · ' + d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' }) + ', ' + d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })) + '</span>' +
+      var exp = n.expires ? new Date(n.expires + 'T12:00:00') : null, badge = '';
+      if (n.localOnly || offline) badge = '<span class="badge local">' + (n.localOnly && !offline ? 'Хранится только на этом устройстве' : 'Копия на этом устройстве') + '</span>';
+      else if (n.saved) badge = '<span class="badge ok">✓ Сохранён на этом устройстве' + (exp ? ' · на сервере до ' + exp.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' }) : '') + '</span>';
+      else if (exp && exp.getTime() < soon) badge = '<span class="badge warn">Удалится с сервера ' + exp.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' }) + ' — открой или скачай PDF</span>';
+      else if (exp) badge = '<span class="badge">На сервере до ' + exp.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' }) + ' · открой, чтобы сохранить на устройстве</span>';
+      h += '<article class="note"><span class="t">' + esc(n.title) + '</span>' + badge + '<span class="m">' + esc(n.tutor || '') + (isNaN(d) ? '' : ' · ' + d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' }) + ', ' + d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })) + '</span>' +
         '<div class="acts"><a class="b" href="lesson.html?note=' + n.id + '">Открыть</a><a class="b sec" href="lesson.html?note=' + n.id + '&dl=png">Скачать PNG</a><a class="b sec" href="lesson.html?note=' + n.id + '&dl=pdf">Скачать PDF</a></div></article>';
     });
-    app.innerHTML = h;
+    if (append) app.insertAdjacentHTML('beforeend', '<div class="stl"><span>На этом устройстве</span></div>' + h); else app.innerHTML = h;
   }
   start();
 })();

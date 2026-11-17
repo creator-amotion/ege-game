@@ -17,6 +17,7 @@
 <script defer src="vendor/katex/katex.min.js"></script>
 <script defer src="vendor/katex/auto-render.min.js"></script>
 <script src="tutor-api.js?v=4"></script>
+<script src="anik-notes-store.js?v=1"></script>
 <style>
 html,body{height:100%}
 body.lesson{display:flex;flex-direction:column;height:100vh;height:100dvh;overflow:hidden}
@@ -130,7 +131,9 @@ body.lesson{display:flex;flex-direction:column;height:100vh;height:100dvh;overfl
   function toast(t) { var d = document.createElement('div'); d.className = 'toast'; d.setAttribute('role', 'status'); d.textContent = t; document.body.appendChild(d); setTimeout(function () { d.remove(); }, 3600); }
   function rid() { var a = new Uint8Array(6); crypto.getRandomValues(a); return Array.prototype.map.call(a, function (b) { return (b % 36).toString(36); }).join('') + Date.now().toString(36).slice(-4); }
   function loadScript(src) { return new Promise(function (ok, bad) { var s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = function () { bad(new Error('Не загрузилась библиотека')); }; document.head.appendChild(s); }); }
-  function fileUrl(f) { return A.API + '/api/file/' + f; }
+  var localUrls = {};                                  // картинки материалов из копии на устройстве
+  function fileUrl(f) { return localUrls[f] || A.API + '/api/file/' + f; }
+  var IMG_MAX = 1600, IMG_Q = 0.8, FILE_LIMIT = 1500000;  // материалы ужимаются на устройстве репетитора
 
   // ───────── вход ─────────
   function start() {
@@ -158,15 +161,32 @@ body.lesson{display:flex;flex-direction:column;height:100vh;height:100dvh;overfl
   }
 
   function openNote() {
-    var first = tutorApi.ownLogin() ? tutorApi : studentApi;
-    first.post('/api/note', { id: +NOTE }).catch(function (e) { var other = first === tutorApi ? studentApi : tutorApi; if (other.token()) return other.post('/api/note', { id: +NOTE }); throw e; })
+    var first = studentApi.token() ? studentApi : tutorApi, id = +NOTE;   // сначала вход приложения: ученику копия — на устройство
+    var show = function (n, banner) {
+      readOnly = true; role = 'view'; tool = 'hand'; noteTitle = n.title;
+      who.textContent = 'Конспект: ' + n.title;
+      peerEl.style.display = 'none';
+      build(); ops = []; apply(n.ops, true); showAll(true);
+      if (banner) { var b = document.createElement('div'); b.className = 'permbar view'; b.setAttribute('role', 'status'); b.textContent = banner; app.insertBefore(b, app.children[1]); resize(); }
+      var dl = qs.get('dl'); if (dl === 'png' || dl === 'pdf') setTimeout(function () { exportBoard(dl); }, 900);
+    };
+    var fromDevice = function (why) {
+      return (window.AnikNotes ? AnikNotes.load(id) : Promise.resolve(null)).then(function (c) {
+        if (!c) throw new Error('none');
+        localUrls = c.urls;
+        show(c.note, why === 404 ? 'Хранится только на этом устройстве: на сервере конспект уже удалён. Чтобы не потерять, скачай PDF.'
+          : 'Нет связи с сервером — показана копия с этого устройства.');
+      });
+    };
+    first.post('/api/note', { id: id }).catch(function (e) { var other = first === tutorApi ? studentApi : tutorApi; if (other.token()) return other.post('/api/note', { id: id }); throw e; })
       .then(function (n) {
-        readOnly = true; role = 'view'; tool = 'hand'; noteTitle = n.title;
-        who.textContent = 'Конспект: ' + n.title;
-        peerEl.style.display = 'none';
-        build(); ops = []; apply(n.ops, true); showAll(true);
-        var dl = qs.get('dl'); if (dl === 'png' || dl === 'pdf') setTimeout(function () { exportBoard(dl); }, 600);
-      }).catch(function () { app.innerHTML = '<main class="wrap"><div class="login"><h1>Конспект недоступен</h1><p class="lead">Откройте его из «Мои конспекты» в приложении или из кабинета.</p><p class="row" style="margin-top:12px"><a class="b sec" href="notes.html">Мои конспекты</a></p></div></main>'; });
+        show(n);
+        if (n.viewer === 'student' && window.AnikNotes) AnikNotes.save(n, fileUrl).then(function (ok) { if (ok) toast('Конспект сохранён на этом устройстве — откроется и без интернета'); }).catch(function () {});
+      }).catch(function (e) {
+        return fromDevice(e && e.status).catch(function () {
+          app.innerHTML = '<main class="wrap"><div class="login"><h1>Конспект недоступен</h1><p class="lead">' + (e && e.status === 404 ? 'На сервере его уже нет, а на этом устройстве копии не было.' : 'Откройте его из «Мои конспекты» в приложении или из кабинета.') + '</p><p class="row" style="margin-top:12px"><a class="b sec" href="notes.html">Мои конспекты</a></p></div></main>';
+        });
+      });
   }
 
   // ───────── разметка ─────────
@@ -594,18 +614,21 @@ body.lesson{display:flex;flex-direction:column;height:100vh;height:100dvh;overfl
     });
   }
   function toBlob(c, type, q) { return new Promise(function (ok) { c.toBlob(ok, type, q); }); }
-  function prepImage(file) {                          // большие картинки уменьшаем: до 2400 px по длинной стороне и до ~3,5 МБ
+  /* ужать холст в WebP (если браузер не умеет — JPEG) около 0,8; не влезло в 1,5 МБ — ещё раз пожиже */
+  function squeeze(c) {
+    var enc = function (q) { return toBlob(c, 'image/webp', q).then(function (b) { return b && b.type === 'image/webp' ? b : toBlob(c, 'image/jpeg', q); }); };
+    return enc(IMG_Q).then(function (b) { return b.size <= FILE_LIMIT ? b : enc(0.6); }).then(function (b) { return b.size <= FILE_LIMIT ? b : enc(0.4); });
+  }
+  function fitCanvas(w, h) { var k = Math.min(1, IMG_MAX / Math.max(w, h)), c = document.createElement('canvas'); c.width = Math.max(1, Math.round(w * k)); c.height = Math.max(1, Math.round(h * k)); return c; }
+  function prepImage(file) {                          // любая картинка: длинная сторона ≤ 1600 px, WebP/JPEG ~0,8
     return createImageBitmap(file).then(function (bmp) {
-      var ar = bmp.width / bmp.height, big = Math.max(bmp.width, bmp.height) > 2400 || file.size > 3.5e6 || !/png|jpeg|webp/.test(file.type);
-      if (!big) return { blob: file, ar: ar };
-      var k = Math.min(1, 2400 / Math.max(bmp.width, bmp.height)), c = document.createElement('canvas');
-      c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
-      var g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(bmp, 0, 0, c.width, c.height);
-      return toBlob(c, 'image/jpeg', 0.86).then(function (b) { return { blob: b, ar: ar }; });
+      var c = fitCanvas(bmp.width, bmp.height), g = c.getContext('2d');
+      g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(bmp, 0, 0, c.width, c.height);
+      return squeeze(c).then(function (b) { return { blob: b, ar: bmp.width / bmp.height }; });
     });
   }
   function pdfPages(file) {
-    var V = '3.11.174', base = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/' + V + '/';
+    var base = 'vendor/pdfjs/';                            // pdf.js 3.11.174 лежит на сайте: с внешних CDN на телефонах ломалось
     return (window.pdfjsLib ? Promise.resolve() : loadScript(base + 'pdf.min.js')).then(function () {
       window.pdfjsLib.GlobalWorkerOptions.workerSrc = base + 'pdf.worker.min.js';
       return file.arrayBuffer();
@@ -615,10 +638,10 @@ body.lesson{display:flex;flex-direction:column;height:100vh;height:100dvh;overfl
         chain = chain.then(function () {
           busy('PDF: страница ' + i + ' из ' + n + '…');
           return pdf.getPage(i).then(function (pg) {
-            var v0 = pg.getViewport({ scale: 1 }), k = 1600 / v0.width, vp = pg.getViewport({ scale: k }), c = document.createElement('canvas');
+            var v0 = pg.getViewport({ scale: 1 }), k = IMG_MAX / Math.max(v0.width, v0.height), vp = pg.getViewport({ scale: k }), c = document.createElement('canvas');
             c.width = Math.round(vp.width); c.height = Math.round(vp.height);
             var g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height);
-            return pg.render({ canvasContext: g, viewport: vp }).promise.then(function () { return toBlob(c, 'image/jpeg', 0.85); })
+            return pg.render({ canvasContext: g, viewport: vp }).promise.then(function () { return squeeze(c); })
               .then(function (b) { out.push({ blob: b, ar: c.width / c.height }); });
           });
         });
@@ -630,7 +653,7 @@ body.lesson{display:flex;flex-direction:column;height:100vh;height:100dvh;overfl
   function upload(blob) {
     var h = api.auth() || {}; h['Content-Type'] = blob.type || 'image/jpeg';
     return fetch(A.API + '/api/room/file?room=' + encodeURIComponent(ROOM), { method: 'POST', headers: h, body: blob })
-      .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error({ too_large: 'файл больше 4 МБ', room_full: 'на доске уже много материалов', quota: 'закончилось место для материалов', bad_type: 'нужен PNG, JPG или PDF' }[j.error] || j.error || 'ошибка'); return j; }); });
+      .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error({ too_large: 'картинка больше 1,5 МБ даже после сжатия', room_full: 'на доске уже много материалов', quota: 'закончилось ваше место для материалов (300 МБ)', bad_type: 'нужен PNG, JPG или PDF', disk_full: 'на сервере мало места, загрузка временно выключена', slow_down: 'слишком часто — подождите минуту' }[j.error] || j.error || 'ошибка'); return j; }); });
   }
   function addFiles(files, at) {
     files = files.filter(function (f) { return f && (/^image\/(png|jpeg|webp|gif)$/.test(f.type) || f.type === 'application/pdf' || /\.pdf$/i.test(f.name || '')); });
@@ -758,7 +781,7 @@ body.lesson{display:flex;flex-direction:column;height:100vh;height:100dvh;overfl
       if (kind === 'png') return dl(c.toDataURL('image/png'), name + '.png');
     } catch (e) { return toast('Картинки с другого сервера не дают сохранить файл'); }
     busy('Собираю PDF…');
-    (window.jspdf ? Promise.resolve() : loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js')).then(function () {
+    (window.jspdf ? Promise.resolve() : loadScript('vendor/jspdf/jspdf.umd.min.js')).then(function () {
       var doc = new window.jspdf.jsPDF({ unit: 'mm', format: 'a4' }), pw = 190, ph = 277, sliceH = Math.floor(c.width * ph / pw), y = 0, first = true;
       while (y < c.height) {                                // длинную доску режем на страницы A4
         var h = Math.min(sliceH, c.height - y), part = document.createElement('canvas'); part.width = c.width; part.height = h;

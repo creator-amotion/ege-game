@@ -196,7 +196,11 @@
         '<div class="row" style="margin-top:6px"><input class="inp" style="flex:1;min-width:200px" readonly value="' + esc(theirs) + '" aria-label="Ссылка для ученика"><button class="b sm" id="cp">Копировать</button>' +
         '<a class="b sm sec" href="' + esc(mine) + '" target="_blank" rel="noopener">Открыть доску</a></div><p class="muted" style="margin-top:4px">Ученику уже ушло приглашение в бот' + (me.call_url ? ' со ссылкой на звонок' : '') + ', и урок появился у него в приложении на «Сегодня».</p></div>';
       document.getElementById('cp').onclick = function () { navigator.clipboard && navigator.clipboard.writeText(theirs).then(function () { toast('Скопировано'); }); };
-    }).catch(function (e) { if (w) w.close(); fail(e); });
+    }).catch(function (e) {
+      if (w) w.close();
+      if (e.status === 503) return toast('Сервер сейчас занят: идёт очень много уроков. Попробуйте через несколько минут.');
+      fail(e);
+    });
   }
 
   // ───────── конструктор ДЗ ─────────
