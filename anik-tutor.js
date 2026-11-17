@@ -25,7 +25,7 @@
     if (!m.has_tutor) return h;
     h += '<div class="stl"><span>Задания от репетитора</span><span>' + esc(m.tutors.join(', ')) + '</span></div>';
     (m.rooms || []).forEach(function (r) {
-      h += '<div class="tut-room" role="status"><b>Урок начался</b><span>' + esc(r.tutor) + ' ждёт тебя на доске</span>' +
+      h += '<div class="tut-room" role="status"><b>Урок начался</b><span>' + esc(r.tutor) + ' ждёт тебя у доски</span>' +
         '<div class="tut-row"><a class="tut-go" href="lesson.html?r=' + encodeURIComponent(r.room) + '&as=s">Открыть доску</a>' +
         (r.call_url ? '<button class="tut-call" data-url="' + esc(r.call_url) + '">' + (/telemost/.test(r.call_url) ? 'Телемост' : 'Звонок') + '</button>' : '') + '</div></div>';
     });
@@ -37,7 +37,8 @@
         '<span class="m">' + x.done + ' из ' + x.total + ' · ' + esc(due(x.due)) + '</span><span class="act">' + (x.done ? 'Продолжить' : 'Решать') + '</span>' +
         '<i class="bar"><i style="width:' + pct + '%"></i></i></a>';
     });
-    if (hw.length || (m.rooms || []).length) h += '<a class="tut-all" href="homework.html">Все задания и конспекты уроков →</a>';
+    h += '<div class="tut-links">' + (hw.length || (m.rooms || []).length ? '<a class="tut-all" href="homework.html">Все задания →</a>' : '') +
+      '<a class="tut-all" href="notes.html">Мои конспекты' + (m.notes ? ' · ' + m.notes : '') + ' →</a></div>';
     return h;
   }
   var css = '.tut-cab{display:flex;flex-direction:column;gap:2px;margin-top:14px;padding:12px 14px;background:var(--ink);color:var(--paper);text-decoration:none}' +
@@ -49,7 +50,7 @@
     '.tut-hw{position:relative;display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:12px 14px 16px;background:#fff;color:var(--ink);text-decoration:none;margin-bottom:6px}' +
     '.tut-hw .t{font-weight:700}.tut-hw .m{font-size:13px;color:var(--muted);grid-column:1}.tut-hw .act{grid-column:2;grid-row:1/3;align-self:center;font-weight:700;color:var(--blue)}' +
     '.tut-hw .bar{position:absolute;left:0;right:0;bottom:0;height:5px;background:var(--chip)}.tut-hw .bar i{display:block;height:100%;background:var(--blue)}' +
-    '.tut-empty{background:#fff;padding:12px 14px;font-size:14px}.tut-all{display:inline-block;margin-top:2px;font-size:14px;font-weight:600;color:var(--ink)}';
+    '.tut-empty{background:#fff;padding:12px 14px;font-size:14px}.tut-all{display:inline-block;margin-top:2px;font-size:14px;font-weight:600;color:var(--ink)}.tut-links{display:flex;gap:18px;flex-wrap:wrap}';
   window.AnikTutorBox = function (el) {
     if (!el) return;
     if (!document.getElementById('tut-css')) { var st = document.createElement('style'); st.id = 'tut-css'; st.textContent = css; document.head.appendChild(st); }

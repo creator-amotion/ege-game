@@ -8,6 +8,7 @@
   function active() {
     var p = location.pathname.split('/').pop() || 'index.html';
     if (p === 'today.html') return /^#stamps/.test(location.hash) ? 'stamps' : 'today';
+    if (p === 'notes.html') return 'today';                 // «Мои конспекты» открываются с «Сегодня»
     return 'tasks';
   }
   function render(bar) {

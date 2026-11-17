@@ -12,7 +12,7 @@
 <link rel="stylesheet" href="anik.css?v=7">
 <link rel="stylesheet" href="tutor.css?v=2">
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-<script src="tutor-api.js?v=3"></script>
+<script src="tutor-api.js?v=4"></script>
 </head>
 <body>
 <header class="bar"><span class="wm">Аник<i>.</i> кабинет</span><span class="who" id="who"></span></header>
@@ -171,7 +171,9 @@
     document.getElementById('lesson').onclick = startLesson;
     api.post('/api/tutor/notes', { sid: cur }).then(function (r) {
       document.getElementById('notes').innerHTML = r.notes.length ? r.notes.map(function (n) {
-        return '<div class="mini"><a href="lesson.html?note=' + n.id + '" target="_blank" rel="noopener">' + esc(n.title) + '</a> <span class="muted">' + esc(n.created) + '</span></div>'; }).join('') : 'Пока нет: на уроке нажмите «Сохранить конспект».';
+        return '<div class="mini row" style="justify-content:space-between"><span><a href="lesson.html?note=' + n.id + '" target="_blank" rel="noopener">' + esc(n.title) + '</a> <span class="muted">' + esc(n.created) + '</span></span>' +
+          '<span class="row"><a class="b sm sec" href="lesson.html?note=' + n.id + '&dl=png" target="_blank" rel="noopener">PNG</a><a class="b sm sec" href="lesson.html?note=' + n.id + '&dl=pdf" target="_blank" rel="noopener">PDF</a></span></div>'; }).join('') :
+        'Пока нет. Конспект сохраняется сам, когда вы нажимаете «Завершить урок» (или кнопкой «Сохранить конспект» во время урока).';
     }).catch(function () {});
   }
 
@@ -194,7 +196,11 @@
         '<div class="row" style="margin-top:6px"><input class="inp" style="flex:1;min-width:200px" readonly value="' + esc(theirs) + '" aria-label="Ссылка для ученика"><button class="b sm" id="cp">Копировать</button>' +
         '<a class="b sm sec" href="' + esc(mine) + '" target="_blank" rel="noopener">Открыть доску</a></div><p class="muted" style="margin-top:4px">Ученику уже ушло приглашение в бот' + (me.call_url ? ' со ссылкой на звонок' : '') + ', и урок появился у него в приложении на «Сегодня».</p></div>';
       document.getElementById('cp').onclick = function () { navigator.clipboard && navigator.clipboard.writeText(theirs).then(function () { toast('Скопировано'); }); };
-    }).catch(function (e) { if (w) w.close(); fail(e); });
+    }).catch(function (e) {
+      if (w) w.close();
+      if (e.status === 503) return toast('Сервер сейчас занят: идёт очень много уроков. Попробуйте через несколько минут.');
+      fail(e);
+    });
   }
 
   // ───────── конструктор ДЗ ─────────
@@ -252,7 +258,8 @@
         (it.topic ? '<span class="tag">' + esc(it.topic) + '</span> ' : '') + '<span class="tag ' + (it.level === 'hard' ? 'red' : it.level === 'fipi' ? 'yel' : '') + '">' + LVL[it.level] + '</span></span>' +
         '<button class="b sm ' + (inBasket(it) ? 'sec' : '') + '" data-i="' + i + '">' + (inBasket(it) ? 'Убрать' : '+ В вариант') + '</button></div>' +
         '<div class="tx">' + esc(it.text) + '</div>' + (it.fig ? '<img src="' + esc(it.fig) + '" alt="Рисунок к задаче" loading="lazy">' : '') +
-        '<div class="ans">Ответ: <b>' + esc(it.answer) + '</b> · ' + esc(it.id) + '</div></article>'; }).join('') || '<div class="empty">Ничего не нашлось — измените фильтры.</div>';
+        '<div class="ans">Ответ: <b>' + esc(it.answer) + '</b> · ' + esc(it.id) + '</div>' +
+        (it.sol && it.sol.length ? '<details class="ans"><summary>Решение по шагам</summary><ol style="margin:4px 0 0 20px">' + it.sol.map(function (st) { return '<li>' + esc(st) + '</li>'; }).join('') + '</ol></details>' : '') + '</article>'; }).join('') || '<div class="empty">Ничего не нашлось — измените фильтры.</div>';
     el.querySelectorAll('[data-i]').forEach(function (b) {
       b.onclick = function () {
         var it = found.items[+b.dataset.i];

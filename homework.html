@@ -18,7 +18,7 @@
 <script defer src="vendor/katex/auto-render.min.js"></script>
 <script src="anik-sync.js?v=7"></script>
 <script src="anik-nav.js?v=7" defer></script>
-<script src="tutor-api.js?v=3"></script>
+<script src="tutor-api.js?v=4"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{min-height:100vh}
@@ -46,6 +46,7 @@ h1{font-family:var(--display);font-size:38px;font-weight:800;letter-spacing:-1.5
 .sum{background:var(--blue);color:#fff;padding:12px 14px;font-weight:600}
 .mini{background:#fff;padding:10px 12px;margin-bottom:6px;font-size:14px}
 .empty{background:#fff;padding:14px;font-size:15px}
+.sol{margin:6px 0 0;font-size:14px;line-height:1.5;background:var(--chip);padding:8px 10px 8px 30px}
 </style>
 </head>
 <body>
@@ -74,7 +75,7 @@ h1{font-family:var(--display);font-size:38px;font-weight:800;letter-spacing:-1.5
     }
     h += '<p class="lead">' + esc(m.tutors.join(', ')) + '</p>';
     (m.rooms || []).forEach(function (r) {
-      h += '<div class="stl"><span>Урок</span></div><div class="room" role="status"><b>Урок начался</b>' + esc(r.tutor) + ' ждёт тебя на доске.' +
+      h += '<div class="stl"><span>Урок</span></div><div class="room" role="status"><b>Урок начался</b>' + esc(r.tutor) + ' ждёт тебя у доски.' +
         '<div class="rowb"><a class="b" href="lesson.html?r=' + encodeURIComponent(r.room) + '&as=s">Открыть доску</a>' +
         (r.call_url ? '<button class="b sec" data-call="' + esc(r.call_url) + '">' + (/telemost/.test(r.call_url) ? 'Позвонить в Телемост' : 'Позвонить') + '</button>' : '') + '</div></div>';
     });
@@ -90,8 +91,7 @@ h1{font-family:var(--display);font-size:38px;font-weight:800;letter-spacing:-1.5
             : '<div class="verdict ' + (it.ok ? 'ok' : 'bad') + '">' + (it.status === 'skipped' ? 'Пропущено' : (it.ok ? '✓ Верно' : '✗ Неверно') + ': ' + esc(it.answer)) + '</div>') + '</article>';
       });
     });
-    if (notes.length) h += '<div class="stl"><span>Конспекты уроков</span></div>' + notes.map(function (n) {
-      return '<div class="mini"><a href="lesson.html?note=' + n.id + '">' + esc(n.title) + '</a></div>'; }).join('');
+    h += '<div class="stl"><span>Конспекты уроков</span><span>' + notes.length + '</span></div><a class="b sec" href="notes.html">Мои конспекты →</a>';
     h += '<p class="lead" style="margin-top:18px;font-size:13px;color:var(--muted)">Эти же задания есть в боте: /homework. Ответ, данный здесь, засчитывается и там.</p>';
     app.innerHTML = h;
     A.math(app);
@@ -111,6 +111,11 @@ h1{font-family:var(--display);font-size:38px;font-weight:800;letter-spacing:-1.5
         f.remove();
         out.className = 'verdict ' + (r.correct ? 'ok' : 'bad');
         out.textContent = r.correct ? '✓ Верно' : '✗ Неверно. Правильный ответ: ' + r.right;
+        if (!r.correct && r.sol && r.sol.length) {                  // решение по шагам (база, ОГЭ)
+          var so = document.createElement('ol'); so.className = 'sol'; so.setAttribute('aria-label', 'Решение');
+          r.sol.forEach(function (st) { var li = document.createElement('li'); li.textContent = st; so.appendChild(li); });
+          out.after(so); A.math(so);
+        }
         if (r.done >= r.total) {
           var s = document.createElement('div'); s.className = 'sum'; s.setAttribute('role', 'status');
           s.textContent = 'Задание выполнено: ' + r.done + ' из ' + r.total + '. Репетитор увидит результат.';
