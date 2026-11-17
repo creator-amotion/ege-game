@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<meta name="theme-color" content="#F3EEE2">
+<title>Аник — мои конспекты</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@700;800&family=Golos+Text:wght@400..700&display=swap">
+<link rel="stylesheet" href="anik.css?v=7">
+<script src="anik-sync.js?v=7"></script>
+<script src="anik-nav.js?v=6" defer></script>
+<script src="tutor-api.js?v=4"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{min-height:100vh}
+main{max-width:520px;margin:0 auto;padding:18px 16px 24px}
+.top{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:6px}
+.back{font-size:14px;font-weight:600;color:var(--ink)}
+h1{font-family:var(--display);font-size:38px;font-weight:800;letter-spacing:-1.5px;line-height:.98;margin:12px 0 6px}
+.lead{font-size:15px;line-height:1.5}
+.stl{margin:24px 0 10px;padding-top:8px;border-top:2px solid var(--ink);font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;display:flex;justify-content:space-between;gap:10px}
+.note{background:#fff;padding:12px 14px;margin-bottom:8px;display:grid;grid-template-columns:1fr auto;gap:4px 10px;align-items:center}
+.note .t{font-weight:700;font-size:16px}
+.note .m{font-size:13px;color:var(--muted);grid-column:1}
+.note .acts{grid-column:1/-1;display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+.b{min-height:40px;padding:0 14px;border:2px solid var(--ink);background:var(--ink);color:var(--paper);font-weight:600;font-size:14px;cursor:pointer;display:inline-flex;align-items:center;text-decoration:none;font-family:inherit}
+.b.sec{background:transparent;color:var(--ink)}
+.empty{background:#fff;padding:14px;font-size:15px}
+</style>
+</head>
+<body>
+<main id="app"><div class="empty">Загружаю…</div></main>
+<script>
+(function () {
+  var A = window.AnikTutor, esc = A.esc, api = new A.Api('student'), app = document.getElementById('app');
+  var MONTHS = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
+  function head() { return '<div class="top"><span class="wm">аник<i>.</i></span><a class="back" href="today.html">← Сегодня</a></div><h1>Мои конспекты</h1>' +
+    '<p class="lead">Всё, что было на доске на уроках с репетитором. Конспект сохраняется сам, когда урок заканчивается.</p>'; }
+  function start() {
+    if (!api.token()) {
+      app.innerHTML = head() + '<div id="linkbox" style="margin-top:12px"></div>';
+      if (window.AnikSync && AnikSync.linkCard) AnikSync.linkCard(document.getElementById('linkbox'), function () { setTimeout(start, 600); });
+      return;
+    }
+    api.get('/api/room/notes').then(function (r) { draw(r.notes); })
+      .catch(function (e) { if (e.status === 401) return start(); app.innerHTML = head() + '<div class="empty">Сервер не ответил. Обнови страницу чуть позже.</div>'; });
+  }
+  function draw(notes) {
+    var h = head();
+    if (!notes.length) { app.innerHTML = h + '<div class="empty" style="margin-top:14px">Конспектов пока нет. Они появятся после первого урока на доске.</div>'; return; }
+    var month = '';
+    notes.forEach(function (n) {
+      var d = new Date(String(n.created).replace(' ', 'T')), m = isNaN(d) ? '' : MONTHS[d.getMonth()] + ' ' + d.getFullYear();
+      if (m !== month) { month = m; h += '<div class="stl"><span>' + esc(m || 'Уроки') + '</span></div>'; }
+      h += '<article class="note"><span class="t">' + esc(n.title) + '</span><span class="m">' + esc(n.tutor) + (isNaN(d) ? '' : ' · ' + d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' }) + ', ' + d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })) + '</span>' +
+        '<div class="acts"><a class="b" href="lesson.html?note=' + n.id + '">Открыть</a><a class="b sec" href="lesson.html?note=' + n.id + '&dl=png">Скачать PNG</a><a class="b sec" href="lesson.html?note=' + n.id + '&dl=pdf">Скачать PDF</a></div></article>';
+    });
+    app.innerHTML = h;
+  }
+  start();
+})();
+</script>
+</body>
+</html>
