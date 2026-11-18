@@ -42,8 +42,8 @@
     return fetch(API + '/api/link', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: code }) })
       .then(function (r) { return r.json().then(function (j) { return [r.status, j]; }); })
       .then(function (x) {
-        if (x[0] !== 200 || !x[1].token) throw new Error('Код не подошёл: он действует 15 минут и один раз. Возьмите новый в боте: /app');
-        if (!set(KEYS[self.role], x[1].token)) throw new Error('Браузер не даёт сохранить вход. Выключите режим инкогнито.');
+        if (x[0] !== 200 || !x[1].token) throw new Error(self.role === 'student' ? 'Код не подошёл: он действует 15 минут и один раз. Возьми новый в боте: /app' : 'Код не подошёл: он действует 15 минут и один раз. Возьмите новый в боте: /app');
+        if (!set(KEYS[self.role], x[1].token)) throw new Error(self.role === 'student' ? 'Браузер не даёт сохранить вход. Выключи режим инкогнито.' : 'Браузер не даёт сохранить вход. Выключите режим инкогнито.');
         return true;
       });
   };

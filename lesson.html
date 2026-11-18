@@ -12,11 +12,11 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@700;800&family=Golos+Text:wght@400..700&display=swap">
 <link rel="stylesheet" href="anik.css?v=7">
-<link rel="stylesheet" href="tutor.css?v=2">
+<link rel="stylesheet" href="tutor.css?v=3">
 <link rel="stylesheet" href="vendor/katex/katex.min.css">
 <script defer src="vendor/katex/katex.min.js"></script>
 <script defer src="vendor/katex/auto-render.min.js"></script>
-<script src="tutor-api.js?v=4"></script>
+<script src="tutor-api.js?v=5"></script>
 <script src="anik-notes-store.js?v=1"></script>
 <style>
 html,body{height:100%}
@@ -82,6 +82,13 @@ body.lesson{display:flex;flex-direction:column;height:100vh;height:100dvh;overfl
 .vids .st{position:absolute;left:8px;top:8px;background:var(--paper);font-size:12px;font-weight:600;padding:2px 6px}
 .ringcall{background:var(--yellow);padding:10px;margin-top:8px;font-weight:600}
 .exp summary{cursor:pointer;font-weight:600;font-size:14px;margin-top:14px}
+.tcard.called,.timg.called{outline:10px solid var(--red);outline-offset:6px}
+.rvc{background:#fff;padding:10px;margin-top:8px;font-size:14px;border-left:5px solid var(--line2);cursor:grab}
+.rvc.ask{border-color:var(--red)}.rvc.wrong{border-color:var(--red)}.rvc.todo{border-color:var(--yellow)}.rvc.on{background:var(--yellow-t)}
+.rvc .hd{font-weight:700}.rvc .rvq{margin-top:4px;padding:4px 6px;background:var(--yellow-t);font-weight:600}
+.rvc .tx{margin:4px 0;max-height:110px;overflow:hidden;white-space:pre-wrap;line-height:1.35;overflow-wrap:anywhere}
+.rvc img{display:block;max-width:100%;max-height:100px}.rvc .row{margin-top:6px}
+.rvh{margin-top:12px;font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;border-top:2px solid var(--ink);padding-top:6px}
 .hint{position:absolute;left:10px;bottom:10px;background:rgba(243,238,226,.95);border:2px solid var(--ink);padding:6px 10px;font-size:12px;max-width:min(440px,80%);pointer-events:none}
 .busy{position:absolute;left:50%;top:14px;transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:8px 14px;font-weight:600;font-size:14px;z-index:6}
 .tbox{position:absolute;z-index:5;min-width:220px;min-height:44px;border:2px dashed var(--ink);background:rgba(255,255,255,.9);font-family:'Golos Text',sans-serif;font-weight:600;padding:4px 6px;resize:both}
@@ -131,6 +138,7 @@ body.lesson{display:flex;flex-direction:column;height:100vh;height:100dvh;overfl
   function toast(t) { var d = document.createElement('div'); d.className = 'toast'; d.setAttribute('role', 'status'); d.textContent = t; document.body.appendChild(d); setTimeout(function () { d.remove(); }, 3600); }
   function rid() { var a = new Uint8Array(6); crypto.getRandomValues(a); return Array.prototype.map.call(a, function (b) { return (b % 36).toString(36); }).join('') + Date.now().toString(36).slice(-4); }
   function loadScript(src) { return new Promise(function (ok, bad) { var s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = function () { bad(new Error('Не загрузилась библиотека')); }; document.head.appendChild(s); }); }
+  var reviewN = 0, reviewData = null, lastCard = '', atBoard = false, permBefore = 'view', calledAt = 0;
   var localUrls = {};                                  // картинки материалов из копии на устройстве
   function fileUrl(f) { return localUrls[f] || A.API + '/api/file/' + f; }
   var IMG_MAX = 1600, IMG_Q = 0.8, FILE_LIMIT = 1500000;  // материалы ужимаются на устройстве репетитора
@@ -138,10 +146,10 @@ body.lesson{display:flex;flex-direction:column;height:100vh;height:100dvh;overfl
   // ───────── вход ─────────
   function start() {
     if (NOTE) return openNote();
-    if (!/^[A-Za-z0-9_-]{10,40}$/.test(ROOM)) { app.innerHTML = '<main class="wrap"><div class="login"><h1>Нет такой комнаты</h1><p class="lead">Попросите у репетитора ссылку на урок.</p></div></main>'; return; }
+    if (!/^[A-Za-z0-9_-]{10,40}$/.test(ROOM)) { app.innerHTML = '<main class="wrap"><div class="login"><h1>Нет такой комнаты</h1><p class="lead">' + (api === studentApi ? 'Попроси у репетитора ссылку на урок.' : 'Создайте урок заново в кабинете.') + '</p></div></main>'; return; }
     if (!api.token()) {
       app.innerHTML = '<main class="wrap"></main>';
-      return A.loginForm(api, app.firstChild, 'Вход на урок', 'Отправьте боту «Аник» команду <b>/app</b> и введите код — так урок узнает, что это вы.', function () { location.reload(); });
+      return A.loginForm(api, app.firstChild, 'Вход на урок', api === studentApi ? 'Отправь боту «Аник» команду <b>/app</b> и введи код — так урок узнает, что это ты.' : 'Отправьте боту «Аник» команду <b>/app</b> и введите код — так урок узнает, что это вы.', function () { location.reload(); });
     }
     api.post('/api/room/join', { room: ROOM }).then(function (j) {
       role = j.role; names = j.names; ice = j.ice || []; callUrl = j.call_url || ''; perm = j.perm || 'view';
@@ -151,6 +159,7 @@ body.lesson{display:flex;flex-direction:column;height:100vh;height:100dvh;overfl
       ops = []; apply(j.ops, true); seq = j.seq; setPeer(j.peer_online);
       var go = ops.filter(function (o) { return o.t === 'go' && o.x != null; }).pop();
       if (role === 'student' && go) jump(go); else showAll(true);
+      if (role === 'tutor') loadReview();
       poll();
     }).catch(function (e) {
       if (e.status === 401) return start();
@@ -184,7 +193,7 @@ body.lesson{display:flex;flex-direction:column;height:100vh;height:100dvh;overfl
         if (n.viewer === 'student' && window.AnikNotes) AnikNotes.save(n, fileUrl).then(function (ok) { if (ok) toast('Конспект сохранён на этом устройстве — откроется и без интернета'); }).catch(function () {});
       }).catch(function (e) {
         return fromDevice(e && e.status).catch(function () {
-          app.innerHTML = '<main class="wrap"><div class="login"><h1>Конспект недоступен</h1><p class="lead">' + (e && e.status === 404 ? 'На сервере его уже нет, а на этом устройстве копии не было.' : 'Откройте его из «Мои конспекты» в приложении или из кабинета.') + '</p><p class="row" style="margin-top:12px"><a class="b sec" href="notes.html">Мои конспекты</a></p></div></main>';
+          app.innerHTML = '<main class="wrap"><div class="login"><h1>Конспект недоступен</h1><p class="lead">' + (e && e.status === 404 ? 'На сервере его уже нет, а на этом устройстве копии не было.' : first === studentApi ? 'Открой его из «Мои конспекты» в приложении.' : 'Откройте его из кабинета.') + '</p><p class="row" style="margin-top:12px"><a class="b sec" href="notes.html">Мои конспекты</a></p></div></main>';
         });
       });
   }
@@ -212,7 +221,8 @@ body.lesson{display:flex;flex-direction:column;height:100vh;height:100dvh;overfl
       '<button class="tool wide" id="zall">Показать всё</button><button class="tool wide" id="zhome">К началу</button>';
     if (role === 'tutor') {
       tb += '<button class="tool wide" id="here" title="Ученик перейдёт к месту доски, которое видно у вас">Позвать сюда</button><span class="sep"></span>' +
-        '<button class="tool wide yel" id="bank">Задачи из банка</button><button class="tool wide yel" id="mat">Материалы</button><input type="file" id="matf" accept="image/png,image/jpeg,image/webp,application/pdf,.pdf" multiple hidden>' +
+        '<button class="tool wide" id="toboard" title="Ученик получит право рисовать, и его экран перейдёт к задаче">' + (atBoard ? 'Вернуть ученика на место' : 'Вывести к доске') + '</button>' +
+        '<button class="tool wide yel" id="rev">К разбору' + (reviewN ? ' · ' + reviewN : '') + '</button><button class="tool wide yel" id="bank">Задачи из банка</button><button class="tool wide yel" id="mat">Материалы</button><input type="file" id="matf" accept="image/png,image/jpeg,image/webp,application/pdf,.pdf" multiple hidden>' +
         '<button class="tool wide" id="clr">Очистить доску</button><button class="tool wide" id="save">Сохранить конспект</button>';
     }
     tb += '<button class="tool wide" id="png">PNG</button><button class="tool wide" id="pdf">PDF</button>';
@@ -240,7 +250,7 @@ body.lesson{display:flex;flex-direction:column;height:100vh;height:100dvh;overfl
     app.querySelectorAll('[data-color]').forEach(function (b) { b.onclick = function () { color = b.dataset.color; press('[data-color]', b); if (tool === 'er' || tool === 'hand') setTool('pen'); }; });
     app.querySelectorAll('[data-w]').forEach(function (b) { b.onclick = function () { width = +b.dataset.w; press('[data-w]', b); }; });
     on('undo', undo); on('clr', clearBoard); on('save', save); on('png', function () { exportBoard('png'); }); on('pdf', function () { exportBoard('pdf'); });
-    on('bank', function () { drawer('bank'); }); on('mat', function () { document.getElementById('matf').click(); });
+    on('bank', function () { drawer('bank'); }); on('rev', function () { drawer('review'); }); on('toboard', toBoard); on('mat', function () { document.getElementById('matf').click(); });
     var mf = document.getElementById('matf'); if (mf) mf.onchange = function () { addFiles([].slice.call(mf.files)); mf.value = ''; };
     on('zin', function () { zoomAt(1.25); }); on('zout', function () { zoomAt(0.8); }); on('zall', function () { showAll(false); }); on('zhome', home);
     on('here', function () { send({ t: 'go', id: rid(), x: Math.round(view.x), y: Math.round(view.y), z: Math.round(view.z * 1000) / 1000 }); toast('Ученик перешёл к этому месту доски'); });
@@ -266,7 +276,7 @@ body.lesson{display:flex;flex-direction:column;height:100vh;height:100dvh;overfl
       [['view', 'смотрит'], ['pen', 'ручка'], ['all', 'рисует']].map(function (p) { return '<button data-perm="' + p[0] + '" aria-pressed="' + (perm === p[0]) + '">' + p[1] + '</button>'; }).join('') + '</span>';
     box.querySelectorAll('[data-perm]').forEach(function (b) {
       b.onclick = function () {
-        api.post('/api/room/perm', { room: ROOM, perm: b.dataset.perm }).then(function (r) { perm = r.perm; permUi(); toast({ view: 'Ученик только смотрит', pen: 'Ученик может рисовать ручкой', all: 'Ученик может рисовать всем, кроме материалов' }[perm]); })
+        api.post('/api/room/perm', { room: ROOM, perm: b.dataset.perm }).then(function (r) { perm = r.perm; atBoard = false; boardBtn(); permUi(); toast({ view: 'Ученик только смотрит', pen: 'Ученик может рисовать ручкой', all: 'Ученик может рисовать всем, кроме материалов' }[perm]); })
           .catch(function (e) { toast('Не получилось: ' + e.message); });
       };
     });
@@ -277,7 +287,7 @@ body.lesson{display:flex;flex-direction:column;height:100vh;height:100dvh;overfl
     if (role === 'student') {
       if (perm !== 'view' && tool === 'hand') tool = 'pen';
       renderTools();
-      toast(PERM_TEXT[perm]);
+      if (Date.now() - calledAt > 1500) toast(PERM_TEXT[perm]);
     } else permUi();
   }
 
@@ -315,7 +325,15 @@ body.lesson{display:flex;flex-direction:column;height:100vh;height:100dvh;overfl
     if (initial && b[2] - b[0] <= W + 100) { z = r.width < 600 ? 0.4 : fitZ(); view.z = z; view.x = Math.min(b[0], 0) - 12 / z; view.y = Math.min(b[1], 0) - 12 / z; return schedule(); }
     view.z = z; view.x = b[0] - (r.width / z - (b[2] - b[0])) / 2; view.y = b[1] - pad / z; schedule();
   }
-  function jump(go) { view.z = Math.max(0.05, Math.min(4, go.z || view.z)); view.x = go.x; view.y = go.y; schedule(); }
+  function jump(go) {
+    var z = go.fw ? (stage.clientWidth - 16) / go.fw : go.z;    // «к доске»: задача целиком по ширине экрана ученика
+    view.z = Math.max(0.05, Math.min(4, z || view.z)); view.x = go.x; view.y = go.y; schedule();
+    if (go.card) setTimeout(function () { flashCard(go.card); }, 120);
+  }
+  function flashCard(id) {
+    calledCard = id; cardsKey = ''; schedule();              // рамка переживает перерисовку карточек
+    setTimeout(function () { if (calledCard === id) { calledCard = ''; cardsKey = ''; schedule(); } }, 6000);
+  }
   function toWorld(e) { var r = canvas.getBoundingClientRect(); return [view.x + (e.clientX - r.left) / view.z, view.y + (e.clientY - r.top) / view.z]; }
   function wheel() {
     stage.addEventListener('wheel', function (e) {
@@ -367,10 +385,15 @@ body.lesson{display:flex;flex-direction:column;height:100vh;height:100dvh;overfl
     list.forEach(function (o) {
       if (sentIds[o.id]) return;
       o = norm(o); ops.push(o);
-      if (o.t === 'go' && o.x != null && !initial && role === 'student') { jump(o); toast('Репетитор показывает это место доски'); }
+      if (o.t === 'go' && o.x != null && !initial && role === 'student') {
+        if (o.card) { calledAt = Date.now(); called = true; } else toast('Репетитор показывает это место доски');
+        jump(o);
+      }
     });
     cache = null; schedule();
+    if (called) { called = false; toast('Репетитор вызвал тебя к доске: пиши прямо у задачи'); }
   }
+  var called = false, calledCard = '';
   function schedule() { if (!dirty) { dirty = true; requestAnimationFrame(function () { dirty = false; redraw(); }); } }
 
   // ───────── рисование ─────────
@@ -398,8 +421,9 @@ body.lesson{display:flex;flex-direction:column;height:100vh;height:100dvh;overfl
     if (key !== cardsKey) { cardsKey = key; drawCards(m.cards); }
   }
   function drawCards(cards) {
-    var box = document.getElementById('cards'), cls = role === 'tutor' ? ' tutor' : '';
+    var box = document.getElementById('cards'), base = role === 'tutor' ? ' tutor' : '';
     box.innerHTML = cards.map(function (c) {
+      var cls = base + (c.id === calledCard ? ' called' : '');
       if (c.t === 'im') return '<div class="timg' + cls + '" data-id="' + esc(c.id) + '" style="left:' + c.x + 'px;top:' + c.y + 'px;width:' + c.w + 'px;height:' + (c.w / c.ar) + 'px">' +
         '<img src="' + esc(fileUrl(c.f)) + '" crossorigin="anonymous" alt="Материал урока" draggable="false"><i class="hdl" aria-hidden="true"></i><b class="del" aria-hidden="true">×</b></div>';
       return '<div class="tcard' + cls + '" data-id="' + esc(c.id) + '" style="left:' + c.x + 'px;top:' + c.y + 'px;width:' + c.w + 'px"><span class="hd">' + esc(c.head) + '</span>' +
@@ -543,6 +567,7 @@ body.lesson{display:flex;flex-direction:column;height:100vh;height:100dvh;overfl
         if (!card) return null;
         if (e.clientX > r.right - Math.max(28, 52 * view.z) && e.clientY < r.top + Math.max(28, 52 * view.z)) return { kind: 'del', id: card.id };
         var corner = e.clientX > r.right - Math.max(24, 44 * view.z) && e.clientY > r.bottom - Math.max(24, 44 * view.z);
+        lastCard = card.id;
         return { kind: corner ? 'size' : 'move', card: card, el: els[i], sx: e.clientX, sy: e.clientY, x0: card.x, y0: card.y, w0: card.w };
       }
     }
@@ -606,7 +631,12 @@ body.lesson{display:flex;flex-direction:column;height:100vh;height:100dvh;overfl
   function dropAndPaste() {
     stage.addEventListener('dragover', function (e) { e.preventDefault(); stage.classList.add('drop'); });
     stage.addEventListener('dragleave', function () { stage.classList.remove('drop'); });
-    stage.addEventListener('drop', function (e) { e.preventDefault(); stage.classList.remove('drop'); var w = toWorld(e); addFiles([].slice.call(e.dataTransfer.files || []), w); });
+    stage.addEventListener('drop', function (e) {
+      e.preventDefault(); stage.classList.remove('drop');
+      var rv = e.dataTransfer.getData('application/x-anik-review');
+      if (rv) { var it = reviewItem(rv); if (it) placeReview(it, toWorld(e)); return; }
+      var w = toWorld(e); addFiles([].slice.call(e.dataTransfer.files || []), w);
+    });
     document.addEventListener('paste', function (e) {
       if (document.activeElement && /TEXTAREA|INPUT/.test(document.activeElement.tagName)) return;
       var files = [].slice.call((e.clipboardData && e.clipboardData.items) || []).filter(function (it) { return it.kind === 'file' && /^image\//.test(it.type); }).map(function (it) { return it.getAsFile(); });
@@ -802,7 +832,7 @@ body.lesson{display:flex;flex-direction:column;height:100vh;height:100dvh;overfl
     if (!d) return;
     if (!d.hidden && d.dataset.what === what) { d.hidden = true; resize(); return; }
     d.hidden = false; d.dataset.what = what; resize();
-    if (what === 'bank') bankUi(d); else callPanel(d);
+    if (what === 'bank') bankUi(d); else if (what === 'review') reviewUi(d); else callPanel(d);
   }
   function bankUi(d) {
     var b = BANKS.filter(function (x) { return x[0] === bf.bank; })[0], nums = [];
@@ -844,15 +874,88 @@ body.lesson{display:flex;flex-direction:column;height:100vh;height:100dvh;overfl
         bl.querySelectorAll('[data-k]').forEach(function (btn) { btn.onclick = function () { place(part[+btn.dataset.k], b); }; });
       }).catch(function () { document.getElementById('bl').innerHTML = '<p class="muted" style="margin-top:8px">Не получилось загрузить задачи этого номера.</p>'; });
   }
-  function place(it, b) {
-    var r = stage.getBoundingClientRect(), y = Math.round(view.y + 30 / view.z), x = Math.round(view.x + 20 / view.z), w = Math.round(Math.min(1400, Math.max(600, r.width / view.z - 60)));
-    document.querySelectorAll('#cards > div').forEach(function (el) { if (el.offsetLeft < x + w && el.offsetLeft + el.offsetWidth > x && el.offsetTop < y + 200 && el.offsetTop + el.offsetHeight > y - 40) y = Math.max(y, el.offsetTop + el.offsetHeight + 40); });
+  function place(it, b) { placeTask({ head: b[1] + ' · №' + bf.n, text: it.text, fig: it.fig }); toast('Задача на доске'); }
+  function placeTask(t, at) {
+    var r = stage.getBoundingClientRect(), y = Math.round(at ? at[1] : view.y + 30 / view.z), x = Math.round(at ? at[0] : view.x + 20 / view.z), w = Math.round(Math.min(1400, Math.max(600, r.width / view.z - 60)));
+    var it = t;
+    if (!at) document.querySelectorAll('#cards > div').forEach(function (el) { if (el.offsetLeft < x + w && el.offsetLeft + el.offsetWidth > x && el.offsetTop < y + 200 && el.offsetTop + el.offsetHeight > y - 40) y = Math.max(y, el.offsetTop + el.offsetHeight + 40); });
     if (y + 200 > view.y + r.height / view.z) { view.y = y - 40 / view.z; schedule(); }
     var fig = /^(figs|trainer\/figs)\/[A-Za-z0-9_.-]+$/.test(it.fig) ? it.fig : '';
-    var id = rid(); myStack.push(id);
-    send({ t: 'tk', id: id, x: x, y: y, w: w, head: b[1] + ' · №' + bf.n, text: it.text.slice(0, 3900), fig: fig });
-    toast('Задача на доске');
+    var id = rid(), op = { t: 'tk', id: id, x: x, y: y, w: w, head: String(t.head).slice(0, 120), text: it.text.slice(0, 3900), fig: fig };
+    if (t.ask) op.ask = t.ask;
+    myStack.push(id); lastCard = id;
+    send(op);
     if (r.width < 820) { document.getElementById('drawer').hidden = true; resize(); }
+    return id;
+  }
+
+  // ───────── «К разбору»: что отметил ученик и его домашка ─────────
+  var STATE = { wrong: 'ошибка', todo: 'не решено', skipped: 'пропущено' };
+  function loadReview() {
+    return api.post('/api/room/review', { room: ROOM }).then(function (r) {
+      reviewData = r; reviewN = r.asks.length + r.homework.length;
+      var b = document.getElementById('rev'); if (b) b.textContent = 'К разбору' + (reviewN ? ' · ' + reviewN : '');
+      return r;
+    });
+  }
+  function reviewItem(key) { var p = key.split(':'), list = reviewData ? (p[0] === 'a' ? reviewData.asks : reviewData.homework) : []; return list[+p[1]] || null; }
+  function placeReview(it, at) {
+    var id = placeTask({ head: it.head, text: it.text, fig: it.fig, ask: it.id && !it.item ? it.id : 0 }, at);
+    it.placed = id; toast('Задача на доске'); var d = document.getElementById('drawer');
+    if (d && !d.hidden && d.dataset.what === 'review') drawReview(d);
+    return id;
+  }
+  function reviewUi(d) {
+    d.innerHTML = '<h3>К разбору <button class="x" id="dx" aria-label="Закрыть">×</button></h3><p class="muted" style="margin-top:6px">Загружаю…</p>';
+    on('dx', function () { d.hidden = true; resize(); });
+    loadReview().then(function () { drawReview(d); }).catch(function () { d.querySelector('p').textContent = 'Не получилось загрузить.'; });
+  }
+  function rvCard(it, key, cls, sub) {
+    return '<article class="rvc ' + cls + (it.placed ? ' on' : '') + '" draggable="true" data-rv="' + key + '"><div class="hd">' + esc(it.head) + '</div><div class="muted">' + esc(sub) + '</div>' +
+      (it.question ? '<div class="rvq">' + esc(it.question) + '</div>' : '') + '<div class="tx">' + esc(it.text) + '</div>' + (it.fig ? '<img src="' + esc(it.fig) + '" alt="" loading="lazy">' : '') +
+      '<div class="row"><button class="b sm" data-put="' + key + '">' + (it.placed ? 'Ещё раз' : 'На доску') + '</button><button class="b sm blue" data-call="' + key + '">К доске</button>' +
+      (it.id && !it.item ? '<button class="b sm sec" data-ok="' + it.id + '">Разобрали</button>' : '') + '</div></article>';
+  }
+  function drawReview(d) {
+    var r = reviewData, h = '<h3>К разбору <button class="x" id="dx" aria-label="Закрыть">×</button></h3><p class="muted" style="margin-top:6px">Нажмите «На доску» или перетащите задачу на нужное место. «К доске» — поставить задачу и вывести ученика.</p>';
+    h += '<div class="rvh">Просит разобрать · ' + r.asks.length + '</div>' + (r.asks.map(function (a, i) {
+      return rvCard(a, 'a:' + i, 'ask', a.source_label + ' · ' + a.when + (a.answer ? ' · ответ: ' + a.answer : '')); }).join('') || '<p class="muted" style="margin-top:6px">Отметок нет.</p>');
+    h += '<div class="rvh">Из домашки · ' + r.homework.length + '</div>' + (r.homework.map(function (x, i) {
+      return rvCard(x, 'h:' + i, x.state, STATE[x.state] + (x.answer ? ' · ответ: ' + x.answer : '') + (x.correct ? ' · верно: ' + x.correct : '')); }).join('') || '<p class="muted" style="margin-top:6px">Всё решено верно.</p>');
+    d.innerHTML = h; A.math(d);
+    on('dx', function () { d.hidden = true; resize(); });
+    d.querySelectorAll('[data-rv]').forEach(function (c) { c.ondragstart = function (e) { e.dataTransfer.setData('application/x-anik-review', c.dataset.rv); e.dataTransfer.effectAllowed = 'copy'; }; });
+    d.querySelectorAll('[data-put]').forEach(function (b) { b.onclick = function () { placeReview(reviewItem(b.dataset.put)); }; });
+    d.querySelectorAll('[data-call]').forEach(function (b) { b.onclick = function () { var it = reviewItem(b.dataset.call); callStudent(it.placed && cardById(it.placed) ? it.placed : placeReview(it)); }; });
+    d.querySelectorAll('[data-ok]').forEach(function (b) {
+      b.onclick = function () {
+        b.disabled = true;
+        api.post('/api/tutor/ask/done', { id: +b.dataset.ok }).then(function () {
+          r.asks = r.asks.filter(function (a) { return a.id !== +b.dataset.ok; }); reviewN = r.asks.length + r.homework.length;
+          var t = document.getElementById('rev'); if (t) t.textContent = 'К разбору' + (reviewN ? ' · ' + reviewN : ''); drawReview(d);
+        }).catch(function (e) { b.disabled = false; toast('Не получилось: ' + e.message); });
+      };
+    });
+  }
+
+  // ───────── «Вывести к доске»: право рисовать + экран ученика у задачи ─────────
+  function cardById(id) { return model().cards.filter(function (c) { return c.id === id; })[0]; }
+  function setStudentPerm(p) { return api.post('/api/room/perm', { room: ROOM, perm: p }).then(function (r) { perm = r.perm; permUi(); }); }
+  function boardBtn() { var b = document.getElementById('toboard'); if (b) b.textContent = atBoard ? 'Вернуть ученика на место' : 'Вывести к доске'; }
+  function callStudent(cardId) {
+    var c = cardId && cardById(cardId);
+    if (!atBoard) permBefore = perm;
+    return setStudentPerm('all').then(function () {
+      atBoard = true; boardBtn();
+      if (c) send({ t: 'go', id: rid(), x: Math.round(c.x - 30), y: Math.round(c.y - 30), z: 1, fw: Math.round(c.w + 60), card: c.id });
+      else send({ t: 'go', id: rid(), x: Math.round(view.x), y: Math.round(view.y), z: Math.round(view.z * 1000) / 1000 });
+      toast('Ученик у доски: может рисовать' + (c ? ' у этой задачи' : ''));
+    }).catch(function (e) { toast('Не получилось: ' + e.message); });
+  }
+  function toBoard() {
+    if (atBoard) return setStudentPerm(permBefore === 'all' ? 'view' : permBefore).then(function () { atBoard = false; boardBtn(); toast('Ученик снова смотрит'); }).catch(function (e) { toast('Не получилось: ' + e.message); });
+    var last = cardById(lastCard) ? lastCard : (model().cards.slice(-1)[0] || {}).id;
+    callStudent(last);
   }
 
   // звонок: основной — Телемост (ссылка репетитора); запасной — WebRTC напрямую, экспериментально
@@ -860,7 +963,7 @@ body.lesson{display:flex;flex-direction:column;height:100vh;height:100dvh;overfl
     var box = document.getElementById('callbox');
     if (readOnly) { box.innerHTML = ''; return; }
     var tm = /telemost/.test(callUrl);
-    box.innerHTML = (callUrl ? '<button class="callb" id="tmb">📞 ' + (tm ? 'Позвонить в Телемост' : 'Позвонить') + '</button>'
+    box.innerHTML = (callUrl ? '<button class="callb" id="tmb">' + (tm ? 'Позвонить в Телемост' : 'Позвонить') + '</button>'
       : (role === 'tutor' ? '<a class="callb off" href="tutor.html" target="_blank" rel="noopener" title="Ссылка на Телемост задаётся в кабинете">Ссылка на Телемост</a>' : '')) +
       ' <button class="callb off" id="callmore" aria-label="Другие способы звонка">⋯</button>' +
       (role === 'tutor' ? ' <button class="callb red" id="endb">Завершить урок</button>' : '');
@@ -870,7 +973,7 @@ body.lesson{display:flex;flex-direction:column;height:100vh;height:100dvh;overfl
   }
   function callPanel(d) {
     d.innerHTML = '<h3>Звонок <button class="x" id="dx" aria-label="Закрыть">×</button></h3>' +
-      (callUrl ? '<p style="margin-top:8px">Основной звонок — ' + (/telemost/.test(callUrl) ? 'Яндекс Телемост' : 'по ссылке репетитора') + ': откроется в новом окне, доска остаётся здесь.</p><button class="callb" id="tm2" style="margin-top:8px">📞 Открыть звонок</button>'
+      (callUrl ? '<p style="margin-top:8px">Основной звонок — ' + (/telemost/.test(callUrl) ? 'Яндекс Телемост' : 'по ссылке репетитора') + ': откроется в новом окне, доска остаётся здесь.</p><button class="callb" id="tm2" style="margin-top:8px">Открыть звонок</button>'
         : '<p class="muted" style="margin-top:8px">Репетитор ещё не указал ссылку на Телемост.</p>') +
       '<details class="exp" id="exp"' + (pc ? ' open' : '') + '><summary>Звонок без Телемоста (экспериментально)</summary><p class="muted" style="margin-top:6px">Прямо в браузере, без сторонних сервисов. В некоторых сетях (мобильный интернет, школьный Wi-Fi) может не соединиться.</p>' +
       '<div class="vids"><video id="rv" autoplay playsinline aria-label="Собеседник"></video><video id="lv" class="me" autoplay playsinline muted aria-label="Вы"></video><span class="st" id="cst">' + (pc ? 'на связи' : 'звонок не начат') + '</span></div>' +
@@ -918,7 +1021,7 @@ body.lesson{display:flex;flex-direction:column;height:100vh;height:100dvh;overfl
     pc = new RTCPeerConnection({ iceServers: ice });
     pc.onicecandidate = function (e) { if (e.candidate) rtc({ type: 'ice', c: e.candidate.toJSON() }); };
     pc.ontrack = function (e) { remote = e.streams[0]; var rv = document.getElementById('rv'); if (rv && rv.srcObject !== remote) { rv.srcObject = remote; rv.play().catch(function () {}); } };
-    pc.onconnectionstatechange = function () { var s = pc && pc.connectionState; cst({ connecting: 'соединяю…', connected: 'на связи', disconnected: 'связь прервалась…', failed: 'не удалось соединиться — используйте Телемост', closed: 'звонок завершён' }[s] || s); if (s === 'failed') hangup(true); };
+    pc.onconnectionstatechange = function () { var s = pc && pc.connectionState; cst({ connecting: 'соединяю…', connected: 'на связи', disconnected: 'связь прервалась…', failed: 'не удалось соединиться — нужен Телемост', closed: 'звонок завершён' }[s] || s); if (s === 'failed') hangup(true); };
     local.getTracks().forEach(function (t) { pc.addTrack(t, local); });
     var lv = document.getElementById('lv'); if (lv) lv.srcObject = local;
   }

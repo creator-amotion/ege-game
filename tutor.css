@@ -101,3 +101,14 @@ textarea.inp{padding:8px 12px;min-height:64px;width:100%}
 /* ── урок: стили в lesson.html ── */
 .prof summary{cursor:pointer;list-style:none}.prof summary::-webkit-details-marker{display:none}
 .prof{margin-top:10px}
+
+/* ── «Просит разобрать» ── */
+.asks{display:grid;gap:8px;grid-template-columns:repeat(auto-fill,minmax(min(100%,340px),1fr))}
+.askc{background:#fff;padding:10px 12px;border-left:6px solid var(--red);min-width:0;font-size:14px}
+.askc .askq{margin:6px 0 0;padding:6px 8px;background:var(--yellow-t);font-weight:600}
+.askc .askt{margin:6px 0;max-height:130px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere}
+.askc img{display:block;max-width:100%;max-height:150px;margin-bottom:6px}
+.sbtn .tag{display:inline-block;margin-top:4px}
+.res{grid-template-columns:90px 70px 1fr 52px}
+.res .ok{font-size:12px}
+.hwi{grid-template-columns:34px 1fr 120px}
