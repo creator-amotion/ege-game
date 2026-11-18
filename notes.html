@@ -15,7 +15,7 @@
 <link rel="stylesheet" href="anik.css?v=7">
 <script src="anik-sync.js?v=7"></script>
 <script src="anik-nav.js?v=8" defer></script>
-<script src="tutor-api.js?v=4"></script>
+<script src="tutor-api.js?v=5"></script>
 <script src="anik-notes-store.js?v=1"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -74,7 +74,7 @@ h1{font-family:var(--display);font-size:38px;font-weight:800;letter-spacing:-1.5
       if (m !== month) { month = m; h += '<div class="stl"><span>' + esc(m || 'Уроки') + '</span></div>'; }
       var exp = n.expires ? new Date(n.expires + 'T12:00:00') : null, badge = '';
       if (n.localOnly || offline) badge = '<span class="badge local">' + (n.localOnly && !offline ? 'Хранится только на этом устройстве' : 'Копия на этом устройстве') + '</span>';
-      else if (n.saved) badge = '<span class="badge ok">✓ Сохранён на этом устройстве' + (exp ? ' · на сервере до ' + exp.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' }) : '') + '</span>';
+      else if (n.saved) badge = '<span class="badge ok">Сохранён на этом устройстве' + (exp ? ' · на сервере до ' + exp.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' }) : '') + '</span>';
       else if (exp && exp.getTime() < soon) badge = '<span class="badge warn">Удалится с сервера ' + exp.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' }) + ' — открой или скачай PDF</span>';
       else if (exp) badge = '<span class="badge">На сервере до ' + exp.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' }) + ' · открой, чтобы сохранить на устройстве</span>';
       h += '<article class="note"><span class="t">' + esc(n.title) + '</span>' + badge + '<span class="m">' + esc(n.tutor || '') + (isNaN(d) ? '' : ' · ' + d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' }) + ', ' + d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })) + '</span>' +

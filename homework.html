@@ -18,7 +18,8 @@
 <script defer src="vendor/katex/auto-render.min.js"></script>
 <script src="anik-sync.js?v=7"></script>
 <script src="anik-nav.js?v=8" defer></script>
-<script src="tutor-api.js?v=4"></script>
+<script src="anik-ask.js?v=1" defer></script>
+<script src="tutor-api.js?v=5"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{min-height:100vh}
@@ -80,6 +81,7 @@ h1{font-family:var(--display);font-size:38px;font-weight:800;letter-spacing:-1.5
         (r.call_url ? '<button class="b sec" data-call="' + esc(r.call_url) + '">' + (/telemost/.test(r.call_url) ? 'Позвонить в Телемост' : 'Позвонить') + '</button>' : '') + '</div></div>';
     });
     if (!m.homework.length) h += '<div class="stl"><span>Задания</span></div><div class="empty">Сейчас заданий нет.</div>';
+    var asks = [];
     m.homework.forEach(function (hw) {
       h += '<div class="stl" id="hw' + hw.id + '"><span>' + esc(hw.title) + '</span><span>' + hw.done + ' из ' + hw.total + ' · до ' + esc(hw.due) + '</span></div>';
       if (hw.note) h += '<div class="note">' + esc(hw.note) + '</div>';
@@ -88,13 +90,16 @@ h1{font-family:var(--display);font-size:38px;font-weight:800;letter-spacing:-1.5
         var cur = it.status === 'todo' && first; if (cur) first = false;
         h += '<article class="task' + (cur && hw.id === focus ? ' cur' : '') + '" id="t' + it.id + '"><div class="h">' + it.seq + '. ' + esc(it.topic) + '</div><div class="tx">' + esc(it.text) + '</div>' +
           (it.status === 'todo' ? '<form data-id="' + it.id + '"><input aria-label="Ответ на задание ' + it.seq + '" placeholder="Ответ" maxlength="200" autocomplete="off"><button class="b">Ответить</button></form><div class="verdict" role="status"></div>'
-            : '<div class="verdict ' + (it.ok ? 'ok' : 'bad') + '">' + (it.status === 'skipped' ? 'Пропущено' : (it.ok ? '✓ Верно' : '✗ Неверно') + ': ' + esc(it.answer)) + '</div>') + '</article>';
+            : '<div class="verdict ' + (it.ok ? 'ok' : 'bad') + '">' + (it.status === 'skipped' ? 'Пропущено' : (it.ok ? 'Верно' : 'Неверно') + ': ' + esc(it.answer)) + '</div>') + '</article>';
+        asks.push(it);
       });
     });
     h += '<div class="stl"><span>Конспекты уроков</span><span>' + notes.length + '</span></div><a class="b sec" href="notes.html">Мои конспекты →</a>';
     h += '<p class="lead" style="margin-top:18px;font-size:13px;color:var(--muted)">Эти же задания есть в боте: /homework. Ответ, данный здесь, засчитывается и там.</p>';
     app.innerHTML = h;
     A.math(app);
+    var mountAsks = function () { if (window.AnikAsk) asks.forEach(function (it) { var el = document.getElementById('t' + it.id); if (el) AnikAsk.mount(el, { hw_item: it.id, ref: it.ref, answer: it.answer || '' }); }); };
+    if (window.AnikAsk) mountAsks(); else document.addEventListener('DOMContentLoaded', mountAsks);
     app.querySelectorAll('[data-call]').forEach(function (b) { b.onclick = function () { A.openCall(b.dataset.call); }; });
     app.querySelectorAll('form[data-id]').forEach(bind);
     var f = focus && (document.querySelector('#hw' + focus + ' ~ .task.cur') || document.getElementById('hw' + focus));
@@ -110,7 +115,7 @@ h1{font-family:var(--display);font-size:38px;font-weight:800;letter-spacing:-1.5
       api.post('/api/hw/answer', { item: +f.dataset.id, answer: v }).then(function (r) {
         f.remove();
         out.className = 'verdict ' + (r.correct ? 'ok' : 'bad');
-        out.textContent = r.correct ? '✓ Верно' : '✗ Неверно. Правильный ответ: ' + r.right;
+        out.textContent = r.correct ? 'Верно' : 'Неверно. Правильный ответ: ' + r.right;
         if (!r.correct && r.sol && r.sol.length) {                  // решение по шагам (база, ОГЭ)
           var so = document.createElement('ol'); so.className = 'sol'; so.setAttribute('aria-label', 'Решение');
           r.sol.forEach(function (st) { var li = document.createElement('li'); li.textContent = st; so.appendChild(li); });
