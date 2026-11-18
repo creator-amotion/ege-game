@@ -62,6 +62,14 @@
     var i = String(u).indexOf('#'), path = (i < 0 ? u : u.slice(0, i)).split('/').pop(), h = i < 0 ? '' : u.slice(i).split('&')[0];
     return path + h;
   }
+  try {                                                    // случайный свайп вниз не должен закрывать приложение посреди задания
+    var twa = window.Telegram && window.Telegram.WebApp;
+    if (twa && twa.disableVerticalSwipes && twa.isVersionAtLeast && twa.isVersionAtLeast('7.7')) twa.disableVerticalSwipes();
+  } catch (e) {}
+  function fullKey(u) {                                    // шаг целиком, с номером задания: trainer.html#oge-math&n=6&tasks
+    var i = String(u).indexOf('#');
+    return (i < 0 ? u : u.slice(0, i)).split('/').pop().split('?')[0] + (i < 0 ? '' : u.slice(i));
+  }
   function here() { return (location.pathname.split('/').pop() || 'index.html') + location.hash.split('&')[0]; }
   function go(url) {
     var same = stepKey(url).split('#')[0] === (location.pathname.split('/').pop() || 'index.html');
@@ -147,13 +155,13 @@
   };
   window.anikPlanDone = function () {
     try {
-      var t = new Date().toDateString(), keys = window.anikStepsDone(), k = here();
+      var t = new Date().toDateString(), keys = window.anikStepsDone(), k = fullKey(location.href);
       if (keys.indexOf(k) < 0) keys.push(k);
       localStorage.setItem('anik_plan_done', JSON.stringify({ d: t, keys: keys.slice(-60) }));
     } catch (e) {}
     planBar('done');
   };
-  window.anikStepKey = stepKey;   // страница вызывает, когда шаг пройден (итог игры, конец подхода)
+  window.anikStepKey = fullKey;   // страница вызывает, когда шаг пройден (итог игры, конец подхода)
 
   function mount() {
     if (document.getElementById('anik-tabs')) return;

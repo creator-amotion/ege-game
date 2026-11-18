@@ -83,7 +83,7 @@ h1{font-size:22px;margin:14px 0 4px;background:linear-gradient(135deg,var(--acc)
 .cues .do{display:block;color:var(--m);margin-top:2px}
 .alg{padding-left:22px}.alg li{margin:5px 0;font-size:14.5px;line-height:1.5}
 .traps li{list-style:none;margin:5px 0;font-size:14px;line-height:1.5}
-.traps li:before{content:'⚠ ';color:var(--acc)}
+.traps li:before{content:'';color:var(--acc)}
 .fm{display:inline-block;background:var(--card2);border-radius:8px;padding:4px 9px;margin:3px 4px 0 0;font-size:13.5px}
 .vgrid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;margin-bottom:10px}
 .vn{min-height:40px;border:2px solid var(--ink,#111);background:transparent;color:var(--ink,#111);font-weight:800;font-size:15px;cursor:pointer}
@@ -106,7 +106,7 @@ h1{font-size:22px;margin:14px 0 4px;background:linear-gradient(135deg,var(--acc)
 <script src="anik-look.js?v=1"></script>
 <script src="anik-theory.js?v=3"></script>
 <script src="anik-sync.js?v=7"></script>
-<script src="anik-nav.js?v=7" defer></script>
+<script src="anik-nav.js?v=8" defer></script>
 </head>
 <body class="math">
 <nav><button class="nb" id="back">←</button><b id="title">Математика</b><span id="xp"></span></nav>
@@ -535,7 +535,7 @@ function ltestDone(){
     +'<div class="fb '+(pass?'good':'bad')+'">'+(pass?'Теория усвоена — переходим к решению.':'Пока шатко. Перечитай теорию и пройди тест ещё раз — или иди дальше, а к теории вернись позже.')+'</div>'
     +'<button class="btn" id="lgo">'+(pass?'Дальше: разбор по шагам':'Всё равно дальше')+'</button>'
     +(pass?'':'<button class="btn sec" id="lre">Перечитать теорию</button>')
-    +'<button class="btn sec" id="lmenu">⬅️ К аспектам темы</button>';
+    +'<button class="btn sec" id="lmenu">← К аспектам темы</button>';
   app.innerHTML=h;
   $('#lgo').onclick=()=>{L.stage='steps';learnToSteps()};
   const re=$('#lre');if(re)re.onclick=()=>{L.stage='theory';setView('ltheory')};
@@ -565,7 +565,7 @@ function learnToSolo(){
   });
 }
 function learnSoloDone(){
-  setTimeout(function(){window.anikPlanDone&&anikPlanDone();},700);   // шаг «Изучить» в плане дня пройден
+  if(pr.res.length>=Math.min(3,pr.items.length))setTimeout(function(){window.anikPlanDone&&anikPlanDone();},700);   // шаг «Изучить» в плане дня пройден
   const ok=pr.res.filter(Boolean).length,tot=pr.res.length,s=lk(L.k);
   s.solo=[Math.max(ok,(s.solo&&s.solo[0])||0),tot];saveLearn();sendLearn(L.k,'p',ok,tot);
   const st=aspectState(L.k),gid=(KINDS[L.k].gs||[KINDS[L.k].g])[0],nx=aspectsOf(gid).find(k=>k!==L.k&&aspectState(k)!=='done');
@@ -574,7 +574,7 @@ function learnSoloDone(){
     +'<div class="fb '+(st==='done'?'good':'bad')+'">'+esc(KINDS[L.k].t)+': '+(st==='done'?'аспект изучен ✓':ok<tot/2?'много ошибок — вернись к теории и разбору, потом попробуй ещё раз':'почти получилось — ещё одна попытка закрепит')+'</div>';
   h+='<button class="btn" id="lagain">Ещё три задания по этому аспекту</button>';
   if(nx)h+='<button class="btn sec" id="lnx" data-learn="'+nx+'">Следующий аспект: '+esc(KINDS[nx].t)+'</button>';
-  h+='<button class="btn sec" id="lmenu">⬅️ К аспектам темы</button>';
+  h+='<button class="btn sec" id="lmenu">← К аспектам темы</button>';
   app.innerHTML=h;
   $('#lagain').onclick=()=>learnToSolo();
   const b=$('#lnx');if(b)b.onclick=()=>startLearn(nx);
@@ -674,17 +674,17 @@ function pracDone(){
   if(pr.fromVar){
     const ok=pr.res.filter(Boolean).length,t=pr.items[pr.items.length-1];
     app.innerHTML='<div class="stars"><b>'+ok+'</b> из '+pr.res.length+'<small>похожие задачи</small></div>'
-      +'<button class="btn" id="simmore">Ещё похожую</button><button class="btn sec" id="simback">⬅️ К итогу варианта</button>';
+      +'<button class="btn" id="simmore">Ещё похожую</button><button class="btn sec" id="simback">← К итогу варианта</button>';
     $('#simmore').onclick=()=>similarStart(t);$('#simback').onclick=()=>setView('vdone');
     return;
   }
   if(!pr.kindsSent){pr.kindsSent=1;const by={};pr.items.forEach((it,i)=>{if(it.k&&pr.res[i]!==undefined){const b=by[it.k]||(by[it.k]=[0,0]);b[1]++;if(pr.res[i])b[0]++}});Object.keys(by).slice(0,6).forEach(k=>sendLearn(k,'p',by[k][0],by[k][1]))}
-  setTimeout(function(){window.anikPlanDone&&anikPlanDone();},700);
+  if(pr.res.length>=Math.min(5,pr.items.length))setTimeout(function(){window.anikPlanDone&&anikPlanDone();},700);
   $('#title').textContent='Итог';
   const ok=pr.res.filter(Boolean).length,tot=pr.res.length,sentAuto=autoSend();
   let h='<div class="stars"><b>'+ok+'</b> из '+tot+'<small>с первой попытки</small></div>'+autoNote(sentAuto);
   h+='<div class="fb '+(ok>=tot*0.8?'good':'bad')+'">'+(ok>=tot*0.8?'Отлично! Навык закрепляется.':ok>=tot*0.5?'Неплохо. Загляни в теорию и разбери ошибки по шагам.':'Пока трудно — прочитай теорию и потренируйся по шагам.')+'<br>'+esc(pr.last||'').replace(/\n/g,'<br>')+'<br>Получено: +'+pr.gain+' XP</div>';
-  h+='<button class="btn" id="again">Ещё подход</button><button class="btn sec" id="menu">⬅️ К разделу</button>';
+  h+='<button class="btn" id="again">Ещё подход</button><button class="btn sec" id="menu">← К разделу</button>';
   if(!sentAuto&&session.length)h+='<button class="btn ok" id="send">Сохранить результат</button>';
   app.innerHTML=h;
   $('#again').onclick=()=>startPractice();
@@ -747,12 +747,12 @@ function varDone(){
   const ok=V.res.filter(Boolean).length;
   $('#title').textContent='Итог варианта';
   let h='<div class="stars"><b>'+ok+'</b> из '+VARIANT_N+'<small>первичных баллов за первую часть · '+V.min+' мин</small></div>';
-  h+='<div class="fb '+(ok>=11?'good':'bad')+'">'+(ok>=11?'Сильно! Первая часть почти без потерь — пора браться за вторую.':ok>=6?'Порог пройден. Разбери ошибки ниже — каждое задание первой части стоит балл.':'Пока трудно. Начни с номеров, где ошибся: изучи тему и реши похожие.')+'</div>';
+  h+='<div class="fb '+(ok>=11?'good':'bad')+'">'+(ok>=11?'Сильно! Первая часть почти без потерь — пора браться за вторую.':ok>=6?'Порог пройден. Разбери ошибки ниже — каждое задание первой части стоит балл.':'Пока трудно. Начни с номеров, где были ошибки: изучи тему и реши похожие.')+'</div>';
   h+='<div class="tag" style="margin-top:12px">По заданиям</div>'+V.items.map((t,k)=>'<div class="card vres '+(V.res[k]?'ok':'bad')+'"><b>№'+t.ex+' '+(V.res[k]?'✓':'✗')+'</b> <span class="src">твой ответ: '+esc(V.ans[k]||'—')+(V.res[k]?'':' · верно: '+esc(t.a[0]))+'</span>'
     +(V.res[k]?'':'<details><summary>Условие</summary><div class="task" style="margin-top:6px">'+esc(t.t)+'</div>'+kindTheory(t.k,false,'Теория этого типа')+'</details><button class="btn sec" data-sim="'+k+'">Решить похожую</button>')+'</div>').join('');
   let hist=[];try{hist=JSON.parse(localStorage.getItem('math_variants')||'[]')}catch(e){}
   if(hist.length>1)h+='<div class="src" style="margin-top:8px">Прошлые варианты: '+hist.slice(-6,-1).map(x=>x.ok+'/'+(x.n||12)).join(' · ')+'</div>';
-  h+='<button class="btn" id="vagain">Новый вариант</button><button class="btn sec" id="vhome">⬅️ К разделам</button>';
+  h+='<button class="btn" id="vagain">Новый вариант</button><button class="btn sec" id="vhome">← К разделам</button>';
   if(session.length&&!autoSend())h+='<button class="btn ok" id="send">Сохранить результат</button>';
   app.innerHTML=h;
   app.querySelectorAll('[data-sim]').forEach(b=>b.onclick=()=>similarStart(V.items[+b.dataset.sim]));
@@ -827,7 +827,7 @@ function diagDone(){
   let h='<div class="stars"><b>'+ok+'</b> из '+DGM.items.length+'<small>тем №'+DGM.n+' уже получается</small></div>';
   h+=DGM.items.map((t,k)=>'<div class="card" style="border-left:6px solid '+(DGM.res[k]?'#2E55C9':'#E5332A')+'"><b>'+esc(name(t.g))+'</b><div class="src">'+(DGM.res[k]?'получается — можно сразу к заданиям':'начнём с теории этой темы · верный ответ: '+esc(t.a[0]))+'</div></div>').join('');
   if(first>=0)h+='<button class="btn" id="dlearn">Начать с: '+esc(name(DGM.items[first].g))+'</button>';
-  h+='<button class="btn sec" id="dhome">⬅️ К разделам</button>';
+  h+='<button class="btn sec" id="dhome">← К разделам</button>';
   app.innerHTML=h;
   const b=$('#dlearn');if(b)b.onclick=()=>goAspect(DGM.items[first].k);
   $('#dhome').onclick=()=>setView('home');
@@ -964,7 +964,7 @@ function doneView(){
   h+='<button class="btn sec" id="other">Другое задание</button>';
   h+='<button class="btn sec" id="solo">Теперь реши сам: практика без шагов</button>';
   if(!sentAuto)h+='<button class="btn ok" id="send">Сохранить результат</button>';
-  h+='<button class="btn sec" id="menu">⬅️ К разделу</button>';
+  h+='<button class="btn sec" id="menu">← К разделу</button>';
   app.innerHTML=h;
   const ls=$('#learnsolo');if(ls)ls.onclick=()=>learnToSolo();
   $('#again').onclick=()=>cur.kind&&kindSteps(cur.kind).length?startKind(cur.kind):cur.topicG?startTopic(cur.topicG):start(sk);
@@ -1052,6 +1052,8 @@ function autoSend(){
   session=[];
   return true;
 }
+document.addEventListener('visibilitychange',()=>{if(document.hidden)autoSend()});   // закрыли посреди занятия — решённое сохраняется
+window.addEventListener('pagehide',()=>autoSend());
 function autoNote(sent){
   return '';
 }

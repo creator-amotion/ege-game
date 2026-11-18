@@ -17,7 +17,7 @@
 <link rel="stylesheet" href="anik.css?v=7">
 <script src="anik-look.js?v=1"></script>
 <script src="anik-sync.js?v=7"></script>
-<script src="anik-nav.js?v=7" defer></script>
+<script src="anik-nav.js?v=8" defer></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{min-height:100vh}
@@ -71,7 +71,7 @@ var TG=window.Telegram&&window.Telegram.WebApp?window.Telegram.WebApp:null;
 if(TG){try{TG.ready();TG.expand();TG.setHeaderColor('#F3EEE2');TG.setBackgroundColor('#F3EEE2');}catch(e){}}
 var app=document.getElementById('app');
 var Q=new URLSearchParams(location.search),TUTOR=Q.get('t')==='1';
-var LEVEL=['не начато','познакомился','знает теорию','решает с опорой','решает сам','устойчиво'];
+var LEVEL=TUTOR?['не начато','познакомился','знает теорию','решает с опорой','решает сам','устойчиво']:['не начато','первое знакомство','знаешь теорию','решаешь с опорой','решаешь самостоятельно','устойчиво'];
 var SHORT={'ege.rus':'Русский','ege.math':'Математика','ege.mathb':'Математика (база)','oge.rus':'Русский (ОГЭ)','oge.math':'Математика (ОГЭ)'};
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function decodeCode(c){
@@ -139,7 +139,7 @@ function render(cat,code){
   h+='<div class="stl"><span>Предметы</span><span>освоено</span></div>';
   active.forEach(function(s){
     var by=[0,0,0,0,0,0];s.all.forEach(function(p){by[p.l]++;});
-    h+='<div class="subj"><b>'+esc(SHORT[s.key]||s.name)+' · '+s.pct+'%</b><small>начато частей '+s.started+' из '+s.all.length+' · решает сам или устойчиво: '+(by[4]+by[5])+'</small><div class="meter">'+
+    h+='<div class="subj"><b>'+esc(SHORT[s.key]||s.name)+' · '+s.pct+'%</b><small>начато частей '+s.started+' из '+s.all.length+' · '+(TUTOR?'решает сам или устойчиво':'решаешь самостоятельно или устойчиво')+': '+(by[4]+by[5])+'</small><div class="meter">'+
       [5,4,3,2,1].map(function(l){return by[l]?'<i class="l'+l+'" style="width:'+(100*by[l]/s.all.length)+'%"></i>':'';}).join('')+'</div></div>';
   });
   var weak=[],rev=[],next=[];

@@ -18,7 +18,7 @@
 <script src="anik-theory.js?v=3"></script>
 <script src="anik-look.js?v=1"></script>
 <script src="anik-sync.js?v=7"></script>
-<script src="anik-nav.js?v=7" defer></script>
+<script src="anik-nav.js?v=8" defer></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{min-height:100vh}
@@ -283,7 +283,7 @@ function numState(set,n){
   var step=!th&&!gm.tot&&!pr.tot?'new':!th?'theory':!gm.tot?'games':!pr.tot?'practice':weak?'weak':'done';
   return {n:n,th:th,pr:pr,gm:gm,know:know,weak:!!weak,step:step,last:Math.max(pr.d||0,gm.d||0)};
 }
-// план на сегодня без бота: что западает → следующая новая тема → давно не повторяли
+// план на сегодня без бота: что западает → следующая новая тема → давно без повторенияи
 function localPlan(set){
   var all=INDEX.sets[set].numbers.map(function(x){var s=numState(set,x.n);s.name=x.name;return s;}),out=[],used={};
   var add=function(s,why){if(out.length<3&&!used[s.n]){used[s.n]=1;out.push({n:s.n,name:s.name,why:why,step:s.step});}};
@@ -332,7 +332,7 @@ function setScreen(set){
   }else{
     var lp=localPlan(set);
     if(lp.length)html+='<div class="stl">Сегодня рекомендуем</div><div class="plan">'+lp.map(function(p){
-      var why={weak:'западает — повтори теорию и игры',cont:'продолжи: '+STEP_TXT[p.step],new:'новая тема: начни с теории',repeat:'давно не повторял'}[p.why];
+      var why={weak:'западает — повтори теорию и игры',cont:'продолжи: '+STEP_TXT[p.step],new:'новая тема: начни с теории',repeat:'давно без повторения'}[p.why];
       return '<a href="#'+set+'&n='+p.n+'&learn"><span>№'+p.n+' '+esc(p.name)+'<br><small>'+esc(why)+'</small></span><span>→</span></a>';
     }).join('')+'</div>';
   }
@@ -612,7 +612,7 @@ function gPassage(g,x){
   if(x.p===undefined||!g.passages)return '';
   return '<details class="card"><summary>Текст (открой и найди нужное место)</summary><div class="passage">'+esc(g.passages[x.p])+'</div></details>';
 }
-var REPORT_BTN='<button class="fblink" id="greport">⚠️ Ошибка в вопросе?</button>';
+var REPORT_BTN='<button class="fblink" id="greport">Ошибка в вопросе?</button>';
 function gameQ(){
   var R=G.round,g=G.games[G.gi];
   if(R.i>=R.items.length)return gameEnd();
@@ -739,7 +739,7 @@ function tapQ(R,g,x){
 function gameEnd(){
   var R=G.round,tot=R.res.length;
   if(!tot)return gamesList();
-  setTimeout(function(){window.anikPlanDone&&anikPlanDone();},700);
+  if(tot>=Math.min(5,R.items.length))setTimeout(function(){window.anikPlanDone&&anikPlanDone();},700);
   var ok=R.ok,ratio=ok/tot,cls=ratio>=.8?'g':ratio>=.5?'y':'r';
   addStats(G.set,G.n,ok,tot,'anik_trg');
   if(G.part){partGameDone(ok,tot);return;}
@@ -793,7 +793,7 @@ function show(){
     '<input class="inp" id="ans" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" inputmode="'+(t.k==='word'?'text':'text')+'" placeholder="'+esc(ph)+'">'+
     nbsHtml(t)+'<div id="fb"></div>'+
     '<div id="acts"><button class="btn" id="chk">Проверить</button><button class="btn sec" id="skip">Не знаю</button></div>'+
-    '<button class="fblink" id="report">⚠️ Ошибка в задании или в ответе?</button>';
+    '<button class="fblink" id="report">Ошибка в задании или в ответе?</button>';
   document.getElementById('report').onclick=function(){window.anikReport&&anikReport(t.id);};
   var inp=document.getElementById('ans');
   wireNbs(t,inp);
@@ -861,19 +861,31 @@ function reveal(v){
   var dots=document.querySelector('.dots');if(dots)dots.outerHTML=dotsHtml();
 }
 
+// ответы ещё не отправлены: только то, что решено после прошлой отправки
+function unsent(){var d=run.res.slice(run.sent||0);return {ok:d.filter(Boolean).length,tot:d.length};}
 function payloadOf(){
-  var ok=run.res.filter(Boolean).length,tot=run.res.length;
-  return 'n_'+INDEX.sets[run.set].kind+pad2(run.n)+pad2(ok)+pad2(tot);
+  var u=unsent();
+  return 'n_'+INDEX.sets[run.set].kind+pad2(run.n)+pad2(u.ok)+pad2(u.tot);
 }
+// приложение свернули или закрыли посреди подхода — решённое не должно пропасть
+function flushRun(){
+  if(!run||!INDEX||!INDEX.sets[run.set])return;
+  var u=unsent();if(!u.tot)return;
+  addStats(run.set,run.n,u.ok,u.tot);
+  if(window.AnikSync)AnikSync.send(payloadOf());
+  run.sent=run.res.length;
+}
+document.addEventListener('visibilitychange',function(){if(document.hidden)flushRun();});
+window.addEventListener('pagehide',flushRun);
 
 function finish(){
-  setTimeout(function(){window.anikPlanDone&&anikPlanDone();},700);
   var tot=run.res.length;
+  if(tot>=Math.min(5,run.items.length))setTimeout(function(){window.anikPlanDone&&anikPlanDone();},700);
   if(!tot){go(run.set+'&n='+run.n);return;}
   var ok=run.res.filter(Boolean).length,ratio=ok/tot,cls=ratio>=.8?'g':ratio>=.5?'y':'r';
-  addStats(run.set,run.n,ok,tot);
+  var rest=unsent();if(rest.tot)addStats(run.set,run.n,rest.ok,rest.tot);
   if(run.part)partTasksDone(ok,tot);
-  var payload=payloadOf(),sent=window.AnikSync&&AnikSync.send(payload);
+  var payload=payloadOf(),sent=!rest.tot||(window.AnikSync&&AnikSync.send(payload));run.sent=tot;
   var link='https://t.me/'+BOT_USERNAME+'?start='+payload;
   var S=INDEX.sets[run.set];
   var marks=run.res.map(function(r,k){return '<span class="'+(r?'ok':'bad')+'">'+(k+1)+'</span>';}).join('');

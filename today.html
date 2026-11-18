@@ -17,7 +17,7 @@
 <link rel="stylesheet" href="anik.css?v=7">
 <script src="anik-look.js?v=1"></script>
 <script src="anik-sync.js?v=7"></script>
-<script src="anik-nav.js?v=7" defer></script>
+<script src="anik-nav.js?v=8" defer></script>
 <script src="anik-tutor.js?v=1" defer></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -126,6 +126,11 @@ h1{font-family:var(--display);font-size:38px;font-weight:800;letter-spacing:-1.5
 .aim-subj button{min-height:40px;padding:0 12px;border:2px solid var(--ink);background:transparent;font:600 14px var(--body);color:var(--ink);cursor:pointer}
 .aim-subj button.on{background:var(--ink);color:var(--paper)}
 .aim-opts button{flex:1;min-width:52px;height:44px;border:2px solid var(--ink);background:var(--yellow);font:800 17px var(--display);color:var(--ink);cursor:pointer}
+.aim-edit{border:0;background:none;padding:0;cursor:pointer;font-family:var(--display);font-size:20px;font-weight:800;letter-spacing:-.4px;color:var(--ink);text-transform:none;min-height:44px}
+.aim-edit small{display:block;font:600 12px var(--body);letter-spacing:0;color:var(--blue);text-decoration:underline}
+.aim-own{display:flex;gap:6px;margin-top:8px}.aim-own input{flex:1;min-width:0;height:44px;border:2px solid var(--ink);padding:0 10px;font:600 16px var(--body);border-radius:0}
+.aim-own button,.aim-x{height:44px;padding:0 14px;border:2px solid var(--ink);background:var(--ink);color:var(--paper);font:700 14px var(--body);cursor:pointer}
+.aim-x{margin-top:8px;width:100%;background:transparent;color:var(--ink)}
 .aim-go{display:flex;align-items:center;min-height:44px;margin-top:10px;padding:8px 14px;border:2px solid var(--ink);background:var(--yellow);color:var(--ink);font-weight:600;text-decoration:none;font-size:15px;line-height:1.3}
 .rcard .k{font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--muted)}
 .rcard .v{font-family:var(--display);font-size:20px;font-weight:800;letter-spacing:-.4px;line-height:1.1;margin:2px 0}
@@ -145,7 +150,7 @@ h1{font-family:var(--display);font-size:38px;font-weight:800;letter-spacing:-1.5
 var TG=window.Telegram&&window.Telegram.WebApp?window.Telegram.WebApp:null;
 if(TG){try{TG.ready();TG.expand();TG.setHeaderColor('#F3EEE2');TG.setBackgroundColor('#F3EEE2');}catch(e){}}
 var REG=null,app=document.getElementById('app');
-var WHY={new:'Новое',weak:'Слабое место',repeat:'Пора повторить',review:'Проверка памяти'};
+var WHY={carry:'Перенесено',new:'Новое',weak:'Слабое место',repeat:'Пора повторить',review:'Проверка памяти'};
 var SETS=[['ege.rus','ЕГЭ · Русский'],['ege.math','ЕГЭ · Математика'],['ege.mathb','ЕГЭ · База'],['oge.rus','ОГЭ · Русский'],['oge.math','ОГЭ · Математика']];
 var STAMP_RULE='Марка выдаётся, когда знание по теме не ниже 80 % и три последних занятия подряд прошли хорошо: в каждом не меньше 3 ответов и не меньше 70 % верных. Игры и задания считаются.';
 
@@ -161,7 +166,7 @@ var ZSNAP=(function(){
   var days=[],t0=new Date(c.t+'T12:00:00');
   String(c.y||'').split('').forEach(function(ch,i){if(ch==='1'){var d=new Date(t0);d.setDate(t0.getDate()-(34-i));days.push(iso(d));}});
   return {v:1,from:'bot',today:c.t,exam:c.e||'ege',streak:c.s,goal:c.g,done_today:c.d,days:days,stamps:[],skills:{},
-    plan:(c.p||[]).map(function(p){return {skill:p[0],number:p[1],why:p[2],link:p[3],name:p[4],done:!!p[5],count:10,minutes:5};}),subs:c.u||null,
+    plan:(c.p||[]).map(function(p){return {skill:p[0],number:p[1],why:p[2],link:p[3],name:p[4],done:!!p[5],done_n:p[6]||0,carried:p[2]==='carry',count:10,minutes:5};}),subs:c.u||null,pnote:c.n||null,
     more:(c.m||[]).map(function(p){return {skill:p[0],number:p[1],why:p[2],link:p[3],name:p[4],done:!!p[5],extra:p[6],count:10,minutes:5};}),
     rules:(c.r||[]).map(function(r){return {n:r[0],cat:r[1],name:r[2],tw:r[3],ta:r[4],gw:r[5]};}),kmap:c.k||'',aim:c.a||null};
 })();
@@ -282,10 +287,12 @@ function trainingHTML(s,prof){
     var st=stepsFor(it.p);
     it.done=!!it.p.done||(st.length&&st.every(function(x){return stepsDone.indexOf(key(x.url))>=0;}));
   });
+  var note=s&&s.pnote,noteH=note&&note.kind==='comeback'?'<p class="lead2"><b>С возвращением.</b> Начнём спокойно: сегодня две темы, а темп вернётся постепенно.</p>':
+    items.some(function(it){return it.kind==='plan'&&!it.done&&(it.p.carried||it.p.why==='carry');})?'<p class="lead2">Незаконченное с прошлых дней перенесено сюда.</p>':'';
   var mix=mixOn(),list=ordered(items,mix);
   list=list.filter(function(it){return !it.done;}).concat(list.filter(function(it){return it.done;}));
   var nDone=list.filter(function(it){return it.done;}).length;
-  var html='<div class="stl"><span>Сегодня тренируем</span><label class="mix"><input type="checkbox" id="mix"'+(mix?' checked':'')+'>вперемешку</label></div>';
+  var html='<div class="stl"><span>Сегодня тренируем</span><label class="mix"><input type="checkbox" id="mix"'+(mix?' checked':'')+'>вперемешку</label></div>'+noteH;
   if(!list.length){
     if(s){html+='<div class="empty"><b>На сегодня всё.</b> План собран по твоим слабым местам. Если хочешь ещё — выбери предмет ниже.</div>';}
     else{html+='<div class="empty"><b>План появится после первого занятия.</b> Открой приложение из Telegram-бота и реши несколько заданий или сыграй в игру: бот поймёт, что подтянуть, и соберёт план.</div>';}
@@ -305,8 +312,9 @@ function trainingHTML(s,prof){
     }
     var p=it.p,sk=REG&&REG.skills.filter(function(x){return x.id===p.skill;})[0],c=sk?skinOf(sk):AnikLook.ramp(1)[0];
     var href=p.link||(sk?linkFor(sk):'index.html'),st=stepsFor(p);
-    if(it.done)return '<div class="pitem pdone"><div class="tn">✓ сделано · '+esc(SUBJ[setOf(p.skill)]||'')+' · № '+pad(p.number)+'</div><div class="nm">'+esc(p.name)+'</div></div>';
-    if(st.length>1)return '<div class="pitem sgt" style="'+AnikLook.style(c)+'">'+AnikLook.signHTML(sk?signFor(sk):String(p.number))+'<div class="tn">'+(i+1)+' · '+esc(SUBJ[setOf(p.skill)]||'')+' · № '+pad(p.number)+' · '+(WHY[p.why]||'тема').toLowerCase()+'</div><div class="nm">'+esc(p.name)+'</div>'+
+    if(it.done)return '<a class="pitem pdone" href="'+esc(st.length?st[0].url:href)+'"><div class="tn">✓ сделано · '+esc(SUBJ[setOf(p.skill)]||'')+' · № '+pad(p.number)+'</div><div class="nm">'+esc(p.name)+'</div><div class="s">Пройти ещё раз</div></a>';
+    var prog=p.done_n?' · решено '+Math.min(p.done_n,4)+' из 5':'';
+    if(st.length>1)return '<div class="pitem sgt" style="'+AnikLook.style(c)+'">'+AnikLook.signHTML(sk?signFor(sk):String(p.number))+'<div class="tn">'+(i+1)+' · '+esc(SUBJ[setOf(p.skill)]||'')+' · № '+pad(p.number)+' · '+(WHY[p.why]||'тема').toLowerCase()+prog+'</div><div class="nm">'+esc(p.name)+'</div>'+
       '<div class="steps">'+st.map(function(x,k){return '<a href="'+esc(x.url)+'"><i>'+(k+1)+'</i>'+esc(x.name)+'</a>';}).join('')+'</div></div>';
     return '<a class="pitem sgt" style="'+AnikLook.style(c)+'" href="'+esc(href)+'">'+AnikLook.signHTML(sk?signFor(sk):String(p.number))+'<div class="tn">'+(i+1)+' · № '+pad(p.number)+' · '+(WHY[p.why]||'тема').toLowerCase()+'</div><div class="nm">'+esc(p.name)+'</div><div class="s">'+(p.count||10)+' заданий · '+(p.minutes||5)+' мин</div></a>';
   }).join('')+'</div>';
@@ -327,10 +335,10 @@ function moreHTML(s,list){
   var nxt=more.filter(function(p){return p.extra==='next';})[0],rep=more.filter(function(p){return p.extra==='repeat';})[0];
   var by={};list.forEach(function(it){if(it.kind==='plan'){var k=setOf(it.p.skill);(by[k]=by[k]||[]).push(it.p.number);}});
   var subj=Object.keys(by)[0],feed=subj&&FEED_SID[subj]?'feed.html?nums='+FEED_SID[subj]+':'+by[subj].join(','):'feed.html';
-  var h='<div class="more"><div class="more-h">Ты молодец — план на сегодня выполнен 🎉</div><p>Можно на этом остановиться: завтра будет новый план. А если хочется ещё:</p>';
+  var h='<div class="more"><div class="more-h">Ты молодец — план на сегодня выполнен</div><p>Можно на этом остановиться: завтра будет новый план. А если хочется ещё:</p>';
   if(nxt){var st=stepsFor(nxt),u=st.length?st[0].url:(nxt.link||'index.html');
     h+='<a class="more-a" href="'+esc(u)+'"><b>Следующая тема</b><span>'+esc(SUBJ[setOf(nxt.skill)]||'')+' · №'+nxt.number+' '+esc(nxt.name)+'</span></a>';}
-  h+='<a class="more-a" href="'+esc(feed)+'"><b>Закрепить сегодняшнее</b><span>Лента задач по номерам, которые ты сегодня решал</span></a>';
+  h+='<a class="more-a" href="'+esc(feed)+'"><b>Закрепить сегодняшнее</b><span>Лента задач по сегодняшним номерам</span></a>';
   if(rep){var st2=stepsFor(rep),u2=st2.length?st2[st2.length-1].url:(rep.link||'index.html');
     h+='<a class="more-a" href="'+esc(u2)+'"><b>Повторить пройденное</b><span>'+esc(rep.name.replace(/^Повторение: /,''))+' — пора освежить, чтобы не забылось</span></a>';}
   return h+'</div>';
@@ -355,9 +363,10 @@ function aimDefault(s){
   try{var c=JSON.parse(localStorage.getItem('anik_choice')||'null');if(c&&AIM_NAME[c.exam+'.'+c.subj])return c.exam+'.'+c.subj;}catch(e){}
   return s&&s.exam==='oge'?'oge.rus':'ege.rus';
 }
+var aimEdit=false;
 function aimAskHTML(s){
   var pend=null;try{pend=JSON.parse(localStorage.getItem('anik_goal_pending')||'null');}catch(e){}
-  if(pend&&Date.now()-pend.t<10*60*1000&&!(s&&s.aim&&s.aim.t)){
+  if(!aimEdit&&pend&&Date.now()-pend.t<10*60*1000&&!(s&&s.aim&&s.aim.s===pend.s&&s.aim.t===pend.v)){
     var pl=AIM_OPT[pend.s][0]<10?'«'+pend.v+'»':pend.v+' '+plural(pend.v,'балл','балла','баллов');
     return '<div class="aim"><div class="aim-k"><span>Путь к цели · '+AIM_NAME[pend.s]+'</span><b>'+pl+'</b></div><div class="aim-t">Цель сохранена. Путь к ней появится здесь, как только бот пересчитает прогноз — обычно за минуту.</div></div>';
   }
@@ -366,26 +375,40 @@ function aimAskHTML(s){
     '<div class="aim-t" style="margin:6px 0 8px"><b>'+(grade?'На какую оценку идёшь?':'Сколько баллов хочешь набрать?')+'</b> Покажу, где ты сейчас и что быстрее всего приблизит к цели.</div>'+
     '<div class="aim-subj">'+Object.keys(AIM_NAME).map(function(k){return '<button class="'+(k===sub?'on':'')+'" data-aims="'+k+'">'+AIM_NAME[k]+'</button>';}).join('')+'</div>'+
     '<div class="aim-opts">'+AIM_OPT[sub].map(function(v){return '<button data-aimv="'+v+'">'+(grade?'«'+v+'»':v)+'</button>';}).join('')+'</div>';
+  if(!grade)h+='<div class="aim-own"><input id="aimnum" inputmode="numeric" maxlength="3" placeholder="Своё число" aria-label="Свой балл"><button id="aimset">Сохранить</button></div>';
+  if(aimEdit)h+='<button class="aim-x" id="aimcancel">Отмена</button>';
   return h+'<div class="aim-w" id="aimmsg"></div></div>';
 }
 function bindAim(){
   [].forEach.call(app.querySelectorAll('[data-aims]'),function(b){b.onclick=function(){aimPick=b.dataset.aims;today();};});
-  [].forEach.call(app.querySelectorAll('[data-aimv]'),function(b){b.onclick=function(){
-    var sub=aimPick||aimDefault(snap()),v=+b.dataset.aimv;
+  var ed=document.getElementById('aimedit');if(ed)ed.onclick=function(){aimEdit=true;aimPick=null;today();};
+  var cc=document.getElementById('aimcancel');if(cc)cc.onclick=function(){aimEdit=false;aimPick=null;today();};
+  var own=document.getElementById('aimset');
+  if(own)own.onclick=function(){
+    var sub=aimPick||aimDefault(snap()),v=parseInt(document.getElementById('aimnum').value,10),lo=sub==='ege.rus'?36:27;
+    if(!(v>=lo&&v<=100)){document.getElementById('aimmsg').textContent='Напиши число от '+lo+' до 100.';return;}
+    aimSave(sub,v);
+  };
+  [].forEach.call(app.querySelectorAll('[data-aimv]'),function(b){b.onclick=function(){aimSave(aimPick||aimDefault(snap()),+b.dataset.aimv);};});
+}
+function aimSave(sub,v){
+  (function(){
     var ok=window.AnikSync&&AnikSync.send('a_'+AIM_CODE[sub]+'_'+v);
     if(!ok&&!(window.AnikSync&&!AnikSync.inTelegram())){var m=document.getElementById('aimmsg');if(m)m.textContent='Не получилось отправить: открой Аника из бота или свяжи приложение с ботом.';return;}
     try{localStorage.setItem('anik_goal_pending',JSON.stringify({s:sub,v:v,t:Date.now()}));}catch(e){}
-    today();
-  };});
+    aimEdit=false;today();
+  })();
 }
 function aimHTML(s){
   var a=s&&s.aim;
-  if(!a||!AIM_NAME[a.s]||!a.t)return aimAskHTML(s);
+  var pg=null;try{pg=JSON.parse(localStorage.getItem('anik_goal_pending')||'null');}catch(e){}
+  var waiting=pg&&Date.now()-pg.t<10*60*1000&&!(a&&a.s===pg.s&&a.t===pg.v);     // новая цель сохранена, бот ещё считает
+  if(aimEdit||waiting||!a||!AIM_NAME[a.s]||!a.t)return aimAskHTML(s);
   var lab=function(v){return a.u==='g'?'«'+v+'»':v+' '+plural(v,'балл','балла','баллов');};
   var now=a.u==='g'?lab(a.n):'≈ '+a.n;
-  var h='<div class="aim"><div class="aim-k"><span>Путь к цели · '+AIM_NAME[a.s]+'</span>'+(a.t?'<b>'+lab(a.t)+'</b>':'')+'</div>';
+  var h='<div class="aim"><div class="aim-k"><span>Путь к цели · '+AIM_NAME[a.s]+'</span>'+(a.t?'<button class="aim-edit" id="aimedit" title="Изменить цель">'+lab(a.t)+' <small>изменить</small></button>':'')+'</div>';
   var pc=a.r?100:Math.max(2,Math.min(100,a.pc||0));
-  h+='<div class="aim-bar"><i style="width:'+pc+'%"></i><span class="aim-me" style="left:'+pc+'%"></span><span class="aim-flag" aria-hidden="true">🏁</span></div>';
+  h+='<div class="aim-bar"><i style="width:'+pc+'%"></i><span class="aim-me" style="left:'+pc+'%"></span><span class="aim-flag" aria-hidden="true"></span></div>';
   var d='';
   if(a.d){var up=a.d>0,v=(up?'+':'')+String(a.d).replace('.',',');d=' · <span class="'+(up?'up':'down')+'">'+v+' перв.'+(a.dd>=7?' за неделю':' за '+a.dd+' '+plural(a.dd,'день','дня','дней'))+'</span>';}
   h+='<div class="aim-t">'+(a.r?'Прогноз на уровне цели — теперь держим темп и повторяем.':'Прогноз '+now+' · '+a.pc+'% пути')+d+'</div>';
