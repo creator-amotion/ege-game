@@ -78,9 +78,19 @@ h1{font-family:var(--display);font-size:38px;font-weight:800;letter-spacing:-1.5
       else if (exp && exp.getTime() < soon) badge = '<span class="badge warn">Удалится с сервера ' + exp.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' }) + ' — открой или скачай PDF</span>';
       else if (exp) badge = '<span class="badge">На сервере до ' + exp.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' }) + ' · открой, чтобы сохранить на устройстве</span>';
       h += '<article class="note"><span class="t">' + esc(n.title) + '</span>' + badge + '<span class="m">' + esc(n.tutor || '') + (isNaN(d) ? '' : ' · ' + d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' }) + ', ' + d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })) + '</span>' +
-        '<div class="acts"><a class="b" href="lesson.html?note=' + n.id + '">Открыть</a><a class="b sec" href="lesson.html?note=' + n.id + '&dl=png">Скачать PNG</a><a class="b sec" href="lesson.html?note=' + n.id + '&dl=pdf">Скачать PDF</a></div></article>';
+        '<div class="acts"><a class="b" href="lesson.html?note=' + n.id + '">Открыть</a><a class="b sec" href="lesson.html?note=' + n.id + '&dl=png">Скачать PNG</a><a class="b sec" href="lesson.html?note=' + n.id + '&dl=pdf">Скачать PDF</a>' +
+        '<button class="b sec" data-hide="' + n.id + '" data-local="' + (n.localOnly || offline ? 1 : 0) + '">Убрать</button></div></article>';
     });
     if (append) app.insertAdjacentHTML('beforeend', '<div class="stl"><span>На этом устройстве</span></div>' + h); else app.innerHTML = h;
+    app.querySelectorAll('[data-hide]').forEach(function (b) {
+      b.onclick = function () {
+        if (!b.dataset.sure) { b.dataset.sure = 1; b.textContent = 'Точно убрать?'; setTimeout(function () { delete b.dataset.sure; b.textContent = 'Убрать'; }, 3000); return; }
+        var id = +b.dataset.hide; b.disabled = true;
+        var gone = function () { if (window.AnikNotes) AnikNotes.remove(id).catch(function () {}); b.closest('.note').remove(); };
+        if (b.dataset.local === '1') return gone();               // только копия на устройстве
+        api.post('/api/room/note/hide', { id: id }).then(gone).catch(function () { b.disabled = false; b.textContent = 'Не получилось'; });
+      };
+    });
   }
   start();
 })();

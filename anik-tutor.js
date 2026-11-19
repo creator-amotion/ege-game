@@ -5,6 +5,7 @@
 (function () {
   var cache = null, at = 0, waiting = [];
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function tutorLogin() { try { return !!localStorage.getItem('anik_tutor'); } catch (e) { return false; } }   // репетитор вышел из кабинета в приложение — дорога обратно
   function load(cb) {
     if (cache && Date.now() - at < 30000) return cb(cache);
     waiting.push(cb);
@@ -21,7 +22,7 @@
   }
   function html(m) {
     var h = '';
-    if (m.tutor) h += '<a class="tut-cab" href="tutor.html"><b>Кабинет репетитора</b><span>ученики, задания, уроки на доске</span></a>';
+    if (m.tutor || tutorLogin()) h += '<a class="tut-cab" href="tutor.html"><b>Кабинет репетитора</b><span>ученики, задания, уроки на доске</span></a>';
     if (!m.has_tutor) return h;
     h += '<div class="stl"><span>Задания от репетитора</span><span>' + esc(m.tutors.join(', ')) + '</span></div>';
     (m.rooms || []).forEach(function (r) {
@@ -55,7 +56,8 @@
     if (!el) return;
     if (!document.getElementById('tut-css')) { var st = document.createElement('style'); st.id = 'tut-css'; st.textContent = css; document.head.appendChild(st); }
     load(function (m) {
-      if (!m || !document.body.contains(el)) return;
+      if (!document.body.contains(el)) return;
+      if (!m) m = { tutor: false, has_tutor: false };          // приложение не связано, но в этом браузере вошёл репетитор
       el.innerHTML = html(m);
       el.querySelectorAll('.tut-call').forEach(function (b) {
         b.onclick = function () { var tg = window.Telegram && window.Telegram.WebApp; if (tg && tg.initData && tg.openLink) tg.openLink(b.dataset.url); else window.open(b.dataset.url, '_blank', 'noopener'); };
