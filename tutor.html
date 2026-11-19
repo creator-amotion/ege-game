@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@700;800&family=Golos+Text:wght@400..700&display=swap">
 <link rel="stylesheet" href="anik.css?v=7">
-<link rel="stylesheet" href="tutor.css?v=3">
+<link rel="stylesheet" href="tutor.css?v=5">
 <link rel="stylesheet" href="vendor/katex/katex.min.css">
 <script defer src="vendor/katex/katex.min.js"></script>
 <script defer src="vendor/katex/auto-render.min.js"></script>
@@ -18,7 +18,7 @@
 <script src="tutor-api.js?v=5"></script>
 </head>
 <body>
-<header class="bar"><span class="wm">Аник<i>.</i> кабинет</span><span class="who" id="who"></span></header>
+<header class="bar"><span class="wm">Аник<i>.</i> кабинет</span><span class="row" style="gap:12px;justify-content:flex-end"><a class="b sm sec" href="today.html" title="Ученическая часть: «Сегодня», задания. Вернуться — кнопкой «Кабинет репетитора» на «Сегодня»">В приложение</a><span class="who" id="who"></span></span></header>
 <main class="wrap" id="app"><div class="empty">Загружаю…</div></main>
 <script>
 (function () {
@@ -58,7 +58,8 @@
   function callState() { return me.call_url ? (/telemost/.test(me.call_url) ? 'Телемост подключён' : 'своя ссылка на звонок') : '<span style="color:var(--red)">ссылка не задана</span>'; }
 
   function render() {
-    var h = '<h1>Ученики и задания</h1><p class="lead">Код приглашения: <b>' + esc(me.code) + '</b> — ученик отправляет боту <b>/start t_' + esc(me.code) + '</b> и подтверждает доступ.</p>';
+    var h = '<div class="row" style="justify-content:space-between;align-items:flex-end"><h1>Ученики и задания</h1>' +
+      '<button class="b blue" id="givetop">Задать ДЗ' + (basket.length ? ' · ' + basket.length : '') + '</button></div><p class="lead">Код приглашения: <b>' + esc(me.code) + '</b> — ученик отправляет боту <b>/start t_' + esc(me.code) + '</b> и подтверждает доступ.</p>';
     h += '<details class="card prof"' + (me.call_url ? '' : ' open') + '><summary><b>Звонки на уроке</b> · <span id="pst">' + callState() + '</span></summary>' +
       '<p class="muted" style="margin-top:6px">Создайте в Яндекс Телемосте постоянную встречу и вставьте ссылку. На уроке у вас и у ученика будет кнопка «Позвонить в Телемост», ученик получит ссылку вместе с приглашением.</p>' +
       '<form class="row" id="pf" style="margin-top:8px"><label class="sr" for="curl">Моя ссылка на Телемост</label><input class="inp" id="curl" style="flex:1;min-width:220px" placeholder="https://telemost.yandex.ru/j/…" value="' + esc(me.call_url) + '" inputmode="url">' +
@@ -68,6 +69,7 @@
     h += '<div id="pane"></div>';
     app.innerHTML = h;
     app.querySelectorAll('[data-tab]').forEach(function (b) { b.onclick = function () { tab = b.dataset.tab; render(); }; });
+    document.getElementById('givetop').onclick = function () { tab = 'builder'; render(); toBuilder(); };
     document.getElementById('pf').onsubmit = function (e) {
       e.preventDefault();
       var msg = document.getElementById('pmsg');
@@ -87,7 +89,7 @@
     if (!me.students.length) { pane.innerHTML = '<div class="empty" style="margin-top:14px">Пока нет учеников с подтверждённым доступом.</div>'; return; }
     var h = asksBlock(me.asks, true) + '<div class="layout"><nav class="slist" aria-label="Ученики">' + me.students.map(function (s, i) {
       return '<button class="sbtn" data-i="' + i + '" aria-current="' + (cur === s.id) + '"><b>' + esc(s.name) + '</b>' +
-        '<span class="muted">серия ' + s.streak + ' · дней за 2 нед.: ' + s.days14 + (s.hw_open ? ' · ДЗ: ' + s.hw_open : '') + '</span>' + (s.asks ? '<span class="tag red">просит разобрать: ' + s.asks + '</span>' : '') + '</button>'; }).join('') +
+        '<span class="muted">серия ' + s.streak + ' · дней за 2 нед.: ' + s.days14 + (s.hw_open ? ' · ДЗ: ' + s.hw_open : '') + (s.days_left != null ? ' · до ' + s.exam_word + ' ' + s.days_left + ' дн.' : '') + '</span>' + (s.asks ? '<span class="tag red">просит разобрать: ' + s.asks + '</span>' : '') + '</button>'; }).join('') +
       '</nav><section id="card" aria-live="polite"></section></div>';
     pane.innerHTML = h;
     pane.querySelectorAll('.sbtn').forEach(function (b) { b.onclick = function () { cur = me.students[+b.dataset.i].id; renderStudents(); }; });
@@ -146,11 +148,12 @@
     var acc = c.answers14 + c.math14 ? Math.round(100 * (c.correct14 + c.math_ok14) / (c.answers14 + c.math14)) + '%' : '—';
     var openHw = c.homework.filter(function (h) { return h.done < h.total; }).length;
     var h = '<div class="row" style="justify-content:space-between"><h2>' + esc(c.name) + '</h2><div class="row">' +
-      '<button class="b blue" id="lesson">Начать урок на доске</button><button class="b sec" id="give">Дать ДЗ</button></div></div>';
-    h += '<p class="muted">' + (c.exam === 'oge' ? 'ОГЭ' : 'ЕГЭ') + (c.exam_date ? ' · экзамен ' + esc(c.exam_date) : '') + '</p>';
+      '<button class="b blue" id="lesson">Начать урок на доске</button><button class="b sec" id="give">Задать ДЗ</button></div></div>';
+    h += '<p class="muted">' + (c.days_left != null ? esc(c.exam_word) + ' ' + new Date(c.exam_date + 'T12:00:00').toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' }) :
+      esc(c.exam_word) + ' · дата экзамена не указана: ученик вводит её в боте') + '</p>';
     h += '<div id="roomlink"></div>';
     h += asksBlock(c.asks, false);
-    h += '<div class="kpis" style="margin-top:10px"><div class="kpi yel"><div class="n">' + c.streak + '</div><div class="l">серия, дней</div></div>' +
+    h += '<div class="kpis" style="margin-top:10px">' + (c.days_left != null ? '<div class="kpi red"><div class="n">' + c.days_left + '</div><div class="l">' + (c.days_left % 10 === 1 && c.days_left % 100 !== 11 ? 'день' : c.days_left % 10 >= 2 && c.days_left % 10 <= 4 && (c.days_left % 100 < 10 || c.days_left % 100 >= 20) ? 'дня' : 'дней') + ' до ' + esc(c.exam_word) + '</div></div>' : '') + '<div class="kpi yel"><div class="n">' + c.streak + '</div><div class="l">серия, дней</div></div>' +
       '<div class="kpi"><div class="n">' + c.days.filter(function (d) { return d >= new Date(Date.now() - 13 * 864e5).toISOString().slice(0, 10); }).length + '</div><div class="l">дней за 2 недели</div></div>' +
       '<div class="kpi"><div class="n">' + (c.answers14 + c.math14) + '</div><div class="l">ответов за 2 нед.</div></div>' +
       '<div class="kpi blue"><div class="n">' + acc + '</div><div class="l">верно</div></div>' +
@@ -199,16 +202,47 @@
     h += c.homework.length ? c.homework.map(hwBlock).join('') : '<div class="empty">ДЗ ещё не было. Соберите вариант во вкладке «Конструктор ДЗ».</div>';
     h += '<div class="stl"><span>Конспекты уроков</span></div><div id="notes" class="muted">…</div>';
     h += '</div></div>';
+    h += '<div class="stl"><span>Ученик</span></div><div id="unl"><button class="b sec danger" id="unlink">Отказаться от ученика</button></div>';
     el.innerHTML = h;
     bindAsks(el);
-    document.getElementById('give').onclick = function () { tab = 'builder'; render(); };
+    document.getElementById('give').onclick = function () { tab = 'builder'; render(); toBuilder(); };
     document.getElementById('lesson').onclick = startLesson;
+    document.getElementById('unlink').onclick = askUnlink;
+    el.querySelectorAll('details.hwd').forEach(function (d) { d.addEventListener('toggle', function () { if (d.open && !d.dataset.m) { d.dataset.m = 1; A.math(d); } }); });
     api.post('/api/tutor/notes', { sid: cur }).then(function (r) {
       document.getElementById('notes').innerHTML = r.notes.length ? r.notes.map(function (n) {
-        return '<div class="mini row" style="justify-content:space-between"><span><a href="lesson.html?note=' + n.id + '" target="_blank" rel="noopener">' + esc(n.title) + '</a> <span class="muted">' + esc(n.created) + '</span></span>' +
-          '<span class="row"><a class="b sm sec" href="lesson.html?note=' + n.id + '&dl=png" target="_blank" rel="noopener">PNG</a><a class="b sm sec" href="lesson.html?note=' + n.id + '&dl=pdf" target="_blank" rel="noopener">PDF</a></span></div>'; }).join('') :
+        return '<div class="mini row" style="justify-content:space-between"><span><a href="lesson.html?note=' + n.id + '">' + esc(n.title) + '</a> <span class="muted">' + esc(n.created) + '</span></span>' +
+          '<span class="row"><a class="b sm sec" href="lesson.html?note=' + n.id + '&dl=png" target="_blank" rel="noopener">PNG</a><a class="b sm sec" href="lesson.html?note=' + n.id + '&dl=pdf" target="_blank" rel="noopener">PDF</a>' +
+          '<button class="b sm sec" data-del="' + n.id + '">Удалить</button></span></div>'; }).join('') :
         'Пока нет. Конспект сохраняется сам, когда вы нажимаете «Завершить урок» (или кнопкой «Сохранить конспект» во время урока).';
+      document.querySelectorAll('#notes [data-del]').forEach(function (b) {
+        b.onclick = function () {
+          if (!b.dataset.sure) { b.dataset.sure = 1; b.textContent = 'Точно удалить?'; b.classList.add('danger'); setTimeout(function () { delete b.dataset.sure; b.textContent = 'Удалить'; b.classList.remove('danger'); }, 3000); return; }
+          b.disabled = true;
+          api.post('/api/tutor/note/delete', { id: +b.dataset.del }).then(function () { b.closest('.mini').remove(); toast('Конспект удалён — и у вас, и у ученика на сервере'); }).catch(function (e) { b.disabled = false; fail(e); });
+        };
+      });
     }).catch(function () {});
+  }
+
+  // отказ от ученика: с подтверждением; прогресс ученика остаётся, ученику — короткое сообщение
+  function toBuilder() {                                   // «Задать ДЗ»: сразу к конструктору (и ещё раз, когда банк догрузится)
+    var go = function () { var t = document.querySelector('.tabs'); if (t) t.scrollIntoView({ block: 'start' }); };
+    go(); setTimeout(go, 700);
+  }
+
+  function askUnlink() {
+    document.getElementById('unl').innerHTML = '<div class="card" style="border:2px solid var(--red)"><b>Отказаться от ученика ' + esc(card.name) + '?</b>' +
+      '<p class="muted" style="margin-top:6px">Ученик пропадёт из кабинета, идущий урок закроется, его отметки «Разобрать» снимутся. Прогресс, марки и конспекты останутся у ученика. Ему придёт короткое сообщение в бот. Вернуть можно только новым приглашением.</p>' +
+      '<div class="row" style="margin-top:8px"><button class="b red" id="unyes">Да, отказаться</button><button class="b sec" id="unno">Отмена</button></div></div>';
+    document.getElementById('unno').onclick = drawCard;
+    document.getElementById('unyes').onclick = function () {
+      this.disabled = true;
+      api.post('/api/tutor/unlink', { sid: card.id }).then(function () {
+        toast(card.name + ' больше не в вашем списке'); cur = null;
+        return api.get('/api/tutor/me').then(function (m) { me = m; render(); });
+      }).catch(fail);
+    };
   }
 
   function hwBlock(hw) {
@@ -217,7 +251,9 @@
       hw.items.map(function (i) {
         var s = i.status === 'todo' ? '…' : i.status === 'skipped' ? '—' : i.ok ? 'да' : 'нет';
         return '<div class="hwi"><span class="st" style="color:' + (i.ok ? 'var(--blue)' : i.status === 'done' ? 'var(--red)' : 'var(--muted)') + '">' + s + '</span>' +
-          '<span><b>' + esc(i.topic) + '</b><br>' + esc(i.text.slice(0, 180)) + '</span><span class="muted">ответ: ' + esc(i.answer || '—') + '<br>верно: ' + esc(i.correct) + '</span></div>'; }).join('') + '</details>';
+          '<details class="hwd"><summary><b>' + esc(i.topic) + '</b> <span class="more">целиком</span><br><span class="short">' + esc(i.text.slice(0, 180)) + '</span></summary>' +
+          '<div class="full">' + esc(i.full || i.text) + '</div>' + (i.fig ? '<img src="' + esc(i.fig) + '" alt="Рисунок к задаче" loading="lazy">' : '') + '</details>' +
+          '<span class="muted">ответ: ' + esc(i.answer || '—') + '<br>верно: ' + esc(i.correct) + '</span></div>'; }).join('') + '</details>';
   }
 
   function startLesson() {
@@ -250,7 +286,8 @@
       sel('level', 'Уровень', [['', 'любой уровень']].concat(Object.keys(meta.levels).map(function (k) { return [k, meta.levels[k]]; }))) +
       '<input class="inp" id="q" placeholder="Поиск по тексту" aria-label="Поиск по тексту" value="' + esc(filt.q) + '" style="flex:1;min-width:140px"></div>';
     h += '<p class="muted" style="margin-top:8px" id="cnt"></p><div id="found"></div><div id="more"></div></div>';
-    h += '<aside class="basket" aria-label="Вариант"><h3>Вариант · <span id="bn">' + basket.length + '</span> зад.</h3><ol id="bl"></ol>' +
+    h += '<div class="sendbar"><span>Вариант · <b id="sbn">' + basket.length + '</b> зад.</span><button class="b blue sm" id="tosend">К отправке</button></div>';
+    h += '<aside class="basket" id="basket" aria-label="Вариант"><h3>Вариант · <span id="bn">' + basket.length + '</span> зад.</h3><ol id="bl"></ol>' +
       '<input class="inp" id="title" placeholder="Название (необязательно)" style="width:100%;margin-top:4px">' +
       '<div class="stl"><span>Кому</span></div>' + me.students.map(function (s) {
         return '<label class="chk"><input type="checkbox" value="' + s.id + '"' + (s.id === cur ? ' checked' : '') + '> ' + esc(s.name) + '</label>'; }).join('') +
@@ -268,6 +305,7 @@
       };
     });
     var t; document.getElementById('q').oninput = function (e) { clearTimeout(t); t = setTimeout(function () { filt.q = e.target.value; filt.offset = 0; search(); }, 300); };
+    document.getElementById('tosend').onclick = function () { document.getElementById('basket').scrollIntoView({ behavior: 'smooth', block: 'start' }); };
     document.getElementById('send').onclick = send;
     drawBasket(); drawFound();
   }
@@ -308,6 +346,8 @@
 
   function drawBasket() {
     document.getElementById('bn').textContent = basket.length;
+    var sb = document.getElementById('sbn'); if (sb) sb.textContent = basket.length;
+    var gt = document.getElementById('givetop'); if (gt) gt.textContent = 'Задать ДЗ' + (basket.length ? ' · ' + basket.length : '');
     document.getElementById('bl').innerHTML = basket.map(function (b, i) {
       return '<li>' + (b.subject.indexOf('oge') === 0 ? 'ОГЭ ' : '') + '№' + b.n + ' ' + esc(b.text.slice(0, 60)) + '… <a href="#" data-x="' + i + '" aria-label="Убрать из варианта">×</a></li>'; }).join('') || '<li class="muted" style="list-style:none;margin-left:-20px">Добавьте задачи из списка слева.</li>';
     document.querySelectorAll('[data-x]').forEach(function (a) { a.onclick = function (e) { e.preventDefault(); basket.splice(+a.dataset.x, 1); drawBasket(); drawFound(); }; });

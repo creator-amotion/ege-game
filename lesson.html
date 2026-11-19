@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@700;800&family=Golos+Text:wght@400..700&display=swap">
 <link rel="stylesheet" href="anik.css?v=7">
-<link rel="stylesheet" href="tutor.css?v=3">
+<link rel="stylesheet" href="tutor.css?v=5">
 <link rel="stylesheet" href="vendor/katex/katex.min.css">
 <script defer src="vendor/katex/katex.min.js"></script>
 <script defer src="vendor/katex/auto-render.min.js"></script>
@@ -170,11 +170,18 @@ body.lesson{display:flex;flex-direction:column;height:100vh;height:100dvh;overfl
   }
 
   function openNote() {
-    var first = studentApi.token() ? studentApi : tutorApi, id = +NOTE;   // сначала вход приложения: ученику копия — на устройство
+    var fromCabinet = /\/tutor\.html/.test(document.referrer) && tutorApi.ownLogin();   // открыл репетитор из кабинета
+    var first = !fromCabinet && studentApi.token() ? studentApi : tutorApi, id = +NOTE;   // иначе вход приложения: ученику копия — на устройство
     var show = function (n, banner) {
       readOnly = true; role = 'view'; tool = 'hand'; noteTitle = n.title;
       who.textContent = 'Конспект: ' + n.title;
       peerEl.style.display = 'none';
+      var mine = n.viewer !== 'tutor', home = mine ? 'notes.html' : 'tutor.html';   // выход из конспекта: туда, откуда пришли
+      document.getElementById('callbox').innerHTML = '<a class="callb off" id="backb" href="' + home + '">← ' + (mine ? 'Мои конспекты' : 'В кабинет') + '</a>';
+      document.getElementById('backb').onclick = function (e) {
+        var same = document.referrer && document.referrer.indexOf(location.origin) === 0 && !/lesson\.html/.test(document.referrer);
+        if (same && history.length > 1) { e.preventDefault(); history.back(); }
+      };
       build(); ops = []; apply(n.ops, true); showAll(true);
       if (banner) { var b = document.createElement('div'); b.className = 'permbar view'; b.setAttribute('role', 'status'); b.textContent = banner; app.insertBefore(b, app.children[1]); resize(); }
       var dl = qs.get('dl'); if (dl === 'png' || dl === 'pdf') setTimeout(function () { exportBoard(dl); }, 900);
@@ -961,7 +968,7 @@ body.lesson{display:flex;flex-direction:column;height:100vh;height:100dvh;overfl
   // звонок: основной — Телемост (ссылка репетитора); запасной — WebRTC напрямую, экспериментально
   function callUi() {
     var box = document.getElementById('callbox');
-    if (readOnly) { box.innerHTML = ''; return; }
+    if (readOnly) return;                                   // в конспекте там кнопка «Назад»
     var tm = /telemost/.test(callUrl);
     box.innerHTML = (callUrl ? '<button class="callb" id="tmb">' + (tm ? 'Позвонить в Телемост' : 'Позвонить') + '</button>'
       : (role === 'tutor' ? '<a class="callb off" href="tutor.html" target="_blank" rel="noopener" title="Ссылка на Телемост задаётся в кабинете">Ссылка на Телемост</a>' : '')) +
