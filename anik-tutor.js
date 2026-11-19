@@ -60,7 +60,12 @@
       if (!m) m = { tutor: false, has_tutor: false };          // приложение не связано, но в этом браузере вошёл репетитор
       el.innerHTML = html(m);
       el.querySelectorAll('.tut-call').forEach(function (b) {
-        b.onclick = function () { var tg = window.Telegram && window.Telegram.WebApp; if (tg && tg.initData && tg.openLink) tg.openLink(b.dataset.url); else window.open(b.dataset.url, '_blank', 'noopener'); };
+        b.onclick = function () {                          // звонок — мимо этой страницы, чтобы потом вернуться к доске
+          if (window.AnikTutor && AnikTutor.openCall) return AnikTutor.openCall(b.dataset.url);
+          var tg = window.Telegram && window.Telegram.WebApp;
+          if (tg && tg.initData && tg.openLink) return tg.openLink(b.dataset.url, { try_instant_view: false });
+          var a = document.createElement('a'); a.href = b.dataset.url; a.target = '_blank'; a.rel = 'noopener noreferrer'; document.body.appendChild(a); a.click(); a.remove();
+        };
       });
     });
   };

@@ -22,10 +22,18 @@
   Api.prototype.token = function () { return !!this.auth(); };
   Api.prototype.ownLogin = function () { return this.role === 'tutor' && !!get(KEYS.tutor); };   // отдельный вход кодом репетитора
   Api.prototype.logout = function () { set(KEYS[this.role], ''); };
-  Api.prototype.call = function (method, path, data) {
-    var self = this, h = this.auth() || {};
+  /* opt.timeout — оборвать запрос через столько мс; opt.signal — оборвать снаружи (урок: переподключение после звонка) */
+  Api.prototype.call = function (method, path, data, opt) {
+    var self = this, h = this.auth() || {}, ac = null, tm = 0;
+    opt = opt || {};
     if (data !== undefined) h['Content-Type'] = 'application/json';
-    return fetch(API + path, { method: method, headers: h, body: data !== undefined ? JSON.stringify(data) : undefined })
+    if ((opt.timeout || opt.signal) && window.AbortController) {
+      ac = new AbortController();
+      if (opt.signal) { if (opt.signal.aborted) ac.abort(); else opt.signal.addEventListener('abort', function () { ac.abort(); }); }
+      if (opt.timeout) tm = setTimeout(function () { ac.abort(); }, opt.timeout);
+    }
+    return fetch(API + path, { method: method, headers: h, body: data !== undefined ? JSON.stringify(data) : undefined, signal: ac ? ac.signal : undefined })
+      .then(function (r) { clearTimeout(tm); return r; }, function (e) { clearTimeout(tm); if (ac && ac.signal.aborted) { var a = new Error('aborted'); a.aborted = true; throw a; } throw e; })
       .then(function (r) {
         return r.json().catch(function () { return {}; }).then(function (j) {
           if (r.status === 401 && !initData) { if (self.role === 'tutor' && get(KEYS.tutor)) set(KEYS.tutor, ''); else set(KEYS.student, ''); }
@@ -35,7 +43,7 @@
       });
   };
   Api.prototype.get = function (p) { return this.call('GET', p); };
-  Api.prototype.post = function (p, d) { return this.call('POST', p, d || {}); };
+  Api.prototype.post = function (p, d, opt) { return this.call('POST', p, d || {}, opt); };
   Api.prototype.link = function (code) {
     var self = this;
     code = String(code || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
@@ -77,9 +85,15 @@
     }
   }
 
-  /* звонок: ссылка на Телемост (или другую комнату) — в новом окне; внутри Telegram — через openLink */
+  /* звонок: ссылка на Телемост (или другую комнату) — всегда мимо текущей страницы, чтобы доска осталась открытой.
+     Внутри Telegram — openLink (внешний браузер или приложение Телемоста); в браузере — новая вкладка через ссылку
+     target=_blank: на iPhone это надёжнее window.open, который Safari может заблокировать. */
   function openCall(url) {
-    if (tg && initData && tg.openLink) tg.openLink(url); else window.open(url, '_blank', 'noopener');
+    if (!/^https:\/\//.test(String(url || ''))) return;
+    if (tg && initData && tg.openLink) { try { tg.openLink(url, { try_instant_view: false }); return; } catch (e) {} }
+    var a = document.createElement('a');
+    a.href = url; a.target = '_blank'; a.rel = 'noopener noreferrer'; a.style.display = 'none';
+    document.body.appendChild(a); a.click(); setTimeout(function () { a.remove(); }, 0);
   }
 
   window.AnikTutor = { Api: Api, esc: esc, loginForm: loginForm, math: math, openCall: openCall, API: API, local: local, inTelegram: !!initData };

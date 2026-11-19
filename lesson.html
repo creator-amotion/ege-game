@@ -16,12 +16,16 @@
 <link rel="stylesheet" href="vendor/katex/katex.min.css">
 <script defer src="vendor/katex/katex.min.js"></script>
 <script defer src="vendor/katex/auto-render.min.js"></script>
-<script src="tutor-api.js?v=5"></script>
+<script src="tutor-api.js?v=6"></script>
 <script src="anik-notes-store.js?v=1"></script>
 <style>
 html,body{height:100%}
 body.lesson{display:flex;flex-direction:column;height:100vh;height:100dvh;overflow:hidden}
-.lbar{display:flex;align-items:center;gap:8px;padding:6px 10px;border-bottom:2px solid var(--ink);background:var(--paper);flex-wrap:nowrap;min-height:54px}
+:root{--safe-t:calc(max(env(safe-area-inset-top,0px),var(--tg-safe-area-inset-top,0px)) + var(--tg-content-safe-area-inset-top,0px));--safe-r:max(env(safe-area-inset-right,0px),var(--tg-safe-area-inset-right,0px));--safe-l:max(env(safe-area-inset-left,0px),var(--tg-safe-area-inset-left,0px));--safe-b:max(env(safe-area-inset-bottom,0px),var(--tg-safe-area-inset-bottom,0px))}
+body.lesson{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+.lbar{display:flex;align-items:center;gap:8px;padding:calc(6px + var(--safe-t)) calc(10px + var(--safe-r)) 6px calc(10px + var(--safe-l));border-bottom:2px solid var(--ink);background:var(--paper);flex-wrap:nowrap;min-height:54px;flex-shrink:0}
+.lbar,.tools,.pop,.lmenu{-webkit-user-select:none;user-select:none}
+.lbar button,.lbar a,.tools button,.pop button,.lmenu button{touch-action:manipulation}
 .lbar .who,.peer span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.lbar .who{flex:0 1 auto}.peer{min-width:0;flex:0 1 auto}
 @media (max-width:760px){.lbar{flex-wrap:wrap}}
 .lbar .wm{font-size:20px;margin-right:4px}
@@ -36,7 +40,7 @@ body.lesson{display:flex;flex-direction:column;height:100vh;height:100dvh;overfl
 .perm b{padding:0 8px;font-weight:600;white-space:nowrap}
 .perm button{height:36px;border:0;border-left:2px solid var(--ink);background:transparent;font:600 13px inherit;padding:0 10px;cursor:pointer;font-family:inherit;white-space:nowrap}
 .perm button[aria-pressed=true]{background:var(--ink);color:var(--paper)}
-.tools{display:flex;gap:4px;align-items:center;padding:6px 8px;border-bottom:2px solid var(--ink);background:var(--paper);flex-wrap:wrap;flex-shrink:0}
+.tools{display:flex;gap:4px;align-items:center;padding:6px calc(8px + var(--safe-r)) 6px calc(8px + var(--safe-l));border-bottom:2px solid var(--ink);background:var(--paper);flex-wrap:wrap;flex-shrink:0}
 @media (max-width:600px){.tools{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:thin}}
 .tools .sep{flex:0 0 2px;height:32px;background:var(--ink);margin:0 4px}
 .tool{flex:0 0 auto;min-width:44px;height:44px;border:2px solid var(--ink);background:#fff;color:var(--ink);font-weight:700;cursor:pointer;font-size:12px;padding:0 6px;display:inline-flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;line-height:1;font-family:inherit}
@@ -89,14 +93,59 @@ body.lesson{display:flex;flex-direction:column;height:100vh;height:100dvh;overfl
 .rvc .tx{margin:4px 0;max-height:110px;overflow:hidden;white-space:pre-wrap;line-height:1.35;overflow-wrap:anywhere}
 .rvc img{display:block;max-width:100%;max-height:100px}.rvc .row{margin-top:6px}
 .rvh{margin-top:12px;font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;border-top:2px solid var(--ink);padding-top:6px}
-.hint{position:absolute;left:10px;bottom:10px;background:rgba(243,238,226,.95);border:2px solid var(--ink);padding:6px 10px;font-size:12px;max-width:min(440px,80%);pointer-events:none}
+.hint{position:absolute;left:10px;bottom:calc(10px + var(--safe-b));background:rgba(243,238,226,.95);border:2px solid var(--ink);padding:6px 10px;font-size:12px;max-width:min(440px,80%);pointer-events:none}
 .busy{position:absolute;left:50%;top:14px;transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:8px 14px;font-weight:600;font-size:14px;z-index:6}
 .tbox{position:absolute;z-index:5;min-width:220px;min-height:44px;border:2px dashed var(--ink);background:rgba(255,255,255,.9);font-family:'Golos Text',sans-serif;font-weight:600;padding:4px 6px;resize:both}
 .over{position:fixed;inset:0;background:rgba(243,238,226,.96);z-index:40;display:flex;align-items:center;justify-content:center;padding:16px}
 .over .card{max-width:440px;width:100%;border:3px solid var(--ink);padding:20px}
 .over h2{margin-bottom:8px}
 .over .row{margin-top:14px}
-@media (max-width:600px){.lbar .who{display:none}.tool small{display:none}.tool{min-width:42px}.perm b{display:none}}
+@media (max-width:600px){.lbar .who{display:none}.tool small{display:none}.tool{min-width:42px}}
+.toast{bottom:calc(20px + var(--safe-b))}
+/* телефон (iPhone 375–430): шапка в две строки, второстепенное — в «Меню», инструменты в одну строку без прокрутки */
+.pop,.lmenu{position:absolute;z-index:15;background:var(--paper);border:2px solid var(--ink);border-top:0}
+.pop{left:0;right:0;top:0;border-left:0;border-right:0;padding:8px calc(8px + var(--safe-r)) 10px calc(8px + var(--safe-l));display:flex;flex-wrap:wrap;gap:8px;align-items:center;box-shadow:0 6px 0 rgba(17,17,17,.12)}
+.pop .lab{flex-basis:100%;font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase}
+.lmenu{right:0;top:0;width:min(100%,340px);max-height:100%;overflow:auto;-webkit-overflow-scrolling:touch;border-right:0;padding:8px calc(8px + var(--safe-r)) calc(10px + var(--safe-b)) 8px;display:grid;grid-template-columns:1fr 1fr;gap:6px;box-shadow:-6px 6px 0 rgba(17,17,17,.15)}
+.pop[hidden],.lmenu[hidden]{display:none}
+.lmenu .mh{grid-column:1/-1;font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;margin-top:4px}
+.lmenu .mi{min-height:44px;border:2px solid var(--ink);background:#fff;color:var(--ink);font-family:inherit;font-weight:600;font-size:14px;line-height:1.15;padding:4px 10px;text-align:left;cursor:pointer;text-decoration:none;display:flex;align-items:center}
+.lmenu .mi.yel{background:var(--yellow)}.lmenu .mi.red{background:var(--red);color:#111}.lmenu .full{grid-column:1/-1}
+.lmenu .zr{grid-column:1/-1;display:flex;gap:6px;align-items:center}.lmenu .zr .mi{flex:1;justify-content:center;font-size:20px}
+#callbox{display:inline-flex;gap:6px;align-items:center;flex-wrap:nowrap}
+@media (min-width:601px) and (max-width:1000px){
+  .lbar{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:6px 10px}
+  .lbar .grow,.lbar .who{display:none}
+  #permbox{grid-column:1/-1;grid-row:2}
+  #permbox:empty{display:none}
+}
+/* телефон боком: всё в одну строку, чтобы доске осталась высота */
+@media (max-height:500px) and (max-width:1000px){
+  body .lbar{grid-template-columns:auto minmax(0,1fr) auto auto;padding-top:calc(4px + var(--safe-t));padding-bottom:4px}
+  body .lbar .wm{grid-area:1/1}body .lbar .peer{grid-area:1/2}body #permbox{grid-area:1/3}body #callbox{grid-area:1/4}
+  body .perm{min-width:250px}
+  body .tools{padding-top:4px;padding-bottom:4px}
+  body .tools .tool{height:40px}
+  .hint{display:none}
+}
+.tool .dot{display:block;border-radius:50%;border:2px solid var(--paper);box-shadow:0 0 0 1px var(--ink)}
+@media (max-width:600px), (max-height:500px) and (max-width:1000px){
+  .lbar{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:6px 8px;min-height:0}
+  .lbar .grow{display:none}
+  .lbar .wm{font-size:18px;margin:0}
+  .peer{font-size:12.5px}
+  #callbox{display:flex;gap:6px;justify-self:end}
+  .callb{min-height:40px;padding:0 10px;font-size:13.5px}
+  #permbox{grid-column:1/-1;grid-row:2;display:flex;gap:6px;min-width:0}
+  #permbox:empty{display:none}
+  .perm{flex:1 1 auto;min-width:0}
+  .perm b{padding:0 6px;font-size:12px}
+  .perm button{flex:1 1 0;min-width:0;height:40px;padding:0 4px;font-size:13px}
+  .permtb{flex:0 0 auto}
+  .tools{flex-wrap:nowrap;gap:4px;overflow:visible}
+  .tools .tool{flex:1 1 0;min-width:0;max-width:56px;height:44px;padding:0 2px}
+  .permbar{font-size:13px;padding:5px 12px;line-height:1.3}
+}
 </style>
 </head>
 <body class="lesson">
@@ -108,7 +157,7 @@ body.lesson{display:flex;flex-direction:column;height:100vh;height:100dvh;overfl
   <span id="callbox"></span>
   <span class="who muted" id="who"></span>
 </header>
-<div id="app" style="flex:1;display:flex;flex-direction:column;min-height:0"><main class="wrap"><div class="empty">Загружаю урок…</div></main></div>
+<div id="app" style="flex:1;display:flex;flex-direction:column;min-height:0;position:relative"><main class="wrap"><div class="empty">Загружаю урок…</div></main></div>
 <script>
 (function () {
   var A = window.AnikTutor, esc = A.esc;
@@ -142,6 +191,12 @@ body.lesson{display:flex;flex-direction:column;height:100vh;height:100dvh;overfl
   var localUrls = {};                                  // картинки материалов из копии на устройстве
   function fileUrl(f) { return localUrls[f] || A.API + '/api/file/' + f; }
   var IMG_MAX = 1600, IMG_Q = 0.8, FILE_LIMIT = 1500000;  // материалы ужимаются на устройстве репетитора
+  var PHONE = window.matchMedia ? window.matchMedia('(max-width:600px), (max-height:500px) and (max-width:1000px)') : null, SHAPES = ['line', 'arrow', 'rect', 'circle'];
+  function compact() { return !!(PHONE && PHONE.matches); }
+  var tg = window.Telegram && window.Telegram.WebApp;
+  if (tg && tg.initData) {                              // внутри Telegram: во весь экран, свайп вниз не сворачивает доску
+    try { tg.ready(); tg.expand(); if (tg.disableVerticalSwipes && tg.isVersionAtLeast && tg.isVersionAtLeast('7.7')) tg.disableVerticalSwipes(); } catch (e) {}
+  }
 
   // ───────── вход ─────────
   function start() {
@@ -215,6 +270,7 @@ body.lesson{display:flex;flex-direction:column;height:100vh;height:100dvh;overfl
     return true;
   }
   function toolsHtml() {
+    if (compact()) return toolsCompact();
     var tb = tbtn('hand', 'Рука: двигать доску' + (role === 'tutor' ? ', задачи и материалы' : ''), 'рука');
     var draw = [['pen', 'Ручка', 'ручка'], ['hl', 'Маркер — выделить', 'маркер'], ['line', 'Прямая (угол прилипает к 15°)', 'прямая'], ['arrow', 'Стрелка', 'стрелка'],
       ['rect', 'Прямоугольник', 'прямоуг.'], ['circle', 'Окружность: от центра', 'окружн.'], ['text', 'Текст', 'текст'], ['er', 'Ластик: касание стирает линию целиком', 'ластик']].filter(function (x) { return allowed(x[0]); });
@@ -235,11 +291,77 @@ body.lesson{display:flex;flex-direction:column;height:100vh;height:100dvh;overfl
     tb += '<button class="tool wide" id="png">PNG</button><button class="tool wide" id="pdf">PDF</button>';
     return tb;
   }
+  // телефон: одна строка инструментов; фигуры и цвет — во всплывающих полосах, остальное — в «Меню»
+  function dot() { var d = { 5: 8, 10: 13, 18: 19 }[width] || 13; return '<i class="dot" style="width:' + d + 'px;height:' + d + 'px;background:' + color + '"></i>'; }
+  function toolsCompact() {
+    var tb = tbtn('hand', 'Рука: двигать доску', 'рука');
+    ['pen', 'hl'].forEach(function (k) { if (allowed(k)) tb += tbtn(k, k === 'pen' ? 'Ручка' : 'Маркер — выделить', k === 'pen' ? 'ручка' : 'маркер'); });
+    var sh = SHAPES.filter(allowed), isSh = sh.indexOf(tool) >= 0;
+    if (sh.length) tb += '<button class="tool" id="shapes" title="Фигуры" aria-label="Фигуры: прямая, стрелка, прямоугольник, окружность" aria-haspopup="true" aria-expanded="false" aria-pressed="' + isSh + '">' + svg(isSh ? tool : 'rect') + '<small>фигуры</small></button>';
+    if (allowed('text')) tb += tbtn('text', 'Текст', 'текст');
+    if (allowed('er')) tb += tbtn('er', 'Ластик: касание стирает линию целиком', 'ластик');
+    if (allowed('pen')) tb += '<button class="tool" id="undo" title="Отменить своё последнее" aria-label="Отменить">' + svg('undo') + '<small>отменить</small></button>' +
+      '<button class="tool" id="style" title="Цвет и толщина" aria-label="Цвет и толщина" aria-haspopup="true" aria-expanded="false">' + dot() + '</button>';
+    return tb;
+  }
+  function mi(id, label, cls) { return '<button class="mi' + (cls ? ' ' + cls : '') + '" id="' + id + '">' + label + '</button>'; }
+  function menuHtml() {
+    var m = '', live = !readOnly;
+    if (role === 'tutor' && live) m += '<div class="mh">Урок</div>' + mi('here', 'Позвать сюда') + mi('rev', revText(), 'yel') + mi('bank', 'Задачи из банка', 'yel') + mi('mat', 'Материалы', 'yel') +
+      '<input type="file" id="matf" accept="image/png,image/jpeg,image/webp,application/pdf,.pdf" multiple hidden>' + mi('save', 'Сохранить конспект') + mi('clr', 'Очистить доску');
+    m += '<div class="mh">Вид</div><div class="zr"><button class="mi" id="zout" aria-label="Уменьшить">−</button><span class="zoomv" id="zv">100%</span><button class="mi" id="zin" aria-label="Увеличить">+</button></div>' +
+      mi('zall', 'Показать всё') + mi('zhome', 'К началу') + '<div class="mh">Скачать доску</div>' + mi('png', 'PNG') + mi('pdf', 'PDF');
+    if (live) {
+      m += '<div class="mh">Звонок</div>' + (role === 'tutor' && !callUrl ? '<a class="mi full" href="tutor.html" target="_blank" rel="noopener">Ссылка на Телемост — в кабинете</a>' : '') + mi('callmore', 'Другие способы звонка', 'full');
+      if (role === 'tutor') m += mi('endb', 'Завершить урок', 'red full');
+    }
+    return m;
+  }
+  function revText() { return 'К разбору' + (reviewN ? ' · ' + reviewN : ''); }
+  function revUpd() {
+    var b = document.getElementById('rev'); if (b) b.textContent = revText();
+    var m = document.getElementById('menub'); if (m) m.textContent = 'Меню' + (role === 'tutor' && reviewN && !readOnly ? ' · ' + reviewN : '');
+  }
+  function menuBtn() {                                   // кнопка «Меню» в шапке — только на телефоне
+    var box = document.getElementById('callbox'), b = document.getElementById('menub');
+    if (!compact()) { if (b) b.remove(); return; }
+    if (!b) { box.insertAdjacentHTML('beforeend', '<button class="callb off" id="menub" aria-haspopup="true" aria-expanded="false" aria-controls="lmenu">Меню</button>'); b = document.getElementById('menub'); }
+    b.onclick = function () { var m = document.getElementById('lmenu'); if (m && m.hidden) openMenu(); else closeMenu(); };
+    revUpd();
+  }
+  function openMenu() {
+    closePop(); var m = document.getElementById('lmenu'), b = document.getElementById('menub'); if (!m) return;
+    m.hidden = false; if (b) b.setAttribute('aria-expanded', 'true'); redraw();
+    var f = m.querySelector('button'); if (f) f.focus({ preventScroll: true });
+  }
+  function closeMenu() { var m = document.getElementById('lmenu'), b = document.getElementById('menub'); if (m) m.hidden = true; if (b) b.setAttribute('aria-expanded', 'false'); }
+  function closePop() {
+    var p = document.getElementById('pop'); if (p) { p.hidden = true; p.dataset.what = ''; }
+    ['shapes', 'style'].forEach(function (id) { var e = document.getElementById(id); if (e) e.setAttribute('aria-expanded', 'false'); });
+  }
+  function openPop(what) {
+    var p = document.getElementById('pop'); if (!p) return;
+    if (!p.hidden && p.dataset.what === what) return closePop();
+    closeMenu(); closePop(); p.hidden = false; p.dataset.what = what;
+    document.getElementById(what).setAttribute('aria-expanded', 'true');
+    if (what === 'shapes') {
+      p.innerHTML = '<span class="lab">Фигуры</span>' + [['line', 'Прямая (угол прилипает к 15°)', 'прямая'], ['arrow', 'Стрелка', 'стрелка'], ['rect', 'Прямоугольник', 'прямоуг.'], ['circle', 'Окружность: от центра', 'окружн.']]
+        .filter(function (x) { return allowed(x[0]); }).map(function (x) { return tbtn(x[0], x[1], x[2]); }).join('');
+      p.querySelectorAll('[data-tool]').forEach(function (b) { b.onclick = function () { setTool(b.dataset.tool); closePop(); }; });
+    } else {
+      p.innerHTML = '<span class="lab">Цвет</span>' + COLORS.map(function (c) { return '<button class="sw" data-color="' + c[0] + '" style="background:' + c[0] + '" aria-label="Цвет: ' + c[1] + '" aria-pressed="' + (c[0] === color) + '"></button>'; }).join('') +
+        '<span class="lab">Толщина</span>' + WIDTHS.map(function (w, i) { var d = [6, 11, 17][i]; return '<button class="wbtn" data-w="' + w + '" aria-label="Толщина ' + ['тонкая', 'средняя', 'толстая'][i] + '" aria-pressed="' + (w === width) + '"><i style="width:' + d + 'px;height:' + d + 'px"></i></button>'; }).join('');
+      p.querySelectorAll('[data-color]').forEach(function (b) { b.onclick = function () { color = b.dataset.color; press('[data-color]', b); styleUpd(); if (tool === 'er' || tool === 'hand') setTool('pen'); closePop(); }; });
+      p.querySelectorAll('[data-w]').forEach(function (b) { b.onclick = function () { width = +b.dataset.w; press('[data-w]', b); styleUpd(); closePop(); }; });
+    }
+  }
+  function styleUpd() { var b = document.getElementById('style'); if (b) b.innerHTML = dot(); }
   function build() {
     app.innerHTML = '<div class="tools" id="tools" role="toolbar" aria-label="Инструменты доски"></div>' + (role === 'student' ? '<div class="permbar" id="permbar" role="status"></div>' : '') +
-      '<div class="lmain"><div class="stage" id="stage"><div class="layer" id="layer"><div id="cards"></div></div><canvas id="board" aria-label="Общая доска"></canvas><div class="ring" id="ring"></div>' +
-      '<div class="hint" id="hint">Доска бесконечная. Колесо — прокрутка, Ctrl + колесо — масштаб, «Рука» — тащить. На планшете: стилусом или пальцем рисуем, двумя пальцами — двигаем и масштабируем.' +
-      (role === 'tutor' ? ' Свои картинки и PDF — кнопкой «Материалы», перетаскиванием на доску или Ctrl+V.' : '') + '</div><span class="sr" aria-live="polite" id="live"></span></div>' +
+      '<div class="lmain"><div class="pop" id="pop" hidden></div><div class="lmenu" id="lmenu" hidden aria-label="Меню урока"></div><div class="stage" id="stage"><div class="layer" id="layer"><div id="cards"></div></div><canvas id="board" aria-label="Общая доска"></canvas><div class="ring" id="ring"></div>' +
+      '<div class="hint" id="hint">' + (compact() ? 'Доска бесконечная. Пальцем рисуем, двумя пальцами — двигаем и масштабируем. Масштаб, PNG и PDF' + (role === 'tutor' ? ', задачи и материалы' : '') + ' — в «Меню».'
+        : 'Доска бесконечная. Колесо — прокрутка, Ctrl + колесо — масштаб, «Рука» — тащить. На планшете: стилусом или пальцем рисуем, двумя пальцами — двигаем и масштабируем.' +
+      (role === 'tutor' ? ' Свои картинки и PDF — кнопкой «Материалы», перетаскиванием на доску или Ctrl+V.' : '')) + '</div><span class="sr" aria-live="polite" id="live"></span></div>' +
       (readOnly ? '' : '<aside class="drawer" id="drawer" hidden></aside>') + '</div>';
     stage = document.getElementById('stage'); layer = document.getElementById('layer'); ringEl = document.getElementById('ring');
     canvas = document.getElementById('board'); ctx = canvas.getContext('2d');
@@ -252,7 +374,12 @@ body.lesson{display:flex;flex-direction:column;height:100vh;height:100dvh;overfl
   }
   function renderTools() {
     if (!allowed(tool)) tool = 'hand';
+    closePop();
     document.getElementById('tools').innerHTML = toolsHtml();
+    var lm = document.getElementById('lmenu'); if (lm) { lm.innerHTML = compact() ? menuHtml() : ''; if (!compact()) closeMenu(); }
+    menuBtn();
+    on('shapes', function () { openPop('shapes'); }); on('style', function () { openPop('style'); });
+    on('callmore', function () { closeMenu(); drawer('call'); }); on('endb', endLesson);
     app.querySelectorAll('[data-tool]').forEach(function (b) { b.onclick = function () { setTool(b.dataset.tool); }; });
     app.querySelectorAll('[data-color]').forEach(function (b) { b.onclick = function () { color = b.dataset.color; press('[data-color]', b); if (tool === 'er' || tool === 'hand') setTool('pen'); }; });
     app.querySelectorAll('[data-w]').forEach(function (b) { b.onclick = function () { width = +b.dataset.w; press('[data-w]', b); }; });
@@ -266,10 +393,27 @@ body.lesson{display:flex;flex-direction:column;height:100vh;height:100dvh;overfl
     if (pb) { pb.className = 'permbar ' + perm; pb.textContent = PERM_TEXT[perm]; }
     schedule();
   }
+  // меню и всплывашки закрываются касанием мимо, пунктом меню (кроме масштаба) и Esc
+  document.addEventListener('pointerdown', function (e) {
+    var t = e.target;
+    if (!t.closest('#lmenu') && !t.closest('#menub')) closeMenu();
+    if (!t.closest('#pop') && !t.closest('#shapes') && !t.closest('#style')) closePop();
+  }, true);
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest && e.target.closest('#lmenu .mi');
+    if (b && b.id !== 'zin' && b.id !== 'zout') closeMenu();
+  });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { closeMenu(); closePop(); } });
+  if (PHONE) {
+    var onPhone = function () { if (!stage) return; closeMenu(); renderTools(); permUi(); callUi(); resize(); };
+    if (PHONE.addEventListener) PHONE.addEventListener('change', onPhone); else if (PHONE.addListener) PHONE.addListener(onPhone);
+  }
   function on(id, fn) { var e = document.getElementById(id); if (e) e.onclick = fn; }
   function press(sel, b) { app.querySelectorAll(sel).forEach(function (x) { x.setAttribute('aria-pressed', String(x === b)); }); }
   function setTool(t) {
-    tool = t; press('[data-tool]', app.querySelector('[data-tool=' + t + ']'));
+    tool = t; press('[data-tool]', app.querySelector('#tools [data-tool=' + t + ']'));
+    var sb = document.getElementById('shapes');
+    if (sb) { var isSh = SHAPES.indexOf(t) >= 0; sb.setAttribute('aria-pressed', String(isSh)); if (isSh) sb.innerHTML = svg(t) + '<small>фигуры</small>'; }
     stage.classList.toggle('hand', t === 'hand' && role === 'tutor');
     canvas.style.cursor = t === 'hand' ? 'grab' : t === 'text' ? 'text' : t === 'er' ? 'none' : 'crosshair';
     ringEl.style.display = 'none';
@@ -280,7 +424,9 @@ body.lesson{display:flex;flex-direction:column;height:100vh;height:100dvh;overfl
     var box = document.getElementById('permbox');
     if (role !== 'tutor') { box.innerHTML = ''; return; }
     box.innerHTML = '<span class="perm" role="group" aria-label="Что может ученик на доске"><b>Ученик:</b>' +
-      [['view', 'смотрит'], ['pen', 'ручка'], ['all', 'рисует']].map(function (p) { return '<button data-perm="' + p[0] + '" aria-pressed="' + (perm === p[0]) + '">' + p[1] + '</button>'; }).join('') + '</span>';
+      [['view', 'смотрит'], ['pen', 'ручка'], ['all', 'рисует']].map(function (p) { return '<button data-perm="' + p[0] + '" aria-pressed="' + (perm === p[0]) + '">' + p[1] + '</button>'; }).join('') + '</span>' +
+      (compact() ? '<button class="callb off permtb" id="toboard"></button>' : '');
+    on('toboard', toBoard); boardBtn();
     box.querySelectorAll('[data-perm]').forEach(function (b) {
       b.onclick = function () {
         api.post('/api/room/perm', { room: ROOM, perm: b.dataset.perm }).then(function (r) { perm = r.perm; atBoard = false; boardBtn(); permUi(); toast({ view: 'Ученик только смотрит', pen: 'Ученик может рисовать ручкой', all: 'Ученик может рисовать всем, кроме материалов' }[perm]); })
@@ -735,27 +881,61 @@ body.lesson{display:flex;flex-direction:column;height:100vh;height:100dvh;overfl
     if (sending || !outbox.length || ended) return;
     sending = true;
     var batch = outbox.splice(0, 50).map(function (o) { var c = {}; for (var k in o) if (k !== 'by') c[k] = o[k]; return c; });
-    api.post('/api/room/op', { room: ROOM, ops: batch }).catch(function (e) {
+    api.post('/api/room/op', { room: ROOM, ops: batch }, { timeout: 20000 }).catch(function (e) {   // повтор сервер не задвоит
       if (e.status === 409) toast('Доска заполнена: сохраните конспект и начните новый урок.');
       else if (e.status === 403) toast('Сейчас рисовать нельзя — репетитор не разрешил.');
       else if (e.status === 410) showEnded(e.body && e.body.note);
       else if (e.status !== 400) { outbox = batch.concat(outbox); return new Promise(function (r) { setTimeout(r, 1500); }); }
     }).then(function () { sending = false; flush(); });
   }
-  function poll() {
-    if (ended) return;
-    api.post('/api/room/poll', { room: ROOM, after: seq }).then(function (r) {
+  /* Опрос доски (long polling). Каждый запрос — со своим номером и тайм-аутом: если телефон уходил в фон (звонок в Телемосте,
+     другое приложение), повисший запрос обрывается, и при возврате доска запрашивает всё, что пропустила, и перерисовывается. */
+  var pollGen = 0, pollCtl = null, pollAt = 0, hiddenAt = 0, backMsg = false;
+  function poll(quick) {                                    // quick: сразу ответ без ожидания — после возврата на страницу
+    if (ended || readOnly) return;
+    var gen = ++pollGen, body = { room: ROOM, after: seq };
+    if (quick) body.wait = 0;
+    pollCtl = window.AbortController ? new AbortController() : null; pollAt = Date.now();
+    api.post('/api/room/poll', body, { signal: pollCtl && pollCtl.signal, timeout: 35000 }).then(function (r) {
+      if (gen !== pollGen) return;                          // уже идёт более свежий опрос
+      pollAt = Date.now();
       if (r.ops.length) { apply(r.ops); document.getElementById('live').textContent = 'Доска обновилась'; }
       seq = r.seq; setPeer(r.peer_online); setPerm(r.perm);
       r.rtc.forEach(onSignal);
+      if (backMsg) { backMsg = false; toast('Доска снова на связи'); }
       if (r.ended) return showEnded(r.note);
       poll();
-    }).catch(function (e) { setPeer(false); if (e.status === 401 || e.status === 404) { toast('Урок закрыт или вход истёк'); return; } setTimeout(poll, 2000); });
+    }).catch(function (e) {
+      if (gen !== pollGen) return;
+      setPeer(false);
+      if (e.status === 401 || e.status === 404) { toast('Урок закрыт или вход истёк'); return; }
+      if (e.status === 410) return showEnded(e.body && e.body.note);
+      setTimeout(function () { if (gen === pollGen) poll(); }, e.aborted ? 300 : 2000);
+    });
+  }
+  function wake() {                                         // вернулись на страницу: переподключить и перерисовать
+    if (ended || readOnly || !stage || document.hidden) return;
+    var away = hiddenAt ? Date.now() - hiddenAt : 0; hiddenAt = 0;
+    if (away > 4000) backMsg = true;
+    var old = pollCtl; pollGen++; if (old) try { old.abort(); } catch (e) {}
+    poll(true); flush();
+    resize(); cache = null; schedule();                      // iOS может очистить холст, пока страница в фоне
+  }
+  document.addEventListener('visibilitychange', function () { if (document.hidden) hiddenAt = Date.now(); else wake(); });
+  window.addEventListener('pagehide', function () { hiddenAt = hiddenAt || Date.now(); });
+  window.addEventListener('pageshow', function (e) { if (e.persisted) { hiddenAt = hiddenAt || Date.now() - 5000; wake(); } });   // возврат из кэша вкладок (bfcache)
+  window.addEventListener('online', wake);
+  window.addEventListener('focus', function () { if (Date.now() - pollAt > 40000) wake(); });
+  setInterval(function () { if (!document.hidden && stage && !ended && !readOnly && Date.now() - pollAt > 45000) wake(); }, 10000);   // сторож: опрос не должен молчать
+  if (tg && tg.initData && tg.onEvent) {
+    try { tg.onEvent('activated', function () { hiddenAt = hiddenAt || Date.now() - 5000; wake(); }); tg.onEvent('deactivated', function () { hiddenAt = Date.now(); }); } catch (e) {}
+    try { tg.onEvent('viewportChanged', function () { if (stage) resize(); }); } catch (e) {}
   }
   function setPeer(onl) {
     var other = role === 'tutor' ? names.student : names.tutor;
     peerEl.className = 'peer' + (onl ? ' on' : '');
     peerEl.querySelector('span').textContent = (other || 'собеседник') + (onl ? ' на уроке' : ' не в комнате');
+    peerEl.title = peerEl.querySelector('span').textContent;
   }
 
   // ───────── конец урока ─────────
@@ -901,7 +1081,7 @@ body.lesson{display:flex;flex-direction:column;height:100vh;height:100dvh;overfl
   function loadReview() {
     return api.post('/api/room/review', { room: ROOM }).then(function (r) {
       reviewData = r; reviewN = r.asks.length + r.homework.length;
-      var b = document.getElementById('rev'); if (b) b.textContent = 'К разбору' + (reviewN ? ' · ' + reviewN : '');
+      revUpd();
       return r;
     });
   }
@@ -939,7 +1119,7 @@ body.lesson{display:flex;flex-direction:column;height:100vh;height:100dvh;overfl
         b.disabled = true;
         api.post('/api/tutor/ask/done', { id: +b.dataset.ok }).then(function () {
           r.asks = r.asks.filter(function (a) { return a.id !== +b.dataset.ok; }); reviewN = r.asks.length + r.homework.length;
-          var t = document.getElementById('rev'); if (t) t.textContent = 'К разбору' + (reviewN ? ' · ' + reviewN : ''); drawReview(d);
+          revUpd(); drawReview(d);
         }).catch(function (e) { b.disabled = false; toast('Не получилось: ' + e.message); });
       };
     });
@@ -948,7 +1128,11 @@ body.lesson{display:flex;flex-direction:column;height:100vh;height:100dvh;overfl
   // ───────── «Вывести к доске»: право рисовать + экран ученика у задачи ─────────
   function cardById(id) { return model().cards.filter(function (c) { return c.id === id; })[0]; }
   function setStudentPerm(p) { return api.post('/api/room/perm', { room: ROOM, perm: p }).then(function (r) { perm = r.perm; permUi(); }); }
-  function boardBtn() { var b = document.getElementById('toboard'); if (b) b.textContent = atBoard ? 'Вернуть ученика на место' : 'Вывести к доске'; }
+  function boardBtn() {
+    var b = document.getElementById('toboard'); if (!b) return;
+    b.textContent = compact() ? (atBoard ? 'Вернуть' : 'К доске') : atBoard ? 'Вернуть ученика на место' : 'Вывести к доске';
+    b.title = atBoard ? 'Ученик снова только смотрит' : 'Ученик получит право рисовать, и его экран перейдёт к задаче';
+  }
   function callStudent(cardId) {
     var c = cardId && cardById(cardId);
     if (!atBoard) permBefore = perm;
@@ -970,6 +1154,11 @@ body.lesson{display:flex;flex-direction:column;height:100vh;height:100dvh;overfl
     var box = document.getElementById('callbox');
     if (readOnly) return;                                   // в конспекте там кнопка «Назад»
     var tm = /telemost/.test(callUrl);
+    if (compact()) {                                        // телефон: звонок + «Меню»; остальное — в меню
+      box.innerHTML = callUrl ? '<button class="callb" id="tmb">' + (tm ? 'Телемост' : 'Звонок') + '</button>' : '';
+      on('tmb', function () { A.openCall(callUrl); });
+      return menuBtn();
+    }
     box.innerHTML = (callUrl ? '<button class="callb" id="tmb">' + (tm ? 'Позвонить в Телемост' : 'Позвонить') + '</button>'
       : (role === 'tutor' ? '<a class="callb off" href="tutor.html" target="_blank" rel="noopener" title="Ссылка на Телемост задаётся в кабинете">Ссылка на Телемост</a>' : '')) +
       ' <button class="callb off" id="callmore" aria-label="Другие способы звонка">⋯</button>' +
@@ -1072,8 +1261,8 @@ body.lesson{display:flex;flex-direction:column;height:100vh;height:100dvh;overfl
     else if (m.type === 'ice') { if (pc && pc.remoteDescription) pc.addIceCandidate(m.c).catch(function () {}); else pendingIce.push(m.c); }
     else if (m.type === 'bye') { if (pc || incoming) toast('Звонок завершён'); hangup(false); }
   }
-  window.addEventListener('beforeunload', function () { if (pc) rtc({ type: 'bye' }); });
-  window.__lesson = { state: function () { var m = model(); return { role: role, perm: perm, ended: ended, ops: ops.length, seq: seq, items: m.items.length, cards: m.cards.length, view: view, tools: [].map.call(document.querySelectorAll('[data-tool]'), function (b) { return b.dataset.tool; }) }; } };
+  window.addEventListener('pagehide', function () { if (pc) rtc({ type: 'bye' }); });   // не beforeunload: он мешает вернуться к доске из кэша вкладок
+  window.__lesson = { wake: function () { hiddenAt = Date.now() - 5000; wake(); }, pollGen: function () { return pollGen; }, state: function () { var m = model(); return { role: role, perm: perm, ended: ended, ops: ops.length, seq: seq, items: m.items.length, cards: m.cards.length, view: view, tools: [].map.call(document.querySelectorAll('[data-tool]'), function (b) { return b.dataset.tool; }) }; } };
 
   start();
 })();
