@@ -61,6 +61,7 @@
       el.innerHTML = html(m);
       el.querySelectorAll('.tut-call').forEach(function (b) {
         b.onclick = function () {                          // звонок — мимо этой страницы, чтобы потом вернуться к доске
+          if (window.AnikCall) return AnikCall.open(b.dataset.url);   // на iPhone — шторка с приложением Телемост
           if (window.AnikTutor && AnikTutor.openCall) return AnikTutor.openCall(b.dataset.url);
           var tg = window.Telegram && window.Telegram.WebApp;
           if (tg && tg.initData && tg.openLink) return tg.openLink(b.dataset.url, { try_instant_view: false });

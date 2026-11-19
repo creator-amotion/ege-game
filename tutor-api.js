@@ -89,6 +89,7 @@
      Внутри Telegram — openLink (внешний браузер или приложение Телемоста); в браузере — новая вкладка через ссылку
      target=_blank: на iPhone это надёжнее window.open, который Safari может заблокировать. */
   function openCall(url) {
+    if (window.AnikCall) return AnikCall.open(url);          // на iPhone — шторка «открыть в приложении Телемост» (anik-call.js)
     if (!/^https:\/\//.test(String(url || ''))) return;
     if (tg && initData && tg.openLink) { try { tg.openLink(url, { try_instant_view: false }); return; } catch (e) {} }
     var a = document.createElement('a');
