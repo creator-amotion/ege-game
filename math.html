@@ -105,8 +105,9 @@ h1{font-size:22px;margin:14px 0 4px;background:linear-gradient(135deg,var(--acc)
 <link rel="stylesheet" href="anik.css?v=7">
 <script src="anik-look.js?v=1"></script>
 <script src="anik-theory.js?v=4"></script>
+<script src="anik-bank.js?v=1"></script>
 <script src="anik-sync.js?v=7"></script>
-<script src="anik-nav.js?v=8" defer></script>
+<script src="anik-nav.js?v=9" defer></script>
 <script src="anik-ask.js?v=1" defer></script>
 </head>
 <body class="math">
@@ -584,14 +585,11 @@ function learnSoloDone(){
 
 function startPractice(){
   Promise.all(pracNums().map(n=>loadPractice(n).then(l=>l.map(t=>Object.assign({n},t))))).then(lists=>{
-    const all=pracFilter([].concat(...lists)),key='math_seen';
-    let seen=[];try{seen=JSON.parse(localStorage.getItem(key)||'[]')}catch(e){}
-    const set=new Set(seen);
-    let fresh=all.filter(t=>!set.has(t.id));
-    if(fresh.length<Math.min(ROUNDS,all.length)){fresh=all.slice();seen=seen.filter(id=>!all.some(t=>t.id===id))}
+    const all=pracFilter([].concat(...lists));
+    const fresh=AnikBank.order('ege-math',all).slice(0,Math.max(ROUNDS*3,30));   // свежие и с ошибками — первыми
     const real=shuffle(fresh.filter(t=>t.r)),own=shuffle(fresh.filter(t=>!t.r));
     const items=shuffle(real.slice(0,Math.min(real.length,Math.ceil(ROUNDS*0.6))).concat(own).slice(0,ROUNDS));
-    try{localStorage.setItem(key,JSON.stringify(seen.concat(items.map(t=>t.id)).slice(-1500)))}catch(e){}
+    AnikBank.shown('ege-math',items);
     pr={items,i:0,res:[],tries:0,fb:null,gain:0};
     setView('prac');
   });
@@ -658,6 +656,7 @@ function pracCheck(text){
 function pracFinish(ok,skipped){
   const t=pr.items[pr.i],first=ok&&pr.tries===0;
   pr.res.push(first);pr.gain+=first?10:ok?5:0;
+  AnikBank.mark('ege-math',t.id,first);
   if(t.k){const s=lk(t.k),p=s.pr||(s.pr=[0,0]);p[1]++;if(first)p[0]++;s.rec=(s.rec||[]).concat(first?1:0).slice(-5);saveLearn()}
   if(t.sk)record(t.sk,first?1:0);
   const msg=ok?(first?'Верно! +10 XP':'Верно со второй попытки. +5 XP'):'Правильный ответ: '+t.a[0]+(kindSteps(t.k).length?'':'\nПовтори теорию этого типа задач и реши ещё несколько таких.');

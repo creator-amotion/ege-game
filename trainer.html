@@ -17,8 +17,9 @@
 <link rel="stylesheet" href="anik.css?v=7">
 <script src="anik-theory.js?v=4"></script>
 <script src="anik-look.js?v=1"></script>
+<script src="anik-bank.js?v=1"></script>
 <script src="anik-sync.js?v=7"></script>
-<script src="anik-nav.js?v=8" defer></script>
+<script src="anik-nav.js?v=9" defer></script>
 <script src="anik-ask.js?v=1" defer></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -328,7 +329,7 @@ function setScreen(set){
     '<h1>'+esc(S.title)+'</h1><p class="lead">Выбери номер задания. Каждый подход — до '+SESSION+' заданий.</p>';
   if(plan.length){
     html+='<div class="stl">Сегодня рекомендуем</div><div class="plan">'+plan.map(function(p){
-      return '<a href="'+esc(p.link.replace('trainer.html',''))+'"><span>№'+p.number+' '+esc(p.name)+'<br><small>'+(p.why==='weak'?'слабое место':p.why==='repeat'?'пора повторить':'новое')+' · ~'+p.minutes+' мин</small></span><span>→</span></a>';
+      return '<a href="'+esc(p.link.replace('trainer.html',''))+'"><span>№'+p.number+' '+esc(p.name)+'<br><small>'+(p.why==='weak'?'слабое место':p.why==='firm'?'закрепить':p.why==='repeat'?'пора повторить':'новое')+' · ~'+p.minutes+' мин</small></span><span>→</span></a>';
     }).join('')+'</div>';
   }else{
     var lp=localPlan(set);
@@ -764,14 +765,8 @@ function gameEnd(){
 function start(set,n,part){
   var sb=document.getElementById('start');if(sb)sb.disabled=true;
   loadPack(set,n).then(function(pack){
-    var seenKey='anik_seen_'+set+'_'+n,seen=lsGet(seenKey,[]);
     var all=part?pack.tasks.filter(function(t){return t.p===part;}):pack.tasks,size=part?5:SESSION;
-    var fresh=all.filter(function(t){return seen.indexOf(t.id)<0;});
-    if(fresh.length<Math.min(size,all.length)){fresh=all.slice();}
-    fresh.sort(function(){return Math.random()-.5;});
-    var items=fresh.slice(0,size);
-    seen=seen.concat(items.map(function(t){return t.id;})).slice(-400);
-    lsSet(seenKey,seen);
+    var items=AnikBank.pick(set+'_'+n,all,size);      // свежие и с ошибками — первыми, решённые верно — в долгий ящик
     run={set:set,n:n,pack:pack,items:items,i:0,res:[],answered:false,part:part||null};
     show();
   }).catch(function(){app.innerHTML='<div class="empty">Не получилось загрузить задания. Проверь интернет и вернись назад.</div>';});
@@ -846,6 +841,7 @@ function reveal(v){
   run.answered=true;
   var t=run.items[run.i],ok=v!==null&&checkAnswer(t,v);
   run.res[run.i]=ok;
+  AnikBank.mark(run.set+'_'+run.n,t.id,ok);
   var inp=document.getElementById('ans');
   inp.disabled=true;inp.classList.add(ok?'ok':'err');
   Array.prototype.forEach.call(app.querySelectorAll('.nbs button'),function(b){b.disabled=true;});

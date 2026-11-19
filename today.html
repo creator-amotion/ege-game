@@ -17,7 +17,7 @@
 <link rel="stylesheet" href="anik.css?v=7">
 <script src="anik-look.js?v=1"></script>
 <script src="anik-sync.js?v=7"></script>
-<script src="anik-nav.js?v=8" defer></script>
+<script src="anik-nav.js?v=9" defer></script>
 <script src="anik-tutor.js?v=1" defer></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -150,7 +150,7 @@ h1{font-family:var(--display);font-size:38px;font-weight:800;letter-spacing:-1.5
 var TG=window.Telegram&&window.Telegram.WebApp?window.Telegram.WebApp:null;
 if(TG){try{TG.ready();TG.expand();TG.setHeaderColor('#F3EEE2');TG.setBackgroundColor('#F3EEE2');}catch(e){}}
 var REG=null,app=document.getElementById('app');
-var WHY={carry:'Перенесено',new:'Новое',weak:'Слабое место',repeat:'Пора повторить',review:'Проверка памяти'};
+var WHY={carry:'Перенесено',new:'Новое',weak:'Слабое место',firm:'Закрепить',repeat:'Пора повторить',review:'Проверка памяти'};
 var SETS=[['ege.rus','ЕГЭ · Русский'],['ege.math','ЕГЭ · Математика'],['ege.mathb','ЕГЭ · База'],['oge.rus','ОГЭ · Русский'],['oge.math','ОГЭ · Математика']];
 var STAMP_RULE='Марка выдаётся, когда знание по теме не ниже 80 % и три последних занятия подряд прошли хорошо: в каждом не меньше 3 ответов и не меньше 70 % верных. Игры и задания считаются.';
 
@@ -205,8 +205,16 @@ var DEFAULT_URL={'ege.rus':'rus-ege.html','ege.math':'math.html','ege.mathb':'tr
 var editingProfile=false,draft=[];
 function getProfile(){try{var p=JSON.parse(localStorage.getItem('anik_profile'));return Array.isArray(p)?p.filter(function(k){return DEFAULT_URL[k];}):[];}catch(e){return [];}}
 function setProfile(p){try{localStorage.setItem('anik_profile',JSON.stringify(p));}catch(e){}}
+function subsPending(s){
+  var pg=null;try{pg=JSON.parse(localStorage.getItem('anik_subs_pending')||'null');}catch(e){}
+  if(!pg||!pg.v||!pg.v.length||Date.now()-pg.t>24*3600*1000)return null;
+  var ex=pg.v[0].split('.')[0],want=pg.v.filter(function(k){return k.split('.')[0]===ex;}).sort().join(),got=((s&&s.subs)||[]).slice().sort().join();
+  if(want===got){try{localStorage.removeItem('anik_subs_pending');}catch(e){}return null;}   // бот уже знает — дальше его список
+  return pg.v;
+}
 function profileSets(){
-  var s=snap();                                              // предметы из бота — главнее выбранных здесь
+  var s=snap(),pg=subsPending(s);
+  if(pg)return pg.filter(function(k){return DEFAULT_URL[k];});   // только что выбрано здесь — бот ещё не пересчитал
   if(s&&s.subs&&s.subs.length){var b=s.subs.filter(function(k){return DEFAULT_URL[k];});if(b.length)return b;}
   var p=getProfile();if(p.length)return p;
   try{var c=JSON.parse(localStorage.getItem('anik_choice')||'null');if(c&&DEFAULT_URL[c.exam+'.'+c.subj])return [c.exam+'.'+c.subj];}catch(e){}
@@ -232,11 +240,11 @@ function bindProfile(){
       if(!draft.length){try{localStorage.setItem('anik_profile_skip','1');}catch(e){}}
       else{
         setProfile(draft);
+        try{localStorage.setItem('anik_subs_pending',JSON.stringify({v:draft.slice(),t:Date.now()}));}catch(e){}
         // бот узнаёт предметы — план на день будет по ним (один экзамен: по первому выбранному)
         var CODE={'ege.rus':'er','ege.math':'ep','ege.mathb':'eb','oge.rus':'or','oge.math':'om'},ex=draft[0].split('.')[0];
         var codes=draft.filter(function(k){return k.split('.')[0]===ex&&CODE[k];}).map(function(k){return CODE[k];});
         if(codes.length&&window.AnikSync)AnikSync.send('s_'+codes.join('.'));
-        var s=snap();if(s&&s.subs)s.subs=draft.slice();
       }
       editingProfile=false;today();};
   }
@@ -270,6 +278,7 @@ function ordered(items,mix){
   while(more){more=false;keys.forEach(function(k){if(groups[k][i]){out.push(groups[k][i]);more=true;}});i++;}
   return out;
 }
+function ruleGame(r){return 'rus-ege.html#game='+r.n+'&cat='+encodeURIComponent(r.cat);}
 function ruleText(r){
   var p=[];
   if(r.tw)p.push('в заданиях '+r.tw+(r.ta?' из '+r.ta:''));
@@ -283,7 +292,7 @@ function trainingHTML(s,prof){
   // пункт выполнен: бот засчитал (5 ответов по теме) или здесь пройдены все его шаги сегодня
   var stepsDone=(window.anikStepsDone&&anikStepsDone())||[],key=window.anikStepKey||function(u){return u;};
   items.forEach(function(it){
-    if(it.kind!=='plan')return;
+    if(it.kind==='rule'){it.done=stepsDone.indexOf(key(ruleGame(it.r)))>=0;return;}
     var st=stepsFor(it.p);
     it.done=!!it.p.done||(st.length&&st.every(function(x){return stepsDone.indexOf(key(x.url))>=0;}));
   });
@@ -306,7 +315,8 @@ function trainingHTML(s,prof){
   html+='<p class="lead2">Сегодня: <b>'+esc(names.join(' + '))+'</b> · около '+mins+' мин. По каждой теме: изучи теорию и пройди тест по ней, закрепи в игре или разборе, реши задания из экзамена. '+(mix?'Предметы чередуются.':'Сначала один предмет, потом другой.')+'</p>';
   html+='<div class="plan">'+list.map(function(it,i){
     if(it.kind==='rule'){
-      var r=it.r,g='rus-ege.html#game='+r.n+'&cat='+encodeURIComponent(r.cat);
+      var r=it.r,g=ruleGame(r);
+      if(it.done)return '<a class="pitem pdone" href="'+esc(g)+'"><div class="tn">✓ сделано · правило · №'+r.n+'</div><div class="nm">'+esc(r.name)+'</div><div class="s">Сыграть ещё раз</div></a>';
       return '<div class="rcard"><div class="k">'+(i+1)+' · подтяни правило · №'+r.n+'</div><div class="v">'+esc(r.name)+'</div><div class="s">'+esc(ruleText(r))+'</div>'+
         '<a href="'+esc(g)+'">Игра по правилу</a><a class="gh" href="rus-ege.html#theory='+r.n+'">Теория №'+r.n+'</a></div>';
     }
@@ -318,14 +328,17 @@ function trainingHTML(s,prof){
       '<div class="steps">'+st.map(function(x,k){return '<a href="'+esc(x.url)+'"><i>'+(k+1)+'</i>'+esc(x.name)+'</a>';}).join('')+'</div></div>';
     return '<a class="pitem sgt" style="'+AnikLook.style(c)+'" href="'+esc(href)+'">'+AnikLook.signHTML(sk?signFor(sk):String(p.number))+'<div class="tn">'+(i+1)+' · № '+pad(p.number)+' · '+(WHY[p.why]||'тема').toLowerCase()+'</div><div class="nm">'+esc(p.name)+'</div><div class="s">'+(p.count||10)+' заданий · '+(p.minutes||5)+' мин</div></a>';
   }).join('')+'</div>';
-  var first=list[0],fh=first.kind==='rule'?'rus-ege.html#learn='+first.r.n:stepsFor(first.p)[0].url;
-  var run={urls:[],names:[]};                                 // весь план подряд: теория → игра → задания по каждой теме
+  var run={urls:[],names:[]};                                 // весь план подряд: теория → игра → задания; пройденное сегодня пропускаем
+  var add=function(u,name){if(stepsDone.indexOf(key(u))<0){run.urls.push(u);run.names.push(name);}};
   list.forEach(function(it){
-    if(it.kind==='rule'){run.urls.push('rus-ege.html#learn='+it.r.n,'rus-ege.html#game='+it.r.n+'&cat='+encodeURIComponent(it.r.cat));run.names.push('Изучить №'+it.r.n,'Игра №'+it.r.n);return;}
-    stepsFor(it.p).forEach(function(x){run.urls.push(x.url);run.names.push(x.name+' · №'+it.p.number+(SUBJ[setOf(it.p.skill)]?' ('+SUBJ[setOf(it.p.skill)].toLowerCase()+')':''));});
+    if(it.done)return;
+    if(it.kind==='rule'){add('rus-ege.html#learn='+it.r.n,'Изучить №'+it.r.n);add(ruleGame(it.r),'Игра №'+it.r.n);return;}
+    stepsFor(it.p).forEach(function(x){add(x.url,x.name+' · №'+it.p.number+(SUBJ[setOf(it.p.skill)]?' ('+SUBJ[setOf(it.p.skill)].toLowerCase()+')':''));});
   });
   window.PLAN_RUN=run;
-  html+='<a class="btn" id="runplan" href="'+esc(fh)+'">Пройти весь план подряд</a><p class="lead2" style="margin-top:8px">'+run.urls.length+' '+(run.urls.length%10===1&&run.urls.length%100!==11?'шаг':(run.urls.length%10>=2&&run.urls.length%10<=4&&(run.urls.length%100<10||run.urls.length%100>=20)?'шага':'шагов'))+' без остановок: закончишь один — сразу откроется следующий, в конце вернёшься сюда.</p>';
+  if(!run.urls.length)return html;
+  var fh=run.urls[0];
+  html+='<a class="btn" id="runplan" href="'+esc(fh)+'">'+(nDone?'Пройти оставшееся подряд':'Пройти весь план подряд')+'</a><p class="lead2" style="margin-top:8px">'+run.urls.length+' '+(run.urls.length%10===1&&run.urls.length%100!==11?'шаг':(run.urls.length%10>=2&&run.urls.length%10<=4&&(run.urls.length%100<10||run.urls.length%100>=20)?'шага':'шагов'))+' без остановок: закончишь один — сразу откроется следующий, в конце вернёшься сюда.</p>';
   return html;
 }
 // план выполнен: похвала и «хочешь ещё?» — следующая тема, закрепить сегодняшнее в ленте, повторить пройденное
@@ -414,8 +427,9 @@ function aimHTML(s){
   h+='<div class="aim-t">'+(a.r?'Прогноз на уровне цели — теперь держим темп и повторяем.':'Прогноз '+now+' · '+a.pc+'% пути')+d+'</div>';
   if(a.gm)h+='<div class="aim-w" style="color:var(--red)">Нужно не меньше 2 баллов за геометрию (№15–19, 23–25) — без них отметка «2» при любой сумме. Геометрия — первой в плане.</div>';
   if(a.x)h+='<div class="aim-w" style="color:var(--red)">Заданий Аника не хватит на эту цель: нужна ещё часть «'+esc(a.e)+'». Поменяй допущение или цель в боте.</div>';
-  if(a.m&&a.m[0]<a.m[1])h+='<div class="aim-w">Проверено номеров: '+a.m[0]+' из '+a.m[1]+'. Непроверенные в прогнозе пока 0 — реши хотя бы по одной задаче, и прогноз уточнится.</div>'+
-    '<a class="aim-go" href="feed.html?diag='+a.s.replace('.','-')+(a.td&&a.td.length?'&only='+a.td.join(','):'')+'">Проверить непроверенные номера →</a>';
+  if(a.m&&a.m[0]<a.m[1]&&a.td&&a.td.length)h+='<div class="aim-w">Проверено номеров: '+a.m[0]+' из '+a.m[1]+'. Непроверенные в прогнозе пока 0 — реши хотя бы по одной задаче, и прогноз уточнится.</div>'+
+    '<a class="aim-go" href="feed.html?diag='+a.s.replace('.','-')+'&only='+a.td.join(',')+'">Проверить непроверенные номера →</a>';
+  else if(a.m&&a.m[1]&&a.m[0]>=a.m[1])h+='<div class="aim-w">Все номера проверены — прогноз считается по твоим ответам.</div>';
   if(!a.r&&a.w&&a.w.length)h+='<div class="aim-w">Больше всего даст: '+a.w.map(function(n){return '№'+n;}).join(', ')+'</div>';
   if(a.e)h+='<div class="aim-w">'+esc(a.e.charAt(0).toUpperCase()+a.e.slice(1))+' — в Анике пока нет, в прогнозе по допущению: '+a.as+' перв.</div>';
   return h+'</div>';

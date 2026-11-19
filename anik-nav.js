@@ -136,7 +136,7 @@
       }, 1000);
     } else {
       b.innerHTML = head + '<div style="font-weight:500">' + (last ? 'Последний шаг плана.' : 'Закончишь — откроется следующий: ' + (nxt || '')) + '</div>' +
-        btn('anik-plan-go', last ? 'Закончить план' : 'Дальше →', true) + btn('anik-plan-stop', 'Выйти из плана');
+        btn('anik-plan-go', last ? 'Закончить план' : 'Пропустить шаг', false) + btn('anik-plan-stop', 'Выйти из плана');   // шаг ещё не пройден: главная кнопка — на самой странице
       document.getElementById('anik-plan-go').onclick = planNext;
       document.getElementById('anik-plan-stop').onclick = planExit;
     }
