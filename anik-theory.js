@@ -4,7 +4,7 @@
 (function(){
   function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
   function arr(x){return Array.isArray(x)?x.filter(function(s){return s!=null&&String(s).trim()!=='';}):(x&&String(x).trim()?[x]:[]);}
-  var ICON={key:'★',rule:'§',form:'ƒ',how:'→',ex:'✎',exc:'≠',trap:'!',tip:'✓',note:'i'};
+  var ICON={key:'■',rule:'§',form:'ƒ',how:'→',ex:'»',exc:'≠',trap:'!',tip:'✓',note:'i'};
 
   function block(kind,label,inner){
     return '<section class="thb thb-'+kind+'"><div class="thb-h"><i aria-hidden="true">'+ICON[kind]+'</i>'+label+'</div>'+inner+'</section>';
