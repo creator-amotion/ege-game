@@ -133,6 +133,7 @@ h1{font-family:var(--display);font-size:38px;font-weight:800;letter-spacing:-1.5
 .aim-cp.me{background:var(--ink);color:var(--paper)}
 .aim-t{font-size:15px;line-height:1.4}.aim-t .up{color:var(--blue);font-weight:700}.aim-t .down{color:var(--red);font-weight:700}
 .aim-w{font-size:13px;color:var(--muted);margin-top:4px}
+.aim2{margin-top:6px;padding:8px 12px}.aim2 .aim-k b{font-size:15px}.aim2 .goalbar{position:static;margin-top:6px;height:6px;background:var(--line);border:0}.aim2 .goalbar i{display:block;height:100%;background:var(--red)}
 .aim-subj,.aim-opts{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
 .aim-subj button{min-height:40px;padding:0 12px;border:2px solid var(--ink);background:transparent;font:600 14px var(--body);color:var(--ink);cursor:pointer}
 .aim-subj button.on{background:var(--ink);color:var(--paper)}
@@ -237,7 +238,7 @@ function chipsHTML(sel){return SETS.map(function(x){return '<button class="chip'
 function profileHTML(prof){
   if(editingProfile||(!prof.length&&!skipped())){
     var sel=editingProfile?draft:[];
-    return '<div class="onb"><b>Что готовишь?</b><span style="font-size:14px">Выбери экзамены: на «Сегодня» будут только они.</span><div class="chips" id="pchips">'+chipsHTML(sel)+'</div><button class="btn" id="pok" style="margin-top:0">Готово</button></div>';
+    return '<div class="onb"><b>Что готовишь?</b><div class="chips" id="pchips">'+chipsHTML(sel)+'</div><button class="btn" id="pok" style="margin-top:0">Готово</button></div>';
   }
   if(!prof.length)return '';
   return '<div class="prof"><span>Готовлюсь:</span>'+prof.map(function(k){return '<span class="chip on" style="cursor:default">'+esc(setName(k))+'</span>';}).join('')+'<button class="chip link" id="pedit">изменить</button></div>';
@@ -252,6 +253,7 @@ function bindProfile(){
       else{
         setProfile(draft);
         try{localStorage.setItem('anik_subs_pending',JSON.stringify({v:draft.slice(),t:Date.now()}));}catch(e){}
+        waitBot();
         // бот узнаёт предметы — план на день будет по ним (один экзамен: по первому выбранному)
         var CODE={'ege.rus':'er','ege.math':'ep','ege.mathb':'eb','oge.rus':'or','oge.math':'om'},ex=draft[0].split('.')[0];
         var codes=draft.filter(function(k){return k.split('.')[0]===ex&&CODE[k];}).map(function(k){return CODE[k];});
@@ -307,23 +309,23 @@ function trainingHTML(s,prof){
     var st=stepsFor(it.p);
     it.done=!!it.p.done||(st.length&&st.every(function(x){return stepsDone.indexOf(key(x.url))>=0;}));
   });
-  var note=s&&s.pnote,noteH=note&&note.kind==='comeback'?'<p class="lead2"><b>С возвращением.</b> Начнём спокойно: сегодня две темы, а темп вернётся постепенно.</p>':
-    items.some(function(it){return it.kind==='plan'&&!it.done&&(it.p.carried||it.p.why==='carry');})?'<p class="lead2">Незаконченное с прошлых дней перенесено сюда.</p>':'';
+  var note=s&&s.pnote,noteH=note&&note.kind==='comeback'?'<p class="lead2"><b>С возвращением.</b> Сегодня две темы.</p>':
+    items.some(function(it){return it.kind==='plan'&&!it.done&&(it.p.carried||it.p.why==='carry');})?'<p class="lead2">Есть незаконченное с прошлых дней.</p>':'';
   var mix=mixOn(),list=ordered(items,mix);
   list=list.filter(function(it){return !it.done;}).concat(list.filter(function(it){return it.done;}));
   var nDone=list.filter(function(it){return it.done;}).length;
   var html='<div class="stl"><span>Сегодня тренируем</span><label class="mix"><input type="checkbox" id="mix"'+(mix?' checked':'')+'>вперемешку</label></div>'+noteH;
   if(!list.length){
-    if(s){html+='<div class="empty"><b>На сегодня всё.</b> План собран по твоим слабым местам. Если хочешь ещё — выбери предмет ниже.</div>';}
+    if(s&&subsPending(s)){html+='<div class="empty"><b>Собираю план по выбранным предметам…</b></div>';return html;}
+    if(s){html+='<div class="empty"><b>На сегодня всё.</b> Хочешь ещё — выбери предмет.</div>';}
     else{html+='<div class="empty"><b>План появится после первого занятия.</b> Открой приложение из Telegram-бота и реши несколько заданий или сыграй в игру: бот поймёт, что подтянуть, и соберёт план.</div>';}
     var base=prof.length?prof:Object.keys(DEFAULT_URL);
     html+=base.map(function(k){return '<a class="pick" href="'+DEFAULT_URL[k]+'">'+esc(setName(k))+'</a>';}).join('');
     return html;
   }
   if(nDone&&nDone===list.length)html+=moreHTML(s,list);
-  else if(nDone)html+='<p class="lead2">Сделано <b>'+nDone+' из '+list.length+'</b> — так держать.</p>';
-  var names=list.filter(function(it){return !it.done;}).slice(0,3).map(function(it){return it.kind==='plan'?it.p.name:it.r.name;}),mins=list.reduce(function(a,it){return a+(it.kind==='plan'?(it.p.minutes||5):5);},0);
-  html+='<p class="lead2">Сегодня: <b>'+esc(names.join(' + '))+'</b> · около '+mins+' мин. По каждой теме: изучи теорию и пройди тест по ней, закрепи в игре или разборе, реши задания из экзамена. '+(mix?'Предметы чередуются.':'Сначала один предмет, потом другой.')+'</p>';
+  var mins=list.reduce(function(a,it){return a+(it.done?0:it.kind==='plan'?(it.p.minutes||5):5);},0);
+  if(!(nDone&&nDone===list.length))html+='<p class="lead2">'+(nDone?'Сделано <b>'+nDone+' из '+list.length+'</b> · ':'')+'около '+mins+' мин</p>';
   html+='<div class="plan">'+list.map(function(it,i){
     if(it.kind==='rule'){
       var r=it.r,g=ruleGame(r);
@@ -349,7 +351,7 @@ function trainingHTML(s,prof){
   window.PLAN_RUN=run;
   if(!run.urls.length)return html;
   var fh=run.urls[0];
-  html+='<a class="btn" id="runplan" href="'+esc(fh)+'">'+(nDone?'Пройти оставшееся подряд':'Пройти весь план подряд')+'</a><p class="lead2" style="margin-top:8px">'+run.urls.length+' '+(run.urls.length%10===1&&run.urls.length%100!==11?'шаг':(run.urls.length%10>=2&&run.urls.length%10<=4&&(run.urls.length%100<10||run.urls.length%100>=20)?'шага':'шагов'))+' без остановок: закончишь один — сразу откроется следующий, в конце вернёшься сюда.</p>';
+  html+='<a class="btn" id="runplan" href="'+esc(fh)+'">'+(nDone?'Пройти оставшееся подряд':'Пройти весь план подряд')+'</a>';
   return html;
 }
 // план выполнен: похвала и «хочешь ещё?» — следующая тема, закрепить сегодняшнее в ленте, повторить пройденное
@@ -392,11 +394,11 @@ function aimAskHTML(s){
   var pend=null;try{pend=JSON.parse(localStorage.getItem('anik_goal_pending')||'null');}catch(e){}
   if(!aimEdit&&pend&&Date.now()-pend.t<10*60*1000&&!(s&&s.aim&&s.aim.s===pend.s&&s.aim.t===pend.v)){
     var pl=AIM_OPT[pend.s][0]<10?'«'+pend.v+'»':pend.v+' '+plural(pend.v,'балл','балла','баллов');
-    return '<div class="aim"><div class="aim-k"><span>Путь к цели · '+AIM_NAME[pend.s]+'</span><b>'+pl+'</b></div><div class="aim-t">Цель сохранена. Путь к ней появится здесь, как только бот пересчитает прогноз — обычно за минуту.</div></div>';
+    return '<div class="aim"><div class="aim-k"><span>Путь к цели · '+AIM_NAME[pend.s]+'</span><b>'+pl+'</b></div><div class="aim-t">Цель сохранена, считаю прогноз…</div></div>';
   }
   var sub=aimPick||aimDefault(s),grade=AIM_OPT[sub][0]<10;
   var h='<div class="aim"><div class="aim-k"><span>Путь к цели</span></div>'+
-    '<div class="aim-t" style="margin:6px 0 8px"><b>'+(grade?'На какую оценку идёшь?':'Сколько баллов хочешь набрать?')+'</b> Покажу, где ты сейчас и что быстрее всего приблизит к цели.</div>'+
+    '<div class="aim-t" style="margin:6px 0 8px"><b>'+(grade?'На какую оценку идёшь?':'Сколько баллов хочешь набрать?')+'</b></div>'+
     '<div class="aim-subj">'+Object.keys(AIM_NAME).map(function(k){return '<button class="'+(k===sub?'on':'')+'" data-aims="'+k+'">'+AIM_NAME[k]+'</button>';}).join('')+'</div>'+
     '<div class="aim-opts">'+AIM_OPT[sub].map(function(v){return '<button data-aimv="'+v+'">'+(grade?'«'+v+'»':v)+'</button>';}).join('')+'</div>';
   if(!grade)h+='<div class="aim-own"><input id="aimnum" inputmode="numeric" maxlength="3" placeholder="Своё число" aria-label="Свой балл"><button id="aimset">Сохранить</button></div>';
@@ -420,6 +422,7 @@ function aimSave(sub,v){
     var ok=window.AnikSync&&AnikSync.send('a_'+AIM_CODE[sub]+'_'+v);
     if(!ok&&!(window.AnikSync&&!AnikSync.inTelegram())){var m=document.getElementById('aimmsg');if(m)m.textContent='Не получилось отправить: открой Аника из бота или свяжи приложение с ботом.';return;}
     try{localStorage.setItem('anik_goal_pending',JSON.stringify({s:sub,v:v,t:Date.now()}));}catch(e){}
+    waitBot();
     aimEdit=false;today();
   })();
 }
@@ -454,14 +457,19 @@ function aimHTML(s){
   var d='';
   if(a.d){var up=a.d>0,v=(up?'+':'')+String(a.d).replace('.',',');d=' · <span class="'+(up?'up':'down')+'">'+v+' перв.'+(a.dd>=7?' за неделю':' за '+a.dd+' '+plural(a.dd,'день','дня','дней'))+'</span>';}
   h+=(a.r?'<div class="aim-t">Прогноз на уровне цели — теперь держим темп и повторяем.'+d+'</div>':(d?'<div class="aim-t">'+d.replace(/^ · /,'')+'</div>':''));
-  if(a.gm)h+='<div class="aim-w" style="color:var(--red)">Нужно не меньше 2 баллов за геометрию (№15–19, 23–25) — без них отметка «2» при любой сумме. Геометрия — первой в плане.</div>';
-  if(a.x)h+='<div class="aim-w" style="color:var(--red)">Заданий Аника не хватит на эту цель: нужна ещё часть «'+esc(a.e)+'». Поменяй допущение или цель в боте.</div>';
-  if(a.m&&a.m[0]<a.m[1]&&a.td&&a.td.length)h+='<div class="aim-w">Проверено номеров: '+a.m[0]+' из '+a.m[1]+'. Непроверенные в прогнозе пока 0 — реши хотя бы по одной задаче, и прогноз уточнится.</div>'+
-    '<a class="aim-go" href="feed.html?diag='+a.s.replace('.','-')+'&only='+a.td.join(',')+'">Проверить непроверенные номера →</a>';
-  else if(a.m&&a.m[1]&&a.m[0]>=a.m[1])h+='<div class="aim-w">Все номера проверены — прогноз считается по твоим ответам.</div>';
+  if(a.gm)h+='<div class="aim-w" style="color:var(--red)">Без 2 баллов за геометрию (№15–19, 23–25) — «2» при любой сумме.</div>';
+  if(a.x)h+='<div class="aim-w" style="color:var(--red)">Для этой цели нужна ещё часть «'+esc(a.e)+'».</div>';
+  if(a.m&&a.m[0]<a.m[1]&&a.td&&a.td.length)h+='<a class="aim-go" href="feed.html?diag='+a.s.replace('.','-')+'&only='+a.td.join(',')+'">Проверить ещё '+a.td.length+' '+plural(a.td.length,'номер','номера','номеров')+' →</a>';
   if(!a.r&&a.w&&a.w.length)h+='<div class="aim-w">Больше всего даст: '+a.w.map(function(n){return '№'+n;}).join(', ')+'</div>';
-  if(a.e)h+='<div class="aim-w">'+esc(a.e.charAt(0).toUpperCase()+a.e.slice(1))+' — в Анике пока нет, в прогнозе по допущению: '+a.as+' перв.</div>';
-  return h+'</div>';
+  if(a.e)h+='<div class="aim-w">'+esc(a.e.charAt(0).toUpperCase()+a.e.slice(1))+': в прогнозе '+a.as+' перв.</div>';
+  return h+'</div>'+aimsMore(s);
+}
+// второй и следующие предметы — короткой строкой с полоской
+function aimsMore(s){
+  return ((s&&s.aims)||[]).filter(function(x){return x&&x.t&&AIM_NAME[x.s]&&!(s.aim&&x.s===s.aim.s);}).map(function(a){
+    var g=a.u==='g',lab=function(v){return g?'«'+v+'»':v;},pc=a.r?100:Math.max(2,Math.min(100,a.pc||0));
+    return '<div class="aim aim2"><div class="aim-k"><span>'+AIM_NAME[a.s]+'</span><b>'+(g?lab(a.n):'≈ '+a.n)+' из '+lab(a.t)+'</b></div><div class="goalbar"><i style="width:'+pc+'%"></i></div></div>';
+  }).join('');
 }
 function today(){
   var s=snap(),now=new Date(),todayIso=(s&&s.today)||iso(now),set=daysSet();
@@ -574,6 +582,16 @@ function route(){
 fetch('skills_registry.json').then(function(r){return r.json();}).then(function(r){REG=r;route();}).catch(function(){app.innerHTML='<div class="empty">Не получилось загрузить. Проверь интернет и обнови страницу.</div>';});
 window.addEventListener('hashchange',function(){var o=document.querySelector('.sheet');if(o)o.remove();route();window.scrollTo(0,0);});
 if(window.AnikSync)AnikSync.onState(function(){if(REG&&!document.querySelector('.sheet'))route();});
+var waitTimer=null;
+function waitBot(){                                            // бот пересчитывает план за секунды — спрашиваем снимок, пока не придёт
+  clearInterval(waitTimer);var n=0;
+  waitTimer=setInterval(function(){
+    var pend=false;try{pend=!!localStorage.getItem('anik_subs_pending')||!!localStorage.getItem('anik_goal_pending');}catch(e){}
+    if(!pend||++n>30||!window.AnikSync||!AnikSync.refresh){clearInterval(waitTimer);return;}
+    AnikSync.refresh();
+  },4000);
+}
+waitBot();
 document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('#runplan');if(a&&window.PLAN_RUN&&window.anikPlan){e.preventDefault();anikPlan.start(PLAN_RUN.urls,PLAN_RUN.names);}});
 </script>
 </body>

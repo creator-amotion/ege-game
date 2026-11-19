@@ -342,7 +342,7 @@ function setScreen(set){
   var done=sts.filter(function(x){return x.step==='done';}).length,started=sts.filter(function(x){return x.step!=='new';}).length,weakN=sts.filter(function(x){return x.weak;});
   var solved=sts.reduce(function(a,x){return a+x.pr.tot;},0),played=sts.reduce(function(a,x){return a+x.gm.tot;},0);
   html+='<div class="stl">Твой прогресс</div><div class="facts"><div class="fact"><b>'+done+'/'+sts.length+'</b><span>тем изучено</span></div><div class="fact"><b>'+solved+'</b><span>заданий решено</span></div><div class="fact"><b>'+played+'</b><span>вопросов в играх</span></div></div>'+
-    (weakN.length?'<p class="lead" style="font-size:14px">Западает: '+weakN.map(function(x){return '№'+x.n;}).join(', ')+'. Начни с них — теория и игры, потом задания.</p>':started?'':'<p class="lead" style="font-size:14px">Начни с любого номера: теория → игры → настоящие задания.</p>');
+    (weakN.length?'<p class="lead" style="font-size:14px">Западает: '+weakN.map(function(x){return '№'+x.n;}).join(', ')+'. Начни с них.</p>':started?'':'<p class="lead" style="font-size:14px">Начни с любого номера: теория → игры → настоящие задания.</p>');
   html+='<div class="stl" style="display:flex;justify-content:space-between"><span>Номера заданий</span><span>полоса — знание</span></div><div class="grid">'+S.numbers.map(function(x){
     var c=numSkin(set,x.n),sk=skills[x.skill],stat=numStats(set,x.n);
     var p=sk?Math.round(sk.p*100):(stat.tot?Math.round(100*stat.ok/stat.tot):0);
@@ -388,7 +388,7 @@ function learnHtml(set,n){
   var row=function(k,title,sub,done,cur){return '<button class="lstep'+(done?' done':'')+(cur?' cur':'')+'" data-go="'+k+'"><i>'+(done?'✓':'')+'</i><span><b>'+title+'</b><small>'+sub+'</small></span></button>';};
   var cur=s.step==='new'||s.step==='theory'?'t':s.step==='games'?'g':s.step==='practice'?'p':s.weak?'t':'p';
   var gp=s.gm.tot?Math.round(100*s.gm.ok/s.gm.tot):0,pp=s.pr.tot?Math.round(100*s.pr.ok/s.pr.tot):0;
-  return '<p class="lead">Как учить тему: сначала теория, потом игры по ней, и только потом — настоящие задания экзамена.</p>'+
+  return '<p class="lead">Теория → игры → задания.</p>'+
     (s.weak?'<div class="hint" style="margin:0 0 10px">Эта тема западает. Перечитай теорию и сыграй в игры ещё раз, потом снова попробуй задания.</div>':'')+
     row('t','1. Теория',s.th?'прочитано':'короткий конспект и правила',s.th,cur==='t')+
     row('g','2. Игры по теме',s.gm.tot?'верно '+gp+'% из '+s.gm.tot+' вопросов':'тренируют каждое правило отдельно',s.gm.tot>=10&&gp>=70,cur==='g')+
@@ -448,7 +448,7 @@ function partsView(openId){
   var a=LRN.parts,cnt={new:0,going:0,done:0,weak:0};a.forEach(function(p){cnt[partState(p)]++;});
   var nx=a.filter(function(p){return partState(p)==='weak';})[0]||a.filter(function(p){return partState(p)!=='done';})[0];
   var S=INDEX.sets[LRN.set],i=S.numbers.map(function(x){return x.n;}).indexOf(LRN.n),nn=S.numbers[i+1];
-  var h='<p class="lead">Тема разбита на части — от простого к сложному. В каждой части: теория → тест по теории'+(LRN.games?' → игра':'')+' → настоящие задания.</p>'+
+  var h='<p class="lead">По частям: теория → тест'+(LRN.games?' → игра':'')+' → задания.</p>'+
     '<div class="lsum">Изучено <b>'+cnt.done+'</b> из '+a.length+(cnt.weak?' · западает: '+cnt.weak:'')+'</div>';
   if(nx)h+='<button class="btn" data-part="'+esc(nx.id)+'">'+(cnt.done||cnt.going?'Продолжить':'Начать')+': '+esc(nx.title)+'</button>';
   else if(nn)h+='<button class="btn" id="lnext">Тема изучена. Дальше: №'+nn.n+' '+esc(nn.name)+'</button>';
@@ -573,7 +573,7 @@ function loadGames(set,n,col){
 }
 function gamesList(){
   var box=gbox();
-  box.innerHTML='<p class="lead">Короткие игры по 10 вопросов — они тренируют навык, который нужен в этом задании. После ответа видно правило из теории.</p>'+
+  box.innerHTML='<p class="lead">Игры по 10 вопросов.</p>'+
     G.games.map(function(g,i){
       var cnt=g.items.length;
       return '<button class="gcard" data-g="'+i+'" style="--col:'+G.col+'"><b>'+esc(g.title)+'</b><span>'+esc(g.instruction)+' · '+cnt+' '+plural(cnt,'вопрос','вопроса','вопросов')+'</span></button>';

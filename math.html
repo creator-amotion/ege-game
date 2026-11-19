@@ -270,7 +270,7 @@ function goAspect(k){
 }
 function home(){
   $('#title').textContent='Математика (ЕГЭ)';
-  let h='<h1>Математика</h1><p class="sub">Выбери раздел. В каждом три вкладки: теория простыми словами, практика (настоящие задания; тему можно изучить по аспектам: теория → тест → разбор по шагам → самостоятельно) и быстрые игры.</p>';
+  let h='<h1>Математика</h1><p class="sub">Выбери раздел: теория, практика, игры.</p>';
   h+=pathCard();
   let vh=[];try{vh=JSON.parse(localStorage.getItem('math_variants')||'[]')}catch(e){}
   h+='<div class="card"><div class="tag">Как на экзамене</div><b>Прорешать весь вариант ЕГЭ 2027: первая часть, 13 заданий</b><p class="src" style="margin:4px 0 8px">Структура и номера — как в демоверсии ФИПИ 2027 (новое задание №6 — случайные величины). Задания из открытого банка ФИПИ и сборников; где их ещё нет — наши, по образцу демоверсии. Ответы проверяются в конце, потом — разбор и «Решить похожую» по ошибкам.'+(vh.length?' Последний результат: <b>'+vh[vh.length-1].ok+' из '+(vh[vh.length-1].n||12)+'</b>.':'')+'</p><button class="btn" id="variant">Начать вариант</button></div>';
@@ -332,7 +332,7 @@ function thCard(t,open){
     +AnikTheory.topic({key:t.key,rule:t.rule,formulas:t.formulas,steps:t.steps,example:t.example,traps:t.traps},{fmt:esc})+'</details>';
 }
 function theoryTab(){
-  let h='<p class="sub">'+esc(PACK.desc)+'. Сначала что это за задание, потом теория каждой темы: определения, формулы, алгоритм и пример. Задачи — во вкладке «Практика».</p>';
+  let h='<p class="sub">'+esc(PACK.desc)+'.</p>';
   const nums=PACK.numbers;
   nums.forEach(n=>{
     const sk=skillsOfNumber(n);
@@ -369,7 +369,7 @@ function loadPractice(n){
 }
 function practiceTab(){
   const nums=PACK.numbers;
-  let h='<p class="sub">Решай задания из экзамена: ответ — число (дробью или десятичной). Можно выбрать тему. Теория и разбор по шагам — ниже, если понадобятся.</p>';
+  let h='<p class="sub">Задания из экзамена. Ответ — число.</p>';
   if(nums.length>1)h+='<div class="chips"><button class="chip'+(pracNum===0?' on':'')+'" data-pn="0">Все</button>'+nums.map(n=>'<button class="chip'+(pracNum===n?' on':'')+'" data-pn="'+n+'">№'+n+'</button>').join('')+'</div>';
   return h+'<div id="pracbox"><div class="card"><div class="sub" style="margin:0">Загружаю задания…</div></div></div>';
 }
