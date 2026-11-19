@@ -27,7 +27,7 @@ body{font-family:'Golos Text',system-ui,sans-serif;background:#F3EEE2;color:#111
 .wm i{font-style:normal;color:#E5332A}
 .climb{display:flex;align-items:center;gap:10px;width:100%;max-width:560px;min-height:50px;margin:8px auto 0;padding:0 8px 0 0;border:2px solid #111;background:#fff;color:#111;font:inherit;text-align:left;cursor:pointer;box-sizing:border-box}
 .top .climb{display:flex}
-.climb>svg.cl-mini{flex:none;width:46px;height:46px;background:#F3EEE2;border-right:2px solid #111}
+.climb>svg.cl-mini{flex:none;width:46px;height:46px;background:#E6ECFC;border-right:2px solid #111}
 .climb>svg.cl-open{flex:none;width:16px;height:16px}
 .cl-r{flex:1;min-width:0;display:flex;flex-direction:column;gap:7px}
 .cl-h{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font:700 14px/1.1 'Golos Text',system-ui,sans-serif}
@@ -37,7 +37,7 @@ body{font-family:'Golos Text',system-ui,sans-serif;background:#F3EEE2;color:#111
 .cl-bar i{position:absolute;top:50%;width:9px;height:9px;margin:-4.5px 0 0 -4.5px;background:#fff;border:2px solid #111;box-sizing:content-box;transform:translate(-2px,-2px)}
 .cl-bar i.on{background:#F6CE2E}
 /* карта подъёма: в шторке по нажатию на полоску и на экранах «Привал» и «Вершина» */
-.clm-map{display:block;width:min(100%,calc(38vh * 340 / 270));aspect-ratio:340/270;height:auto;margin:0 auto;border:2px solid #111;box-sizing:border-box;background:#F3EEE2}
+.clm-map{display:block;width:min(100%,calc(38vh * 340 / 270));aspect-ratio:340/270;height:auto;margin:0 auto;border:2px solid #111;box-sizing:border-box;background:#E6ECFC}
 .clm-map text{font-family:'Golos Text',system-ui,sans-serif;font-weight:700;font-size:13px;fill:#111;paint-order:stroke;stroke:#F3EEE2;stroke-width:4px;stroke-linejoin:round}
 .clm-map text.s{font-weight:600;font-size:11px;fill:#4A463E}
 .clm-cap{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-top:10px;font-size:14px;line-height:1.3;color:#4A463E}
@@ -230,7 +230,7 @@ function subjBar(){
   b.innerHTML=ORDER.map(function(k){return '<button data-s="'+k+'" class="'+(k===SID?'on':'')+'">'+SUBJ[k].t+'</button>';}).join('');
   [].forEach.call(b.children,function(x){x.onclick=function(){if(x.dataset.s===SID)return;flush();SID=x.dataset.s;save();subjBar();restart();};});
 }
-var FIRE='<svg class="ic-fire" viewBox="0 0 12 14" aria-hidden="true"><path d="M6.4 .8C7 3.4 11 5.2 11 9a5 5 0 0 1-10 0c0-1.9 1-3.2 2.2-4.2.1 1.2.6 2 1.4 2.4C4.3 4.9 5 2.5 6.4 .8Z" fill="#E5332A" stroke="#111" stroke-width="1.3" stroke-linejoin="round"/></svg>';
+var FIRE='';   // огонька больше нет: серия — просто число
 function streakBar(){document.getElementById('streak').innerHTML=(st.streak>=3?FIRE:'')+st.streak+' подряд';}
 
 /* сложность: «уровень» 0…1 по каждому предмету; номер выбираем рядом с ним (первые номера — проще) */
@@ -373,52 +373,55 @@ function climbCamps(c,g,L){
   for(var k=1;k*REST*avg<g-.01&&out.length<12;k++)out.push({k:k,f:k*REST*avg/g,on:c.ok>=k*REST});
   return out;
 }
-// большая карта: схема восхождения, как карта маршрута на Эверест. Белая гора с серой теневой стороной, соседний пик, красный
-// маршрут от «Старта» к «Вершине дня», привалы — квадратные отметки с подписью и номером шага. Цвета и линии — как во всём Анике:
-// бумага, чёрная линия 2px, без солнца, неба и конфетти. Чем выше уровень, тем уже основание и круче склон
+// большая карта: схема восхождения «вышивкой» — Эверест и Лхоцзе из квадратиков, как вышивка крестиком. Маршрут — клетки:
+// пройденные красные, впереди серые; лагеря-привалы — квадратные отметки с подписью и номером шага.
+var CLIMB={
+  mass:[[-4,274],[-4,170],[22,150],[40,128],[58,112],[74,88],[90,64],[104,40],[116,24],[124,22],[134,30],[150,40],[168,52],[186,62],[200,66],[214,58],[232,44],[248,34],[256,36],[272,50],[292,64],[316,82],[344,92],[344,274]],
+  shade:[[[124,22],[134,30],[150,40],[168,52],[186,62],[176,92],[160,124],[150,156],[140,112],[132,66]],
+         [[248,34],[256,36],[272,50],[292,64],[316,82],[344,92],[344,210],[304,176],[280,124],[262,80]],
+         [[104,40],[116,24],[112,70],[98,112],[80,146],[56,170],[30,182],[54,140],[80,96]]],
+  rock:[[[60,150],[86,138],[96,150],[70,166],[46,174]],[[206,120],[230,110],[244,124],[226,140],[204,138]],[[168,180],[196,172],[204,188],[176,196]]],
+  haze:[[-4,274],[-4,234],[60,226],[120,238],[180,224],[240,234],[300,222],[344,230],[344,274]],
+  route:[[84,250],[78,238],[86,226],[104,214],[116,202],[122,188],[132,176],[146,164],[150,150],[154,138],[164,126],[180,118],[194,106],[202,94],[206,82],[196,74],[182,66],[168,58],[154,48],[140,36],[126,26]]
+};
+function climbInside(p,poly){var c=false;for(var i=0,j=poly.length-1;i<poly.length;j=i++){var a=poly[i],b=poly[j];if((a[1]>p[1])!=(b[1]>p[1])&&p[0]<(b[0]-a[0])*(p[1]-a[1])/(b[1]-a[1])+a[0])c=!c;}return c;}
+function climbAt(v){
+  var R=CLIMB.route,L=CLIMB.len;
+  if(!L){L=[0];for(var i=1;i<R.length;i++)L[i]=L[i-1]+Math.hypot(R[i][0]-R[i-1][0],R[i][1]-R[i-1][1]);CLIMB.len=L;}
+  var d=Math.max(0,Math.min(1,v))*L[L.length-1],j=1;while(j<R.length-1&&L[j]<d)j++;
+  var q=(d-L[j-1])/((L[j]-L[j-1])||1);return [R[j-1][0]+(R[j][0]-R[j-1][0])*q,R[j-1][1]+(R[j][1]-R[j-1][1])*q];
+}
+// фон «вышивкой»: клетка C px, цвет — по слою, в который попал её центр. Кэш по размеру клетки
+function climbStitch(C){
+  CLIMB.bg=CLIMB.bg||{};if(CLIMB.bg[C])return CLIMB.bg[C];
+  var h='<rect width="340" height="270" fill="#E6ECFC"/>',k=C-.6;
+  for(var y=0;y<270;y+=C)for(var x=0;x<340;x+=C){
+    var p=[x+C/2,y+C/2],col=climbInside(p,CLIMB.mass)?'#fff':null;
+    if(col){CLIMB.shade.forEach(function(s){if(climbInside(p,s))col='#D8D1C1';});CLIMB.rock.forEach(function(s){if(climbInside(p,s))col='#B9B2A2';});}
+    if(climbInside(p,CLIMB.haze))col='#E9E2D2';
+    if(col&&col!=='#E6ECFC')h+='<rect x="'+x+'" y="'+y+'" width="'+k+'" height="'+k+'" fill="'+col+'"/>';
+  }
+  return (CLIMB.bg[C]=h);
+}
+// маршрут клетками: пройденное красное, впереди — серые клетки
+function climbPath(C,f){
+  var seen={},h='',k=C-.6;
+  for(var v=0;v<=1.0001;v+=.002){var q=climbAt(v),cx=Math.floor(q[0]/C),cy=Math.floor(q[1]/C),key=cx+'_'+cy;if(seen[key])continue;seen[key]=1;
+    h+='<rect x="'+cx*C+'" y="'+cy*C+'" width="'+k+'" height="'+k+'" fill="'+(v<=f?'#E5332A':'#8E887B')+'"/>';}
+  return h;
+}
 function climbMap(c,g,L,mark){
-  var W=340,H=270,px=150,py=34,hw=160-60*Math.max(0,Math.min(1,L)),f=Math.min(1,c.steps/g),n=function(v){return (+v).toFixed(1);};
-  var at=function(t,u){return [px+u*hw*(1-t),H-(H-py)*t];},line=function(a){return a.map(function(p){return n(p[0])+','+n(p[1]);}).join(' ');};
-  var LJ=[[0,-1.02],[.12,-1.04],[.24,-.96],[.36,-1.08],[.48,-.97],[.6,-1.1],[.72,-.98],[.84,-1.12],[.93,-1]],RJ=[[.9,1.1],[.8,.96],[.68,1.1],[.56,.98],[.44,1.06],[.3,.96],[.16,1.04],[0,1.02]];
-  var body=LJ.map(function(q){return at(q[0],q[1]);}).concat([[px,py]],RJ.map(function(q){return at(q[0],q[1]);}));
-  // теневая сторона — от гребня вправо; на светлом склоне — две скальные полосы
-  var ridge=[[1,0],[.86,.16],[.74,-.04],[.6,.2],[.46,.02],[.32,.26],[.18,.08],[0,.3]].map(function(q){return at(q[0],q[1]);});
-  var shade=ridge.concat(RJ.slice().reverse().map(function(q){return at(q[0],q[1]);}));
-  var rock1=[[.5,-.95],[.56,-.62],[.5,-.5],[.44,-.7],[.4,-1]].map(function(q){return at(q[0],q[1]);});
-  var rock2=[[.24,-.92],[.3,-.72],[.22,-.6],[.17,-.8],[.14,-1]].map(function(q){return at(q[0],q[1]);});
-  // маршрут вьётся вверх, как тропа на схеме: t — высота, u — положение между краями склона
-  var R=[[.07,-.3],[.12,-.62],[.19,-.52],[.26,-.22],[.34,-.4],[.42,-.1],[.5,.24],[.58,.08],[.66,.44],[.74,.32],[.81,-.04],[.88,.12],[.94,-.08]].map(function(q){return at(q[0],q[1]);}).concat([[px,py+2]]);
-  var len=[0];for(var i=1;i<R.length;i++)len[i]=len[i-1]+Math.hypot(R[i][0]-R[i-1][0],R[i][1]-R[i-1][1]);
-  var pointAt=function(v){var d=v*len[len.length-1],j=1;while(j<R.length-1&&len[j]<d)j++;var q=(d-len[j-1])/((len[j]-len[j-1])||1);return [R[j-1][0]+(R[j][0]-R[j-1][0])*q,R[j-1][1]+(R[j][1]-R[j-1][1])*q];};
-  var route=line(R),pct=n(f*100),INK='#111',h='<rect width="340" height="270" fill="#F3EEE2"/>'+
-    // дальний хребет и соседний пик
-    '<polygon points="-4,274 -4,150 24,128 50,142 78,120 112,146 200,168 344,176 344,274" fill="#E9E2D2" stroke="'+INK+'" stroke-width="2" stroke-linejoin="round"/>'+
-    '<polygon points="190,190 232,132 256,122 286,86 312,108 344,98 344,250 190,250" fill="#fff" stroke="'+INK+'" stroke-width="2" stroke-linejoin="round"/>'+
-    '<polygon points="286,86 312,108 344,98 344,250 292,250 300,180 278,140" fill="#D8D1C1"/>'+
-    '<polyline points="286,86 278,140 300,180 292,250" fill="none" stroke="'+INK+'" stroke-width="1.5" stroke-linejoin="round"/>'+
-    // главная гора
-    '<polygon points="'+line(body)+'" fill="#fff" stroke="'+INK+'" stroke-width="2.5" stroke-linejoin="round"/>'+
-    '<polygon points="'+line(shade)+'" fill="#D8D1C1"/>'+
-    '<polygon points="'+line(rock1)+'" fill="#E9E2D2"/><polygon points="'+line(rock2)+'" fill="#E9E2D2"/>'+
-    '<polyline points="'+line(ridge)+'" fill="none" stroke="'+INK+'" stroke-width="1.5" stroke-linejoin="round"/>'+
-    '<polygon points="'+line(body)+'" fill="none" stroke="'+INK+'" stroke-width="2.5" stroke-linejoin="round"/>'+
-    // ледник у подножия
-    '<polygon points="-4,274 -4,254 44,248 98,254 152,249 214,255 272,248 344,254 344,274" fill="#E9E2D2" stroke="'+INK+'" stroke-width="2" stroke-linejoin="round"/>'+
-    '<polyline points="'+route+'" fill="none" stroke="'+INK+'" stroke-width="2" stroke-dasharray="1 6" stroke-linecap="round" stroke-linejoin="round"/>';
-  if(f>0)h+='<polyline points="'+route+'" pathLength="100" fill="none" stroke="#E5332A" stroke-width="4" stroke-dasharray="'+pct+' 100" stroke-linejoin="round"/>';
-  // отметка на маршруте: квадрат и подпись в две строки (название, шаг), подпись — в сторону, где больше места
-  var mk=function(q,fill,name,sub,hot,side){
-    side=side||(q[0]<W-110?1:-1);var x=q[0]+side*10,a=side>0?'start':'end';
-    return '<rect x="'+n(q[0]-5)+'" y="'+n(q[1]-5)+'" width="10" height="10" fill="'+fill+'" stroke="'+INK+'" stroke-width="2"/>'+
-      '<text x="'+n(x)+'" y="'+n(q[1]+1)+'" text-anchor="'+a+'"'+(hot?' style="fill:#E5332A"':'')+'>'+name+'</text>'+
-      (sub?'<text class="s" x="'+n(x)+'" y="'+n(q[1]+14)+'" text-anchor="'+a+'">'+sub+'</text>':'');};
-  var cs=climbCamps(c,g,L),many=cs.length>4;
-  h+=mk(R[0],INK,'Старт','шаг 0',false,1);
-  cs.forEach(function(p){h+=mk(pointAt(p.f),p.on?'#F6CE2E':'#fff',many?String(p.k):'Привал '+p.k,many?'':'шаг '+Math.round(p.f*g),mark===p.k);});
-  h+=mk([px,py],c.summit?'#F6CE2E':'#E5332A','Вершина дня','шаг '+g,mark==='summit',1);
-  // где ученик сейчас
-  var me=pointAt(f);
-  h+='<circle cx="'+n(me[0])+'" cy="'+n(me[1])+'" r="8" fill="#fff" stroke="'+INK+'" stroke-width="2.5"/><circle cx="'+n(me[0])+'" cy="'+n(me[1])+'" r="3.5" fill="#E5332A"/>';
+  var f=Math.min(1,c.steps/g),n=function(v){return (+v).toFixed(1);},INK='#111';
+  var lab=function(x,y,a,t1,t2,hot){return '<text x="'+n(x)+'" y="'+n(y)+'" text-anchor="'+a+'"'+(hot?' style="fill:#E5332A"':'')+'>'+t1+'</text>'+(t2?'<text class="s" x="'+n(x)+'" y="'+n(y+13)+'" text-anchor="'+a+'">'+t2+'</text>':'');};
+  var box=function(q,fill){return '<rect x="'+n(q[0]-5)+'" y="'+n(q[1]-5)+'" width="10" height="10" fill="'+fill+'" stroke="'+INK+'" stroke-width="2"/>';};
+  var h=climbStitch(6)+climbPath(6,f),cs=climbCamps(c,g,L),many=cs.length>4,R=CLIMB.route;
+  h+=box(R[0],INK)+lab(R[0][0]+10,R[0][1]+4,'start','Старт','шаг 0');
+  cs.forEach(function(p){var q=climbAt(p.f),right=q[0]<200;
+    h+=box(q,p.on?'#F6CE2E':'#fff')+lab(q[0]+(right?10:-10),q[1]+2,right?'start':'end',many?String(p.k):'Привал '+p.k,many?'':'шаг '+Math.round(p.f*g),mark===p.k);});
+  var s=R[R.length-1];
+  h+=box(s,c.summit?'#F6CE2E':'#E5332A')+lab(s[0]+12,s[1]+2,'start','Вершина дня','шаг '+g,mark==='summit');
+  var me=climbAt(f);
+  h+='<circle cx="'+n(me[0])+'" cy="'+n(me[1])+'" r="7" fill="#fff" stroke="'+INK+'" stroke-width="2.5"/><circle cx="'+n(me[0])+'" cy="'+n(me[1])+'" r="3" fill="#E5332A"/>';
   var done=Math.min(Math.floor(c.steps),g);
   return '<svg class="clm-map" viewBox="0 0 340 270" role="img" aria-label="Карта подъёма: '+done+' из '+g+' '+stepsWord(g)+', привалов на маршруте: '+cs.length+'">'+h+'</svg>';
 }
@@ -430,8 +433,8 @@ function climbCaption(c,g,L){
 function climbSheet(){
   var c=climbState(),g=climbGoal(),L=st.lvl[SID]||0;
   document.getElementById('clm-b').innerHTML=climbMap(c,g,L)+climbCaption(c,g,L)+
-    '<div class="clm-key"><span><svg width="24" height="8" aria-hidden="true"><rect y="1" width="24" height="6" fill="#E5332A" stroke="#111" stroke-width="1.5"/></svg>пройдено</span>'+
-    '<span><svg width="24" height="8" aria-hidden="true"><line x1="1" y1="4" x2="23" y2="4" stroke="#111" stroke-width="2" stroke-dasharray="1 5" stroke-linecap="round"/></svg>впереди</span>'+
+    '<div class="clm-key"><span><svg width="24" height="8" aria-hidden="true"><rect x="0" y="1" width="6" height="6" fill="#E5332A"/><rect x="8" y="1" width="6" height="6" fill="#E5332A"/><rect x="16" y="1" width="6" height="6" fill="#E5332A"/></svg>пройдено</span>'+
+    '<span><svg width="24" height="8" aria-hidden="true"><rect x="0" y="1" width="6" height="6" fill="#8E887B"/><rect x="8" y="1" width="6" height="6" fill="#8E887B"/><rect x="16" y="1" width="6" height="6" fill="#8E887B"/></svg>впереди</span>'+
     '<span><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><rect x="2" y="2" width="10" height="10" fill="#F6CE2E" stroke="#111" stroke-width="2"/></svg>привал пройден</span></div>';
 }
 function climbOpen(){var m=document.getElementById('clm');climbSheet();m.hidden=false;document.getElementById('clm-x').focus();}
@@ -441,11 +444,9 @@ function climbDraw(){
   var c=climbState(),g=climbGoal(),f=Math.min(1,c.steps/g),L=Math.max(0,Math.min(1,st.lvl[SID]||0));
   // значок в полоске: та же гора в миниатюре, склон тоже круче с уровнем
   var hw=25-8*L,x0=23-hw*.72,y0=40,x1=23,y1=10,mx=x0+(x1-x0)*f,my=y0+(y1-y0)*f;
-  svg.innerHTML='<polygon points="'+(23-hw).toFixed(1)+',47 23,8 '+(23+hw).toFixed(1)+',47" fill="#fff" stroke="#111" stroke-width="2" stroke-linejoin="round"/>'+
-    '<polygon points="23,9 '+(23+hw-1).toFixed(1)+',46 27,46 26,30" fill="#D8D1C1"/>'+
-    '<line x1="'+x0.toFixed(1)+'" y1="'+y0+'" x2="'+mx.toFixed(1)+'" y2="'+my.toFixed(1)+'" stroke="#E5332A" stroke-width="3"/>'+
-    '<rect x="20" y="5" width="6" height="6" fill="'+(c.summit?'#F6CE2E':'#E5332A')+'" stroke="#111" stroke-width="1.5"/>'+
-    '<circle cx="'+mx.toFixed(1)+'" cy="'+my.toFixed(1)+'" r="3.6" fill="#fff" stroke="#111" stroke-width="1.8"/>';
+  // значок в полоске: верхушка той же горы «вышивкой», клетки крупнее
+  svg.setAttribute('viewBox','36 4 196 196');
+  svg.innerHTML=climbStitch(12)+climbPath(12,f)+'<rect x="120" y="20" width="12" height="12" fill="'+(c.summit?'#F6CE2E':'#E5332A')+'" stroke="#111" stroke-width="4"/>';
   var steps=Math.floor(c.steps);
   document.getElementById('cl-bar').innerHTML='<b style="width:'+(f*100).toFixed(1)+'%"></b>'+climbCamps(c,g,L).map(function(p){return '<i class="'+(p.on?'on':'')+'" style="left:'+(p.f*100).toFixed(1)+'%"></i>';}).join('');
   document.getElementById('cl-t').textContent=c.summit?'Вершина взята':'Подъём дня';

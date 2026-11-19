@@ -116,10 +116,21 @@ h1{font-family:var(--display);font-size:38px;font-weight:800;letter-spacing:-1.5
 .aim{margin:14px 0 4px;border:2px solid var(--ink);background:#fff;padding:12px 14px}
 .aim-k{display:flex;justify-content:space-between;gap:8px;align-items:baseline;font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--muted)}
 .aim-k b{font-family:var(--display);font-size:20px;letter-spacing:-.4px;text-transform:none;color:var(--ink)}
-.aim-bar{position:relative;height:14px;margin:12px 22px 8px 0;background:var(--chip);border:2px solid var(--ink)}
-.aim-bar i{display:block;height:100%;background:var(--yellow);transition:width .6s}
-.aim-me{position:absolute;top:50%;width:14px;height:14px;margin:-7px 0 0 -7px;background:var(--red);border:2px solid var(--ink);border-radius:50%}
-.aim-flag{position:absolute;right:-24px;top:50%;transform:translateY(-55%);font-size:18px}
+.aim-big{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 8px;margin:10px 0 0}
+.aim-big b{font-family:var(--display);font-size:34px;font-weight:800;letter-spacing:-1.2px;line-height:1}
+.aim-big span{font-size:14px;color:var(--muted)}
+/* путь к цели: четыре равных отрезка от старта до цели, цвет плавно идёт жёлтый → розовый → красный → синий (как у плиток);
+   пройденное — ярко, впереди — бледнее; засечки с баллами сверху, плашки «старт · сейчас · цель» снизу */
+.aim-sc{position:relative;margin:30px 0 44px}
+.aim-segs{display:flex;gap:5px;height:20px}
+.aim-seg{position:relative;flex:1;overflow:hidden}
+.aim-seg u{position:absolute;top:0;right:0;bottom:0;background:rgba(255,255,255,.55);transition:left .6s}
+.aim-tk{position:absolute;top:-8px;bottom:-14px;width:2px;margin-left:-1px;background:var(--ink)}
+.aim-tk::before{content:"";position:absolute;left:-3px;top:-1px;width:8px;height:6px;background:var(--ink);clip-path:polygon(0 0,100% 0,50% 100%)}
+.aim-tv{position:absolute;top:-28px;transform:translateX(-50%);font-size:12px;font-weight:600;color:var(--muted);white-space:nowrap}
+.aim-me{position:absolute;top:-6px;bottom:-12px;width:3px;margin-left:-1.5px;background:var(--ink)}
+.aim-cp{position:absolute;top:34px;padding:4px 10px;background:var(--chip);font-size:13px;font-weight:600;white-space:nowrap}
+.aim-cp.me{background:var(--ink);color:var(--paper)}
 .aim-t{font-size:15px;line-height:1.4}.aim-t .up{color:var(--blue);font-weight:700}.aim-t .down{color:var(--red);font-weight:700}
 .aim-w{font-size:13px;color:var(--muted);margin-top:4px}
 .aim-subj,.aim-opts{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
@@ -412,6 +423,23 @@ function aimSave(sub,v){
     aimEdit=false;today();
   })();
 }
+// полоска «Путь к цели»: 4 равных отрезка, цвета — переход плиток (AnikLook.ramp(5): ровно на стыках отрезков)
+function aimScale(a,pc,now,lab){
+  var C=AnikLook.ramp(5).map(function(c){return c[0];}),g=a.u==='g',segs='',ticks='';
+  // старт пути в баллах: из прогноза и доли пройденного (только для баллов и пока цель не достигнута)
+  var s0=!g&&!a.r&&a.pc>0&&a.pc<100?Math.round((a.n-a.pc/100*a.t)/(1-a.pc/100)):null;
+  if(s0!==null&&!(s0>=0&&s0<a.n))s0=null;
+  for(var k=0;k<4;k++){
+    var fill=Math.max(0,Math.min(100,(pc-25*k)*4));
+    segs+='<div class="aim-seg" style="background:linear-gradient(90deg,'+C[k]+','+C[k+1]+')"><u style="left:'+fill+'%"></u></div>';
+    if(k)ticks+='<span class="aim-tk" style="left:'+(25*k)+'%"></span><span class="aim-tv" style="left:'+(25*k)+'%">'+(s0!==null?Math.round(s0+(a.t-s0)*k/4):(25*k)+'%')+'</span>';
+  }
+  var meX=pc<14?'transform:none':pc>86?'transform:translateX(-100%)':'transform:translateX(-50%)';
+  return '<div class="aim-sc" role="img" aria-label="Пройдено '+pc+'% пути к цели">'+'<div class="aim-segs">'+segs+'</div>'+ticks+
+    '<span class="aim-me" style="left:'+pc+'%"></span><span class="aim-cp me" style="left:'+pc+'%;'+meX+'">сейчас '+now+'</span>'+
+    (pc>=30?'<span class="aim-cp" style="left:0">'+(s0!==null?'старт '+s0:'старт')+'</span>':'')+
+    (pc<=70?'<span class="aim-cp" style="right:0">цель '+(g?lab(a.t):a.t)+'</span>':'')+'</div>';
+}
 function aimHTML(s){
   var a=s&&s.aim;
   var pg=null;try{pg=JSON.parse(localStorage.getItem('anik_goal_pending')||'null');}catch(e){}
@@ -421,10 +449,11 @@ function aimHTML(s){
   var now=a.u==='g'?lab(a.n):'≈ '+a.n;
   var h='<div class="aim"><div class="aim-k"><span>Путь к цели · '+AIM_NAME[a.s]+'</span>'+(a.t?'<button class="aim-edit" id="aimedit" title="Изменить цель">'+lab(a.t)+' <small>изменить</small></button>':'')+'</div>';
   var pc=a.r?100:Math.max(2,Math.min(100,a.pc||0));
-  h+='<div class="aim-bar"><i style="width:'+pc+'%"></i><span class="aim-me" style="left:'+pc+'%"></span><span class="aim-flag" aria-hidden="true"></span></div>';
+  h+='<div class="aim-big"><b>'+now+'</b><span>'+(a.u==='g'?'цель '+lab(a.t):'из '+a.t)+' · '+(a.r?100:(a.pc||0))+'% пути</span></div>';
+  h+=aimScale(a,pc,now,lab);
   var d='';
   if(a.d){var up=a.d>0,v=(up?'+':'')+String(a.d).replace('.',',');d=' · <span class="'+(up?'up':'down')+'">'+v+' перв.'+(a.dd>=7?' за неделю':' за '+a.dd+' '+plural(a.dd,'день','дня','дней'))+'</span>';}
-  h+='<div class="aim-t">'+(a.r?'Прогноз на уровне цели — теперь держим темп и повторяем.':'Прогноз '+now+' · '+a.pc+'% пути')+d+'</div>';
+  h+=(a.r?'<div class="aim-t">Прогноз на уровне цели — теперь держим темп и повторяем.'+d+'</div>':(d?'<div class="aim-t">'+d.replace(/^ · /,'')+'</div>':''));
   if(a.gm)h+='<div class="aim-w" style="color:var(--red)">Нужно не меньше 2 баллов за геометрию (№15–19, 23–25) — без них отметка «2» при любой сумме. Геометрия — первой в плане.</div>';
   if(a.x)h+='<div class="aim-w" style="color:var(--red)">Заданий Аника не хватит на эту цель: нужна ещё часть «'+esc(a.e)+'». Поменяй допущение или цель в боте.</div>';
   if(a.m&&a.m[0]<a.m[1]&&a.td&&a.td.length)h+='<div class="aim-w">Проверено номеров: '+a.m[0]+' из '+a.m[1]+'. Непроверенные в прогнозе пока 0 — реши хотя бы по одной задаче, и прогноз уточнится.</div>'+
