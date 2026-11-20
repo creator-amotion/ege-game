@@ -16,10 +16,18 @@
     fetch(S.api + '/api/me', { headers: h }).then(function (r) { return r.ok ? r.json() : null; }).then(done).catch(function () { done(null); });
   }
   function plural(n, a, b, c) { var m = n % 10, k = n % 100; return m === 1 && k !== 11 ? a : m >= 2 && m <= 4 && (k < 10 || k >= 20) ? b : c; }
-  function due(d) {
-    var days = Math.round((new Date(d + 'T23:59:00') - new Date()) / 864e5);
-    return days < 0 ? 'срок прошёл' : days === 0 ? 'срок сегодня' : 'ещё ' + days + ' ' + plural(days, 'день', 'дня', 'дней');
+  var MON = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
+  function dayOf(d) { return new Date(String(d) + 'T12:00:00'); }
+  function left(d) { var t = new Date(); t.setHours(12, 0, 0, 0); return Math.round((dayOf(d) - t) / 864e5); }
+  function human(d) { var x = dayOf(d); if (isNaN(x)) return String(d || ''); return x.getDate() + ' ' + MON[x.getMonth()] + (x.getFullYear() !== new Date().getFullYear() ? ' ' + x.getFullYear() : ''); }
+  function due(d) {                                       // «до 27 ноября»; просрочено — «срок был 21 октября»
+    if (!d) return '';
+    var n = left(d);
+    return n < 0 ? 'срок был ' + human(d) : n === 0 ? 'срок сегодня' : 'до ' + human(d) + (n <= 3 ? ', ещё ' + n + ' ' + plural(n, 'день', 'дня', 'дней') : '');
   }
+  // ученику на «Сегодня»: только то, что можно делать (есть задачи или непройденные игры) и не просрочено больше недели
+  function current(x) { return (x.total > 0 || (x.games || []).some(function (g) { return g.status === 'todo'; })) && !(x.due && left(x.due) < -7); }
+  function count(x) { if (x.total) return x.done + ' из ' + x.total; var g = (x.games || []).length; return g === 1 ? 'игра' : g + ' ' + plural(g, 'игра', 'игры', 'игр'); }
   function html(m) {
     var h = '';
     if (m.tutor || tutorLogin()) h += '<a class="tut-cab" href="tutor.html"><b>Кабинет репетитора</b><span>ученики, задания, уроки на доске</span></a>';
@@ -30,15 +38,15 @@
         '<div class="tut-row"><a class="tut-go" href="lesson.html?r=' + encodeURIComponent(r.room) + '&as=s">Открыть доску</a>' +
         (r.call_url ? '<button class="tut-call" data-url="' + esc(r.call_url) + '">' + (/telemost/.test(r.call_url) ? 'Телемост' : 'Звонок') + '</button>' : '') + '</div></div>';
     });
-    var hw = m.homework || [];
+    var all = m.homework || [], hw = all.filter(current), past = all.length - hw.length;
     if (!hw.length && !(m.rooms || []).length) h += '<div class="tut-empty">Сейчас заданий нет. Когда репетитор их пришлёт, они появятся здесь и в боте.</div>';
     hw.forEach(function (x) {
       var pct = x.total ? Math.round(100 * x.done / x.total) : 0;
       h += '<a class="tut-hw" href="homework.html#hw=' + x.id + '"><span class="t">' + esc(x.title) + '</span>' +
-        '<span class="m">' + x.done + ' из ' + x.total + ' · ' + esc(due(x.due)) + '</span><span class="act">' + (x.done ? 'Продолжить' : 'Решать') + '</span>' +
+        '<span class="m">' + count(x) + (x.due ? ' · ' + esc(due(x.due)) : '') + '</span><span class="act">' + (x.done ? 'Продолжить' : x.total ? 'Решать' : 'Играть') + '</span>' +
         '<i class="bar"><i style="width:' + pct + '%"></i></i></a>';
     });
-    h += '<div class="tut-links">' + (hw.length || (m.rooms || []).length ? '<a class="tut-all" href="homework.html">Все задания →</a>' : '') +
+    h += '<div class="tut-links">' + (hw.length || past || (m.rooms || []).length ? '<a class="tut-all" href="homework.html">' + (past && !hw.length ? 'Прошлые задания · ' + past : 'Все задания') + ' →</a>' : '') +
       '<a class="tut-all" href="notes.html">Мои конспекты' + (m.notes ? ' · ' + m.notes : '') + ' →</a></div>';
     return h;
   }
@@ -49,7 +57,7 @@
     '.tut-go,.tut-call{min-height:44px;padding:0 16px;display:inline-flex;align-items:center;font-weight:600;font-size:15px;text-decoration:none;border:2px solid var(--ink);cursor:pointer;font-family:inherit}' +
     '.tut-go{background:var(--ink);color:var(--paper)}.tut-call{background:transparent;color:var(--ink)}' +
     '.tut-hw{position:relative;display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:12px 14px 16px;background:#fff;color:var(--ink);text-decoration:none;margin-bottom:6px}' +
-    '.tut-hw .t{font-weight:700}.tut-hw .m{font-size:13px;color:var(--muted);grid-column:1}.tut-hw .act{grid-column:2;grid-row:1/3;align-self:center;font-weight:700;color:var(--blue)}' +
+    '.tut-hw .t{font-weight:700;overflow-wrap:anywhere;min-width:0}.tut-hw .m{font-size:13px;color:var(--muted);grid-column:1}.tut-hw .act{grid-column:2;grid-row:1/3;align-self:center;font-weight:700;color:var(--blue)}' +
     '.tut-hw .bar{position:absolute;left:0;right:0;bottom:0;height:5px;background:var(--chip)}.tut-hw .bar i{display:block;height:100%;background:var(--blue)}' +
     '.tut-empty{background:#fff;padding:12px 14px;font-size:14px}.tut-all{display:inline-block;margin-top:2px;font-size:14px;font-weight:600;color:var(--ink)}.tut-links{display:flex;gap:18px;flex-wrap:wrap}';
   window.AnikTutorBox = function (el) {

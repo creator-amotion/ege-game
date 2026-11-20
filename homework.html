@@ -19,7 +19,7 @@
 <script src="anik-sync.js?v=7"></script>
 <script src="anik-nav.js?v=9" defer></script>
 <script src="anik-ask.js?v=1" defer></script>
-<script src="anik-call.js?v=1"></script>
+<script src="anik-call.js?v=2"></script>
 <script src="tutor-api.js?v=7"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -40,7 +40,13 @@ h1{font-family:var(--display);font-size:38px;font-weight:800;letter-spacing:-1.5
 .task{background:#fff;padding:12px 14px;margin-bottom:8px;scroll-margin-top:12px}
 .task.cur{outline:3px solid var(--blue)}
 .task .h{font-weight:700;font-size:14px}
-.task .tx{white-space:pre-wrap;font-size:15px;line-height:1.5;margin:6px 0}
+.task .tx{white-space:pre-wrap;font-size:15px;line-height:1.5;margin:6px 0;overflow-wrap:anywhere}
+.task .tx .katex-display{overflow-x:auto;overflow-y:hidden;padding:2px 0}
+.task .fig{display:block;max-width:100%;height:auto;margin:6px 0;background:#fff;border:1px solid var(--line)}
+.stl span:first-child{min-width:0;overflow-wrap:anywhere}.stl span:last-child{flex-shrink:0;text-align:right}
+.game{display:flex;align-items:center;justify-content:space-between;gap:10px}.game .b{flex-shrink:0}.game .dn{font-weight:600;color:var(--blue)}
+.past{margin-top:24px}.past summary{cursor:pointer;font-weight:600;font-size:15px;padding:10px 0;border-top:2px solid var(--ink)}
+.past summary span{color:var(--muted);font-weight:500}
 .task form{display:flex;gap:8px;margin-top:6px}
 .task input{flex:1;min-width:0;min-height:44px;padding:0 12px;border:2px solid var(--ink);font-size:16px;font-family:inherit;background:#fff}
 .verdict{font-weight:700;margin-top:6px}
@@ -57,6 +63,18 @@ h1{font-family:var(--display);font-size:38px;font-weight:800;letter-spacing:-1.5
 (function () {
   var A = window.AnikTutor, esc = A.esc, api = new A.Api('student'), app = document.getElementById('app');
   var focus = +((/hw=(\d+)/.exec(location.hash) || [])[1] || 0);
+  var MON = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
+  function dayOf(d) { return new Date(String(d) + 'T12:00:00'); }
+  function human(d) { var x = dayOf(d); if (isNaN(x)) return String(d || ''); return x.getDate() + ' ' + MON[x.getMonth()] + (x.getFullYear() !== new Date().getFullYear() ? ' ' + x.getFullYear() : ''); }
+  function left(d) { var t = new Date(); t.setHours(12, 0, 0, 0); return Math.round((dayOf(d) - t) / 864e5); }
+  function dueText(d) { if (!d) return ''; var n = left(d); return n < 0 ? 'срок был ' + human(d) : n === 0 ? 'срок сегодня' : 'до ' + human(d); }
+  function isPast(hw) { return hw.due && left(hw.due) < -7; }                 // просрочено больше недели — в «Прошлые»
+  function hasWork(hw) { return hw.items.length || (hw.games || []).some(function (g) { return g.status === 'todo'; }); }
+  function count(hw) {
+    var g = (hw.games || []).length;
+    if (hw.total) return hw.done + ' из ' + hw.total;
+    return g === 1 ? 'игра' : g + ' ' + (g % 10 >= 2 && g % 10 <= 4 && (g % 100 < 10 || g % 100 >= 20) ? 'игры' : 'игр');
+  }
   function head() { return '<div class="top"><span class="wm">аник<i>.</i></span><a class="back" href="today.html">← Сегодня</a></div><h1>Задания от репетитора</h1>'; }
 
   function start() {
@@ -81,20 +99,32 @@ h1{font-family:var(--display);font-size:38px;font-weight:800;letter-spacing:-1.5
         '<div class="rowb"><a class="b" href="lesson.html?r=' + encodeURIComponent(r.room) + '&as=s">Открыть доску</a>' +
         (r.call_url ? '<button class="b sec" data-call="' + esc(r.call_url) + '">' + (/telemost/.test(r.call_url) ? 'Позвонить в Телемост' : 'Позвонить') + '</button>' : '') + '</div></div>';
     });
-    if (!m.homework.length) h += '<div class="stl"><span>Задания</span></div><div class="empty">Сейчас заданий нет.</div>';
+    var list = m.homework.filter(hasWork), now = list.filter(function (hw) { return !isPast(hw); }), past = list.filter(isPast);
+    if (!now.length) h += '<div class="stl"><span>Задания</span></div><div class="empty">Сейчас заданий нет.</div>';
     var asks = [];
-    m.homework.forEach(function (hw) {
-      h += '<div class="stl" id="hw' + hw.id + '"><span>' + esc(hw.title) + '</span><span>' + hw.done + ' из ' + hw.total + ' · до ' + esc(hw.due) + '</span></div>';
-      if (hw.note) h += '<div class="note">' + esc(hw.note) + '</div>';
+    var hwHtml = function (hw) {
+      var o = '<div class="stl" id="hw' + hw.id + '"><span>' + esc(hw.title) + '</span><span>' + count(hw) + (hw.due ? ' · ' + esc(dueText(hw.due)) : '') + '</span></div>';
+      if (hw.note) o += '<div class="note">' + esc(hw.note) + '</div>';
       var first = true;
       hw.items.forEach(function (it) {
         var cur = it.status === 'todo' && first; if (cur) first = false;
-        h += '<article class="task' + (cur && hw.id === focus ? ' cur' : '') + '" id="t' + it.id + '"><div class="h">' + it.seq + '. ' + esc(it.topic) + '</div><div class="tx">' + esc(it.text) + '</div>' +
+        o += '<article class="task' + (cur && hw.id === focus ? ' cur' : '') + '" id="t' + it.id + '"><div class="h">' + it.seq + '. ' + esc(it.topic) + '</div><div class="tx">' + esc(it.full || it.text) + '</div>' +
+          (it.fig ? '<img class="fig" src="' + esc(it.fig) + '" alt="Рисунок к заданию ' + it.seq + '" loading="lazy">' : '') +
           (it.status === 'todo' ? '<form data-id="' + it.id + '"><input aria-label="Ответ на задание ' + it.seq + '" placeholder="Ответ" maxlength="200" autocomplete="off"><button class="b">Ответить</button></form><div class="verdict" role="status"></div>'
             : '<div class="verdict ' + (it.ok ? 'ok' : 'bad') + '">' + (it.status === 'skipped' ? 'Пропущено' : (it.ok ? 'Верно' : 'Неверно') + ': ' + esc(it.answer)) + '</div>') + '</article>';
         asks.push(it);
       });
-    });
+      (hw.games || []).forEach(function (g) {
+        o += '<div class="mini game"><span>' + esc(g.title) + '</span>' + (g.status !== 'todo' ? '<span class="dn">Пройдена</span>'
+          : g.url ? '<a class="b sec" href="' + esc(g.url) + '">Играть</a>' : '<span class="muted">открой в боте: /homework</span>') + '</div>';
+      });
+      return o;
+    };
+    now.forEach(function (hw) { h += hwHtml(hw); });
+    if (past.length) {
+      var open = past.some(function (hw) { return hw.id === focus; });
+      h += '<details class="past"' + (open ? ' open' : '') + '><summary>Прошлые задания <span>· ' + past.length + ' · срок прошёл больше недели назад</span></summary>' + past.map(hwHtml).join('') + '</details>';
+    }
     h += '<div class="stl"><span>Конспекты уроков</span><span>' + notes.length + '</span></div><a class="b sec" href="notes.html">Мои конспекты →</a>';
     h += '<p class="lead" style="margin-top:18px;font-size:13px;color:var(--muted)">Эти же задания есть в боте: /homework. Ответ, данный здесь, засчитывается и там.</p>';
     app.innerHTML = h;
