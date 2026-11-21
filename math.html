@@ -133,12 +133,12 @@ function saveAll(){try{localStorage.setItem('math_prog',JSON.stringify(prog));lo
 function pOf(s){return prog[s]?prog[s].p:P_L0}
 function level(){return Math.floor(xp/100)+1}
 function showXp(){$('#xp').textContent='ур. '+level()+' · '+xp+' XP'}
-function record(skill,ok){
+function record(skill,ok,game){
   const p=pOf(skill);
   const obs=ok?(p*(1-P_S))/(p*(1-P_S)+(1-p)*P_G):(p*P_S)/(p*P_S+(1-p)*(1-P_G));
   const o=prog[skill]||{a:0,c:0};
   prog[skill]={p:obs+(1-obs)*P_T,a:o.a+1,c:o.c+(ok?1:0)};
-  session.push([skill,ok?1:0]);
+  session.push([skill,ok?1:0,game?1:0]);         // game: игра или разбор по шагам — в прогноз балла не идёт
 }
 function badge(p){return p>=0.9?'':p>=0.7?'':p>=0.45?'':''}
 function badgeText(p){return p>=0.9?'мастер':p>=0.7?'уверенно':p>=0.45?'растёшь':'новичок'}
@@ -936,7 +936,7 @@ function answer(ok){
 function next(msg){
   cur.i++;
   if(cur.i>=cur.t.st.length){
-    cur.t.st.forEach((st,k)=>record(st.s,cur.res[k]));
+    cur.t.st.forEach((st,k)=>record(st.s,cur.res[k],1));
     xp+=cur.gain;saveAll();
     return setView('done');
   }
@@ -1008,7 +1008,7 @@ function gameView(){
   app.innerHTML=h;
   if(gm.picked===null)app.querySelectorAll('.opt').forEach(b=>b.onclick=()=>{
     gm.picked=+b.dataset.k;const good=gm.order[gm.picked]===it.opts[0];
-    if(good)gm.ok++;record(it.sk,good);saveAll();render();
+    if(good)gm.ok++;record(it.sk,good,1);saveAll();render();
   });
   else $('#nx').onclick=()=>{
     gm.i++;
@@ -1038,17 +1038,19 @@ function fnv(str){let h=0x811c9dc5;for(let i=0;i<str.length;i++){h^=str.charCode
 function b62(n,w){let o='';for(let i=0;i<w;i++){o=B62[n%62]+o;n=Math.floor(n/62)}return o}
 
 // Короткая строка с результатами занятия: «код навыка + верных + всего», как её читает бот (game_sync.parse_math)
-function sessionPayload(){
+function sessionPayload(game){
   const agg={};
-  session.forEach(([sk,ok])=>{const a=agg[sk]||(agg[sk]=[0,0]);a[1]=Math.min(9,a[1]+1);a[0]=Math.min(a[1],a[0]+(ok?1:0))});
+  session.filter(x=>!!x[2]===!!game).forEach(([sk,ok])=>{const a=agg[sk]||(agg[sk]=[0,0]);a[1]=Math.min(9,a[1]+1);a[0]=Math.min(a[1],a[0]+(ok?1:0))});
   let body='';
   Object.keys(agg).slice(-15).forEach(sk=>{body+=b62(fnv(sk)%3844,2)+agg[sk][0]+agg[sk][1]});
-  return 'm_'+body;
+  return body?(game?'mg_':'m_')+body:'';
 }
 // Если подключено облако — результат уходит боту сам, кнопка не нужна. true — отправлено.
 function autoSend(){
   if(!session.length||!window.AnikSync||!AnikSync.enabled())return false;
-  if(!AnikSync.send(sessionPayload()))return false;
+  const real=sessionPayload(0),game=sessionPayload(1);         // задания — m_, игры и разбор — mg_ (в прогноз не идут)
+  if(real&&!AnikSync.send(real))return false;
+  if(game&&!AnikSync.send(game))return false;
   session=[];
   return true;
 }
@@ -1062,10 +1064,10 @@ function sendToBot(){
   // из кнопки на клавиатуре бота данные уходят напрямую, во всех остальных случаях — ссылкой с результатом
   const keyboardLaunch=TG&&TG.initDataUnsafe&&!TG.initDataUnsafe.query_id;
   if(keyboardLaunch){
-    TG.sendData(JSON.stringify({v:1,t:'math_stages',r:session.slice(-150)}));
+    TG.sendData(JSON.stringify({v:1,t:'math_stages',r:session.slice(-150).map(x=>[x[0],x[1]])}));
     return;
   }
-  const url='https://t.me/'+BOT_USERNAME+'?start='+sessionPayload();
+  const url='https://t.me/'+BOT_USERNAME+'?start='+(sessionPayload(0)||sessionPayload(1));
   session=[];
   if(TG&&TG.openTelegramLink)TG.openTelegramLink(url);else window.open(url,'_blank');
 }
