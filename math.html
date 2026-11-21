@@ -294,6 +294,7 @@ function openPack(id){loadPack(id).then(p=>{
 })}
 
 function packView(){
+  pracKind='';
   $('#title').textContent=PACK.title;
   if(packTab==='steps')packTab='practice';   // раздела «По шагам» нет: разбор открывается из практики
   const T=[['practice','Практика'],['theory','Теория'],['games','Игры']];
@@ -374,6 +375,7 @@ function practiceTab(){
   return h+'<div id="pracbox"><div class="card"><div class="sub" style="margin:0">Загружаю задания…</div></div></div>';
 }
 function pracNums(){return pracNum?[pracNum]:PACK.numbers}
+let pracKind='';   // задания только этого типа (из плана дня #prac=<тип>)
 let pracOpen=false;   // «Изучить тему» в практике свёрнуто, пока ученик сам не откроет
 // без выбранной темы — теория всех тем номера (свёрнутыми карточками)
 function thGroupCards(){
@@ -381,7 +383,7 @@ function thGroupCards(){
   const gs=[].concat(...pracNums().map(n=>(MTH.numbers[n]||[]).filter(g=>MTH.topics[g])));
   return gs.length?'<p class="src" style="margin:6px 0">Выбери тему выше, чтобы открыть разбор по шагам и «Изучить». Теория тем:</p>'+gs.map(g=>thCard(MTH.topics[g],false)).join(''):'<p class="src">Теории по этому номеру пока нет.</p>';
 }
-function pracFilter(a){if(pracGroup)a=a.filter(t=>t.g===pracGroup);if(!pracSkill)return a;const f=a.filter(t=>t.sk===pracSkill);return f.length>=3?f:a}
+function pracFilter(a){if(pracGroup)a=a.filter(t=>t.g===pracGroup);if(pracKind){const f=a.filter(t=>t.k===pracKind);if(f.length>=5)a=f}if(!pracSkill)return a;const f=a.filter(t=>t.sk===pracSkill);return f.length>=3?f:a}
 function pracInit(){
   app.querySelectorAll('[data-pn]').forEach(b=>b.onclick=()=>{pracNum=+b.dataset.pn;pracGroup='';setView('pack')});
   Promise.all(pracNums().map(loadPractice)).then(lists=>{
@@ -403,9 +405,13 @@ function pracInit(){
         +(topicSteps(pracGroup).length?'<p class="src" style="margin:0">Задача решается маленькими шагами: видно, на каком ты запнулся. Задач по шагам в этой теме: '+topicSteps(pracGroup).length+'.</p><button class="btn sec" id="tsteps">Разобрать по шагам</button>':'<p class="src" style="margin:0">Шагов по этой теме пока нет — переходи к самостоятельным заданиям.</p>')
         +'</div>';
     }
-    const learnBox='<details class="kth lbox"'+(pracOpen?' open':'')+'><summary>Изучить тему: теория, разбор по шагам, приёмы</summary>'+(topic||thGroupCards())+'</details>';
+    const learnBox='<details class="kth lbox"'+(pracOpen?' open':'')+'><summary>Теория и приёмы темы (справочник)</summary>'+(topic||thGroupCards())+'</details>';
+    const lt=learnTarget();
+    const learnHint=lt?'<div class="src" style="margin:6px 0 0">Изучить дальше: <b>'+esc(KINDS[lt].t)+'</b> — теория, короткий тест, разбор по шагам и три своих задания.</div>':'';
     const diagBtns=PACK.numbers.map(n=>'<button class="btn sec" data-diag="'+n+'">Проверить, что я уже знаю в №'+n+'</button>').join('');
-    $('#pracbox').innerHTML=chips+'<div class="card">'+(pracSkill&&PACK.skills[pracSkill]?'<div class="src" style="margin:0 0 6px">Только по навыку «'+esc(PACK.skills[pracSkill].name)+'» <button class="nb" id="pall" style="margin-left:8px">все задания раздела</button></div>':'')+'<b>Реши задания этого раздела</b><button class="btn" id="pstart">Решать</button></div>'+learnBox+diagBtns;
+    $('#pracbox').innerHTML=chips+'<div class="card">'+(pracSkill&&PACK.skills[pracSkill]?'<div class="src" style="margin:0 0 6px">Только по навыку «'+esc(PACK.skills[pracSkill].name)+'» <button class="nb" id="pall" style="margin-left:8px">все задания раздела</button></div>':'')+'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'+(lt?'<button class="btn" id="plearn">Изучить тему</button>':'')+'<button class="btn'+(lt?' sec':'')+'" id="pstart"'+(lt?'':' style="grid-column:1/3"')+'>Решать</button></div>'+learnHint+'</div>'+learnBox+diagBtns;
+    mathRender();
+    const pl=$('#plearn');if(pl)pl.onclick=()=>{pracGroup=(KINDS[lt].gs||[KINDS[lt].g])[0];startLearn(lt)};
     app.querySelectorAll('[data-diag]').forEach(b=>b.onclick=()=>diagStartMath(+b.dataset.diag));
     const lb=app.querySelector('.lbox');if(lb)lb.addEventListener('toggle',()=>{pracOpen=lb.open});
     $('#pstart').onclick=()=>startPractice();
@@ -415,6 +421,15 @@ function pracInit(){
     app.querySelectorAll('[data-kind]').forEach(b=>b.onclick=()=>startKind(b.dataset.kind));
     app.querySelectorAll('[data-learn]').forEach(b=>b.onclick=()=>startLearn(b.dataset.learn));
   }).catch(()=>{const b=$('#pracbox');if(b)b.innerHTML='<div class="card"><div class="sub" style="margin:0">Не получилось загрузить задания. Проверь интернет и зайди ещё раз.</div></div>'});
+}
+// куда ведёт «Изучить тему»: выбранная тема → её следующий аспект; иначе — западающий аспект номера, потом главный из неизученных
+function learnTarget(){
+  if(!KINDS)return '';
+  if(pracGroup){const nx=nextAspect(pracGroup);if(nx)return nx}
+  const rows=pathRows().filter(r=>pracNums().includes(r.n));
+  for(const r of rows){const w=r.ks.find(k=>aspectState(k)==='weak');if(w)return w}
+  for(const r of rows){const k=r.core.find(k=>aspectState(k)!=='done')||r.ks.find(k=>aspectState(k)!=='done');if(k)return k}
+  return '';
 }
 // «Приёмы темы»: по каждому типу задач — теория и кнопка разбора именно этого типа
 function topicKinds(gid){
@@ -1095,7 +1110,7 @@ fetch('math_packs.json').then(r=>r.json()).then(idx=>{
     const go=()=>{const d=KINDS&&KINDS[m[2]];if(!d)return setView('home');
       if(m[1]==='learn')return goAspect(m[2]);
       const meta=INDEX.packs.find(p=>p.numbers.includes(d.n));if(!meta)return setView('home');
-      return loadPack(meta.id).then(p=>{PACK=p;pracNum=PACK.numbers.length>1?d.n:0;pracSkill='';pracGroup=d.g||'';packTab='practice';startPractice()});};
+      return loadPack(meta.id).then(p=>{PACK=p;pracNum=PACK.numbers.length>1?d.n:0;pracSkill='';pracGroup=(d.gs&&d.gs[0])||d.g||'';pracKind=m[2];packTab='practice';startPractice()});};
     if(KINDS)return go();
     return fetch('math_kinds.json').then(r=>r.json()).then(d=>{KINDS=d.kinds;go()}).catch(()=>setView('home'));
   }
