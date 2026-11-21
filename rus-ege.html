@@ -85,7 +85,7 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:12px 1
 .ps{font-size:12px;color:var(--g);font-weight:700}
 .ptrack{height:3px;background:#2a2a3e;border-radius:2px;margin-bottom:18px;overflow:hidden}
 .pfill{height:100%;background:linear-gradient(90deg,var(--acc),var(--g));border-radius:2px;transition:width .4s}
-.tsk{background:var(--card);border-radius:var(--r);padding:16px;margin-bottom:12px;max-height:340px;overflow-y:auto}
+.tsk{background:var(--card);border-radius:var(--r);padding:16px;margin-bottom:12px}
 .tsk-txt{font-size:12px;line-height:2;white-space:pre-wrap}
 .albl{font-size:11px;color:var(--m);margin-bottom:7px;margin-top:14px}
 .nbs{display:flex;gap:7px;flex-wrap:wrap}
@@ -115,6 +115,7 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:12px 1
 .cat-chip.mix{background:linear-gradient(135deg,var(--acc),var(--g));border:none;color:#fff}
 .res{border-radius:9px;padding:12px;margin-top:12px;text-align:center;font-size:13px;font-weight:600;display:none}
 .res.on{display:block}
+.nudge{color:#B3261E;font-size:13px;font-weight:600;margin-top:8px;min-height:0}.nudge:empty{display:none}
 .res.ok{background:rgba(78,204,163,.12);border:1px solid var(--g);color:var(--g)}
 .res.err{background:rgba(233,69,96,.08);border:1px solid var(--acc);color:var(--acc)}
 .res .ca{margin-top:5px;font-size:11px;color:var(--txt);opacity:.75}
@@ -209,8 +210,9 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:12px 1
 .lp-row.done i{background:#2E55C9;border-color:#2E55C9;color:#fff}
 .lp-row.weak{border-color:#E5332A}.lp-row.going{border-color:#F6CE2E}
 .lp-stages{display:flex;gap:6px;margin:4px 0 10px}
-.lp-stages span{flex:1;text-align:center;font-size:12px;font-weight:600;padding:5px 0;background:var(--card);opacity:.6}
-.lp-stages span.on{background:#111;color:#fff;opacity:1}.lp-stages span.past{opacity:.9}
+.lp-stages span,.lp-stages button{flex:1;text-align:center;font-size:12px;font-weight:600;padding:5px 0;background:var(--card);opacity:.6;border:0;font-family:inherit;color:inherit}
+.lp-stages button{opacity:.85;cursor:pointer;min-height:34px;box-shadow:inset 0 0 0 1.5px currentColor}.lp-stages button:hover{opacity:1}
+.lp-stages span.on{background:#111;color:#fff;opacity:1}.lp-stages .past{opacity:.95}
 .lp-name{font-size:14px;margin-bottom:8px}
 .pwarn{background:#F6CE2E;color:#111;padding:10px 12px;font-size:13px;line-height:1.45;margin-bottom:10px}
 .pwarn button{margin-top:6px;border:2px solid #111;background:transparent;padding:6px 10px;font:inherit;font-weight:600;cursor:pointer}
@@ -231,7 +233,7 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:12px 1
 <script src="anik-look.js?v=1"></script>
 <script src="anik-theory.js?v=4"></script>
 <script src="anik-bank.js?v=1"></script>
-<script src="anik-sync.js?v=7"></script>
+<script src="anik-sync.js?v=8"></script>
 <script src="anik-nav.js?v=9" defer></script>
 <script src="anik-ask.js?v=1" defer></script>
 </head>
@@ -563,8 +565,11 @@ function learnStart(num,cat){
 }
 function lStages(){
   const S=[['theory','Теория'],['test','Тест по теории'],['game','Игра'],['done','Итог']],i=S.findIndex(x=>x[0]===LR.stage);
-  return `<div class="lp-stages">${S.map((s,j)=>`<span class="${j===i?'on':j<i?'past':''}">${j<i?'✓ ':''}${s[1]}</span>`).join('')}</div>`;
+  // этапы — кнопки: можно вернуться к теории, пересдать тест или сразу пойти в игру; «Итог» — только когда до него дошли
+  return `<div class="lp-stages">${S.map((s,j)=>s[0]==='done'||j===i?`<span class="${j===i?'on':''}" aria-current="${j===i?'step':'false'}">${j<i?'✓ ':''}${s[1]}</span>`
+    :`<button type="button" class="${j<i?'past':''}" onclick="lGo('${s[0]}')">${j<i?'✓ ':''}${s[1]}</button>`).join('')}</div>`;
 }
+function lGo(st){if(!LR)return;LR.tans=0;if(st==='theory'){LR.stage='theory';learnTheory();}else if(st==='test')learnTestStart();else if(st==='game')learnGame();}
 function learnTheory(){
   const c=document.getElementById('tb3');
   c.innerHTML=`${lStages()}<div class="lp-name">Часть: <b>${LR.name}</b></div>${aspTheory(LR.num,LR.cat,LR.name)}
@@ -744,11 +749,25 @@ function togN(n,btn){
   if(sel.has(n)){sel.delete(n);btn.className='nb';}else{sel.add(n);btn.className='nb sel';}
 }
 
+// Пустой ответ — не ошибка: просим ответить, а не засчитываем «неверно» и не раскрываем ответ
+function noAnswer(at,pre,btn){
+  let empty;
+  if(at==='text')empty=!((document.getElementById(pre==='g'?'gInp':'ansInp')||{}).value||'').trim();
+  else if(at==='match')empty=['А','Б','В','Г','Д'].every(l=>!((document.getElementById((pre==='g'?'gm':'m')+l)||{}).value));
+  else empty=!sel||!sel.size;
+  if(!empty)return false;
+  let n=btn&&btn.parentElement&&btn.parentElement.querySelector('.nudge');
+  if(btn&&!n){n=document.createElement('div');n.className='nudge';n.setAttribute('role','status');btn.insertAdjacentElement('afterend',n);}
+  if(n){n.textContent=at==='text'?'Сначала впиши ответ.':at==='match'?'Сначала выбери цифры для букв.':'Сначала отметь номера ответов.';clearTimeout(n._t);n._t=setTimeout(()=>{n.textContent='';},3000);}
+  return true;
+}
 function checkAns(num){
-  if(answered)return;answered=true;
+  if(answered)return;
+  const at=ANS_TYPES[num]||'nums';
+  if(noAnswer(at,'',document.getElementById('chk')))return;
+  answered=true;
   const tasks=ALL_TASKS[num]||[];
   const task=tasks[pidx];
-  const at=ANS_TYPES[num]||'nums';
   let ok=false,correctStr='';
 
   if(at==='text'){
@@ -872,7 +891,7 @@ function showGTask(){
     nb+='</div>';
   }
   c.innerHTML=`<div class="ph"><span class="pi">${gidx+1}/${tasks.length}</span><span class="ps">${gscore} очков</span></div>
-<div class="tsk" style="max-height:240px"><div class="tsk-txt" style="font-size:11px">${fmt(task.text)}</div></div>
+<div class="tsk"><div class="tsk-txt">${fmt(task.text)}</div></div>
 <div class="albl" style="margin-top:10px">Ответ:</div>${nb}
 <div class="res" id="gRes"></div>
 <button class="cbtn" onclick="checkG()">Проверить</button>
@@ -883,9 +902,11 @@ ${task.id?`<button class="fblink" onclick="anikReport('${task.id}')">Ошибк�
 function togG(n,btn){if(answered)return;if(sel.has(n)){sel.delete(n);btn.className='nb';}else{sel.add(n);btn.className='nb sel';}}
 
 function checkG(){
-  if(answered)return;answered=true;
-  const task=(window._gt||[])[gidx];
+  if(answered)return;
   const at=ANS_TYPES[window._gn]||'nums';
+  if(noAnswer(at,'g',document.querySelector('[onclick="checkG()"]')))return;
+  answered=true;
+  const task=(window._gt||[])[gidx];
   let ok=false,correctStr=task.answer;
   if(at==='text'){
     const inp=document.getElementById('gInp');

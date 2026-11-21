@@ -66,6 +66,8 @@
     var f = el.querySelector('form'), msg = el.querySelector('.msg');
     f.onsubmit = function (e) {
       e.preventDefault();
+      var v = f.querySelector('input').value.replace(/[^A-Za-z0-9]/g, '');
+      if (!v) { msg.textContent = 'Введите код из бота: отправьте боту /app.'; f.querySelector('input').focus(); return; }   // пустое поле — не отправляем
       msg.textContent = 'Проверяю…';
       api.link(f.querySelector('input').value).then(onDone).catch(function (err) { msg.textContent = err.message; });
     };

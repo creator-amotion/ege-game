@@ -17,7 +17,7 @@
 <script defer src="vendor/katex/katex.min.js"></script>
 <script defer src="vendor/katex/auto-render.min.js"></script>
 <script src="anik-call.js?v=2"></script>
-<script src="tutor-api.js?v=7"></script>
+<script src="tutor-api.js?v=8"></script>
 <script src="anik-notes-store.js?v=1"></script>
 <style>
 html,body{height:100%}
@@ -74,7 +74,7 @@ body.lesson{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 .hand .tutor .hdl,.hand .tutor .del{display:block}
 .hand .tutor{cursor:move;box-shadow:8px 8px 0 var(--blue)}
 .ring{position:absolute;border:2px dashed var(--red);border-radius:50%;pointer-events:none;display:none;background:rgba(229,51,42,.08)}
-.drawer{width:340px;border-left:2px solid var(--ink);background:var(--paper);overflow:auto;padding:10px;flex-shrink:0}
+.drawer{width:340px;border-left:2px solid var(--ink);background:var(--paper);overflow:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-y;min-height:0;max-height:100%;padding:10px;flex-shrink:0}
 @media (max-width:820px){.drawer{position:absolute;right:0;top:0;bottom:0;width:min(92vw,360px);z-index:10;box-shadow:-6px 0 0 rgba(17,17,17,.15)}}
 .drawer h3{font-family:var(--display);font-size:18px;font-weight:800;display:flex;justify-content:space-between;align-items:center}
 .drawer .x{border:2px solid var(--ink);background:#fff;width:36px;height:36px;font-weight:800;cursor:pointer}
@@ -85,7 +85,8 @@ body.lesson{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 .vids video{width:100%;height:100%;object-fit:cover;display:block;background:#111}
 .vids video.me{position:absolute;right:6px;bottom:6px;width:32%;height:auto;aspect-ratio:4/3;border:2px solid var(--paper)}
 .vids .st{position:absolute;left:8px;top:8px;background:var(--paper);font-size:12px;font-weight:600;padding:2px 6px}
-.ringcall{background:var(--yellow);padding:10px;margin-top:8px;font-weight:600}
+.ringcall{background:var(--yellow);border:2px solid var(--ink);padding:10px;margin-top:8px;font-weight:600;position:sticky;top:-10px;z-index:2}
+.ringcall .b{min-height:44px;flex:1}
 .exp summary{cursor:pointer;font-weight:600;font-size:14px;margin-top:14px}
 .tcard.called,.timg.called{outline:10px solid var(--red);outline-offset:6px}
 .rvc{background:#fff;padding:10px;margin-top:8px;font-size:14px;border-left:5px solid var(--line2);cursor:grab}
@@ -202,7 +203,8 @@ body.lesson{-webkit-text-size-adjust:100%;text-size-adjust:100%}
   // ───────── вход ─────────
   function start() {
     if (NOTE) return openNote();
-    if (!/^[A-Za-z0-9_-]{10,40}$/.test(ROOM)) { app.innerHTML = '<main class="wrap"><div class="login"><h1>Нет такой комнаты</h1><p class="lead">' + (api === studentApi ? 'Попроси у репетитора ссылку на урок.' : 'Создайте урок заново в кабинете.') + '</p></div></main>'; return; }
+    if (!/^[A-Za-z0-9_-]{10,40}$/.test(ROOM)) { app.innerHTML = '<main class="wrap"><div class="login"><h1>Нет такой комнаты</h1><p class="lead">' + (api === studentApi ? 'Попроси у репетитора ссылку на урок.' : 'Создайте урок заново в кабинете.') + '</p><p class="row" style="margin-top:12px">' +
+      (api === tutorApi ? '<a class="b sec" href="tutor.html">В кабинет</a>' : '<a class="b sec" href="notes.html">Мои конспекты</a><a class="b sec" href="today.html">На «Сегодня»</a>') + '</p></div></main>'; return; }
     if (!api.token()) {
       app.innerHTML = '<main class="wrap"></main>';
       return A.loginForm(api, app.firstChild, 'Вход на урок', api === studentApi ? 'Отправь боту «Аник» команду <b>/app</b> и введи код — так урок узнает, что это ты.' : 'Отправьте боту «Аник» команду <b>/app</b> и введите код — так урок узнает, что это вы.', function () { location.reload(); });
@@ -219,7 +221,7 @@ body.lesson{-webkit-text-size-adjust:100%;text-size-adjust:100%}
       poll();
     }).catch(function (e) {
       if (e.status === 401) return start();
-      if (e.status === 410) return showEnded(e.body && e.body.note);
+      if (e.status === 410) return showEnded(e.body && e.body.note, e.body && e.body.idle);
       app.innerHTML = '<main class="wrap"><div class="login"><h1>Урок недоступен</h1><p class="lead">Урок уже закончился или эта комната — другого репетитора или ученика.</p><p class="row" style="margin-top:12px">' +
         (role === 'tutor' || api === tutorApi ? '<a class="b sec" href="tutor.html">В кабинет</a>' : '<a class="b sec" href="notes.html">Мои конспекты</a><a class="b sec" href="today.html">На «Сегодня»</a>') + '</p></div></main>';
     });
@@ -885,17 +887,20 @@ body.lesson{-webkit-text-size-adjust:100%;text-size-adjust:100%}
     api.post('/api/room/op', { room: ROOM, ops: batch }, { timeout: 20000 }).catch(function (e) {   // повтор сервер не задвоит
       if (e.status === 409) toast('Доска заполнена: сохраните конспект и начните новый урок.');
       else if (e.status === 403) toast('Сейчас рисовать нельзя — репетитор не разрешил.');
-      else if (e.status === 410) showEnded(e.body && e.body.note);
+      else if (e.status === 410) showEnded(e.body && e.body.note, e.body && e.body.idle);
       else if (e.status !== 400) { outbox = batch.concat(outbox); return new Promise(function (r) { setTimeout(r, 1500); }); }
     }).then(function () { sending = false; flush(); });
   }
   /* Опрос доски (long polling). Каждый запрос — со своим номером и тайм-аутом: если телефон уходил в фон (звонок в Телемосте,
      другое приложение), повисший запрос обрывается, и при возврате доска запрашивает всё, что пропустила, и перерисовывается. */
-  var pollGen = 0, pollCtl = null, pollAt = 0, hiddenAt = 0, backMsg = false;
+  var pollGen = 0, pollCtl = null, pollAt = 0, hiddenAt = 0, backMsg = false, actAt = Date.now(), idleWarned = false;
+  // 15 минут без действий урок закрывается сам (сервер). Действие — касание, колесо, клавиша или идущий звонок.
+  ['pointerdown', 'wheel', 'keydown', 'touchstart'].forEach(function (ev) { document.addEventListener(ev, function () { actAt = Date.now(); idleWarned = false; }, { passive: true, capture: true }); });
   function poll(quick) {                                    // quick: сразу ответ без ожидания — после возврата на страницу
     if (ended || readOnly) return;
     var gen = ++pollGen, body = { room: ROOM, after: seq };
     if (quick) body.wait = 0;
+    if (!document.hidden && (Date.now() - actAt < 60000 || (pc && pc.connectionState === 'connected'))) body.active = true;
     pollCtl = window.AbortController ? new AbortController() : null; pollAt = Date.now();
     api.post('/api/room/poll', body, { signal: pollCtl && pollCtl.signal, timeout: 35000 }).then(function (r) {
       if (gen !== pollGen) return;                          // уже идёт более свежий опрос
@@ -904,13 +909,14 @@ body.lesson{-webkit-text-size-adjust:100%;text-size-adjust:100%}
       seq = r.seq; setPeer(r.peer_online); setPerm(r.perm);
       r.rtc.forEach(onSignal);
       if (backMsg) { backMsg = false; toast('Доска снова на связи'); }
-      if (r.ended) return showEnded(r.note);
+      if (r.ended) return showEnded(r.note, r.idle);
+      if (r.idle_left != null && r.idle_left < 120 && !idleWarned) { idleWarned = true; toast('На доске давно ничего не происходит — через пару минут урок закроется сам. Коснитесь доски, чтобы продолжить.'); }
       poll();
     }).catch(function (e) {
       if (gen !== pollGen) return;
       setPeer(false);
       if (e.status === 401 || e.status === 404) { toast('Урок закрыт или вход истёк'); return; }
-      if (e.status === 410) return showEnded(e.body && e.body.note);
+      if (e.status === 410) return showEnded(e.body && e.body.note, e.body && e.body.idle);
       setTimeout(function () { if (gen === pollGen) poll(); }, e.aborted ? 300 : 2000);
     });
   }
@@ -947,11 +953,11 @@ body.lesson{-webkit-text-size-adjust:100%;text-size-adjust:100%}
     var go = function () { api.post('/api/room/end', { room: ROOM }).then(function (r) { showEnded(r.note); }).catch(function (e) { b.disabled = false; toast('Не получилось: ' + e.message); }); };
     if (outbox.length || sending) setTimeout(go, 800); else go();
   }
-  function showEnded(note) {
+  function showEnded(note, idle) {
     if (ended) return; ended = true;
     try { if (pc) hangup(true); } catch (e) {}
     var o = document.createElement('div'); o.className = 'over'; o.setAttribute('role', 'dialog'); o.setAttribute('aria-label', 'Урок завершён');
-    o.innerHTML = '<div class="card"><h2>Урок завершён</h2><p class="lead">' + (note ? 'Конспект сохранён — все записи доски.' + (role === 'tutor' ? ' Он в карточке ученика и у ученика в «Мои конспекты».' : ' Он всегда есть в «Мои конспекты».') : 'Доска была пустой — конспекта нет.') + '</p>' +
+    o.innerHTML = '<div class="card"><h2>Урок завершён</h2><p class="lead">' + (idle ? '15 минут на доске ничего не происходило — урок закрылся сам. ' : '') + (note ? 'Конспект сохранён — все записи доски.' + (role === 'tutor' ? ' Он в карточке ученика и у ученика в «Мои конспекты».' : ' Он всегда есть в «Мои конспекты».') : 'Доска была пустой — конспекта нет.') + '</p>' +
       '<div class="row">' + (note ? '<a class="b" href="lesson.html?note=' + note + '">Открыть конспект</a>' : '') +
       (role === 'tutor' ? '<a class="b sec" href="tutor.html">В кабинет</a>' : '<a class="b sec" href="notes.html">Мои конспекты</a><a class="b sec" href="today.html">На «Сегодня»</a>') + '</div></div>';
     document.body.appendChild(o);
@@ -1169,14 +1175,14 @@ body.lesson{-webkit-text-size-adjust:100%;text-size-adjust:100%}
     on('endb', endLesson);
   }
   function callPanel(d) {
-    d.innerHTML = '<h3>Звонок <button class="x" id="dx" aria-label="Закрыть">×</button></h3>' +
+    d.innerHTML = '<h3>Звонок <button class="x" id="dx" aria-label="Закрыть">×</button></h3><div id="ringbox"></div>' +
       (callUrl ? '<p style="margin-top:8px">Основной звонок — ' + (/telemost/.test(callUrl) ? 'Яндекс Телемост' : 'по ссылке репетитора') + ': откроется в новом окне, доска остаётся здесь.</p><button class="callb" id="tm2" style="margin-top:8px">Открыть звонок</button>'
         : '<p class="muted" style="margin-top:8px">Репетитор ещё не указал ссылку на Телемост.</p>') +
       '<details class="exp" id="exp"' + (pc ? ' open' : '') + '><summary>Звонок без Телемоста (экспериментально)</summary><p class="muted" style="margin-top:6px">Прямо в браузере, без сторонних сервисов. В некоторых сетях (мобильный интернет, школьный Wi-Fi) может не соединиться.</p>' +
       '<div class="vids"><video id="rv" autoplay playsinline aria-label="Собеседник"></video><video id="lv" class="me" autoplay playsinline muted aria-label="Вы"></video><span class="st" id="cst">' + (pc ? 'на связи' : 'звонок не начат') + '</span></div>' +
       '<div class="row" style="margin-top:8px"><button class="b blue sm" id="cvid">Видео</button><button class="b sm sec" id="caud">Голос</button><button class="b sm red" id="chang" disabled>Завершить</button></div>' +
       '<div class="row" style="margin-top:6px"><button class="b sm sec" id="mm" disabled>Микрофон</button><button class="b sm sec" id="mc" disabled>Камера</button>' +
-      '<label class="chk" style="font-size:12px"><input type="checkbox" id="fake"> тестовый сигнал</label></div><div id="ringbox"></div></details>';
+      '<label class="chk" style="font-size:12px"><input type="checkbox" id="fake"> тестовый сигнал</label></div></details>';
     on('dx', function () { d.hidden = true; resize(); });
     on('tm2', function () { A.openCall(callUrl); });
     on('cvid', function () { call(true); }); on('caud', function () { call(false); }); on('chang', function () { hangup(true); });
@@ -1232,6 +1238,7 @@ body.lesson{-webkit-text-size-adjust:100%;text-size-adjust:100%}
     var other = role === 'tutor' ? names.student : names.tutor;
     box.innerHTML = '<div class="ringcall" role="alert">' + esc(other) + ' звонит' + (incoming.video ? ' по видео' : '') + '<div class="row" style="margin-top:6px"><button class="b sm blue" id="acc">Принять</button><button class="b sm sec" id="dec">Отклонить</button></div></div>';
     on('acc', accept); on('dec', function () { hangup(true); });
+    var d = document.getElementById('drawer'); if (d) d.scrollTop = 0;   // кнопки ответа всегда на виду
   }
   function accept() {
     var o = incoming; incoming = null; var rb = document.getElementById('ringbox'); if (rb) rb.innerHTML = '';

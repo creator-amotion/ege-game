@@ -106,7 +106,7 @@ h1{font-size:22px;margin:14px 0 4px;background:linear-gradient(135deg,var(--acc)
 <script src="anik-look.js?v=1"></script>
 <script src="anik-theory.js?v=4"></script>
 <script src="anik-bank.js?v=1"></script>
-<script src="anik-sync.js?v=7"></script>
+<script src="anik-sync.js?v=8"></script>
 <script src="anik-nav.js?v=9" defer></script>
 <script src="anik-ask.js?v=1" defer></script>
 </head>
@@ -209,7 +209,7 @@ function packMastery(p){const s=skillsOfPack(p);return s.reduce((a,k)=>a+pOf(k),
 // Цвет каждого раздела — из anik-look.js: без повторов, от синего к жёлтому
 function packSkin(id){const n=INDEX?INDEX.packs.length:11,k=INDEX?INDEX.packs.findIndex(p=>p.id===id):-1;return AnikLook.ramp(n,true)[k<0?0:k]}
 function packNum(p){return p.numbers.length>1?p.numbers[0]+'–'+p.numbers[p.numbers.length-1]:String(p.numbers[0])}
-function setView(v){view=v;render()}
+function setView(v){view=v;if(v==='home')cameFrom='';render()}
 function render(){
   showXp();
   document.body.classList.toggle('in-pack',view!=='home');
@@ -217,7 +217,11 @@ function render(){
   else if(view==='done')doneView();else if(view==='game')gameView();else if(view==='gdone')gameDone();else if(view==='prac')pracView();else if(view==='pdone')pracDone();else if(view==='ltheory')ltheoryView();else if(view==='var')varView();else if(view==='diag')diagView();else if(view==='ddone')diagDone();else if(view==='vdone')varDone();else if(view==='ltest')ltestView();
   mathRender();
 }
+// пришли по ссылке с другой страницы приложения (лента, «Сегодня», карта) прямо в тему — «←» возвращает туда
+var cameFrom=(()=>{try{const r=document.referrer?new URL(document.referrer):null;
+  return r&&r.origin===location.origin&&r.pathname!==location.pathname&&/^#(learn|prac|pack|skill|n|diag)=/.test(location.hash)?r.href:''}catch(e){return ''}})();
 $('#back').onclick=()=>{
+  if(cameFrom&&view!=='var'){if(history.length>1)history.back();else location.href=cameFrom;return}
   if(view==='home')location.href='./';
   else if(view==='pack')setView('home');
   else if(view==='var'){if(confirm('Выйти из варианта? Ответы не сохранятся.'))setView('home');}
@@ -655,7 +659,7 @@ function pracCheck(text){
 }
 function pracFinish(ok,skipped){
   const t=pr.items[pr.i],first=ok&&pr.tries===0;
-  pr.res.push(first);pr.gain+=first?10:ok?5:0;
+  pr.res.push(first);const g=first?10:ok?5:0;pr.gain+=g;xp+=g;   // XP — сразу, как на экране «+10 XP»
   AnikBank.mark('ege-math',t.id,first);
   if(t.k){const s=lk(t.k),p=s.pr||(s.pr=[0,0]);p[1]++;if(first)p[0]++;s.rec=(s.rec||[]).concat(first?1:0).slice(-5);saveLearn()}
   if(t.sk)record(t.sk,first?1:0);
@@ -666,7 +670,7 @@ function pracFinish(ok,skipped){
 }
 function pracNext(){
   pr.reveal=null;pr.fb=null;pr.i++;pr.tries=0;
-  if(pr.i>=pr.items.length){xp+=pr.gain;saveAll();return setView('pdone')}
+  if(pr.i>=pr.items.length){saveAll();return setView('pdone')}
   render();
 }
 function pracDone(){
@@ -922,7 +926,7 @@ function answer(ok){
   const right=st.k==='choice'?st.opts[0]:st.a;
   if(ok){
     const first=cur.tries===0;
-    cur.res.push(first);cur.gain+=first?10:5;
+    cur.res.push(first);cur.gain+=first?10:5;xp+=first?10:5;saveAll();showXp();
     return next(first?'Верно! +10 XP':'Верно со второй попытки. +5 XP');
   }
   cur.tries++;
@@ -937,7 +941,7 @@ function next(msg){
   cur.i++;
   if(cur.i>=cur.t.st.length){
     cur.t.st.forEach((st,k)=>record(st.s,cur.res[k]));
-    xp+=cur.gain;saveAll();
+    saveAll();
     return setView('done');
   }
   prepare();cur.fb={cls:msg.startsWith('Верно')?'good':'bad',text:msg};
