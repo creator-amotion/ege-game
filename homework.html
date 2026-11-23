@@ -109,9 +109,9 @@ h1{font-family:var(--display);font-size:38px;font-weight:800;letter-spacing:-1.5
       hw.items.forEach(function (it) {
         var cur = it.status === 'todo' && first; if (cur) first = false;
         o += '<article class="task' + (cur && hw.id === focus ? ' cur' : '') + '" id="t' + it.id + '"><div class="h">' + it.seq + '. ' + esc(it.topic) + '</div><div class="tx">' + esc(it.full || it.text) + '</div>' +
-          (it.fig ? '<img class="fig" src="' + esc(it.fig) + '" alt="Рисунок к заданию ' + it.seq + '" loading="lazy">' : '') +
+          (it.fig ? '<img class="fig" src="' + esc((it.fig.indexOf('/api/') === 0 ? A.API : '') + it.fig) + '" alt="Рисунок к заданию ' + it.seq + '" loading="lazy">' : '') +
           (it.status === 'todo' ? '<form data-id="' + it.id + '"><input aria-label="Ответ на задание ' + it.seq + '" placeholder="Ответ" maxlength="200" autocomplete="off"><button class="b">Ответить</button></form><div class="verdict" role="status"></div>'
-            : '<div class="verdict ' + (it.ok ? 'ok' : 'bad') + '">' + (it.status === 'skipped' ? 'Пропущено' : (it.ok ? 'Верно' : 'Неверно') + ': ' + esc(it.answer)) + '</div>') + '</article>';
+            : '<div class="verdict ' + (it.status === 'done' && it.ok === null ? '' : it.ok ? 'ok' : 'bad') + '">' + (it.status === 'skipped' ? 'Пропущено' : it.ok === null ? 'Ответ отправлен репетитору, он проверит: ' + esc(it.answer) : (it.ok ? 'Верно' : 'Неверно') + ': ' + esc(it.answer)) + '</div>') + '</article>';
         asks.push(it);
       });
       (hw.games || []).forEach(function (g) {
@@ -145,8 +145,8 @@ h1{font-family:var(--display);font-size:38px;font-weight:800;letter-spacing:-1.5
       f.querySelector('button').disabled = true;
       api.post('/api/hw/answer', { item: +f.dataset.id, answer: v }).then(function (r) {
         f.remove();
-        out.className = 'verdict ' + (r.correct ? 'ok' : 'bad');
-        out.textContent = r.correct ? 'Верно' : 'Неверно. Правильный ответ: ' + r.right;
+        out.className = 'verdict ' + (r.correct === null ? '' : r.correct ? 'ok' : 'bad');
+        out.textContent = r.correct === null ? 'Ответ отправлен репетитору, он проверит.' : r.correct ? 'Верно' : 'Неверно. Правильный ответ: ' + r.right;
         if (!r.correct && r.sol && r.sol.length) {                  // решение по шагам (база, ОГЭ)
           var so = document.createElement('ol'); so.className = 'sol'; so.setAttribute('aria-label', 'Решение');
           r.sol.forEach(function (st) { var li = document.createElement('li'); li.textContent = st; so.appendChild(li); });

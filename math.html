@@ -119,7 +119,7 @@ h1{font-size:22px;margin:14px 0 4px;background:linear-gradient(135deg,var(--acc)
 const P_L0=0.30,P_T=0.09,P_S=0.10,P_G=0.20,MAX_TRIES=2,ROUNDS=10;
 let INDEX=null, PACK=null, packCache={}, prog={}, xp=0, session=[], cur=null, gm=null, view='home', openHelp=null;
 let MTH=null;
-let packTab='theory', pracNum=0, pracSkill='', pracCache={}, pr=null, ANALYSIS=null, GROUPS_META=null, TOPICS_META=null, pracGroup='', KINDS=null;
+let packTab='theory', pracNum=0, pracSkill='', pracCache={}, pr=null, ANALYSIS=null, GROUPS_META=null, TOPICS_META=null, pracGroup='', KINDS=null, TW=null;
 const TG=window.Telegram&&window.Telegram.WebApp&&window.Telegram.WebApp.initData?window.Telegram.WebApp:null;
 if(TG){try{TG.ready();TG.expand();TG.setHeaderColor('#F3EEE2');TG.setBackgroundColor('#F3EEE2');}catch(e){}}
 const $=s=>document.querySelector(s);
@@ -133,12 +133,12 @@ function saveAll(){try{localStorage.setItem('math_prog',JSON.stringify(prog));lo
 function pOf(s){return prog[s]?prog[s].p:P_L0}
 function level(){return Math.floor(xp/100)+1}
 function showXp(){$('#xp').textContent='ур. '+level()+' · '+xp+' XP'}
-function record(skill,ok){
+function record(skill,ok,game){
   const p=pOf(skill);
   const obs=ok?(p*(1-P_S))/(p*(1-P_S)+(1-p)*P_G):(p*P_S)/(p*P_S+(1-p)*(1-P_G));
   const o=prog[skill]||{a:0,c:0};
   prog[skill]={p:obs+(1-obs)*P_T,a:o.a+1,c:o.c+(ok?1:0)};
-  session.push([skill,ok?1:0]);
+  session.push([skill,ok?1:0,game?1:0]);         // game: игра или разбор по шагам — в прогноз балла не идёт
 }
 function badge(p){return p>=0.9?'':p>=0.7?'':p>=0.45?'':''}
 function badgeText(p){return p>=0.9?'мастер':p>=0.7?'уверенно':p>=0.45?'растёшь':'новичок'}
@@ -230,48 +230,56 @@ $('#back').onclick=()=>{
 };
 
 
-// ── «Путь к максимальному баллу»: по каждому номеру — сколько аспектов изучено; главные аспекты (самые частые в заданиях) — «ядро» номера ──
+// ── «Путь к максимальному баллу»: по каждому номеру — сколько тем освоено (тема — единица изучения) ──
+function groupName(g){
+  if(GROUPS_META)for(const n in GROUPS_META){const x=(GROUPS_META[n]||[]).find(y=>y.id===g);if(x)return x.name}
+  return (TOPICS_META&&TOPICS_META[g]&&TOPICS_META[g].name)||g;
+}
 function pathRows(){
   const rows={};
   Object.keys(KINDS).forEach(k=>{
-    const v=KINDS[k];if(v.n===undefined)return;
-    (rows[v.n]||(rows[v.n]={n:v.n,ks:[]})).ks.push(k);
+    const v=KINDS[k],g=kindGroup(k);if(v.n===undefined||!g||/_misc$/.test(g))return;
+    const r=rows[v.n]||(rows[v.n]={n:v.n,gs:{}});
+    (r.gs[g]||(r.gs[g]={g,w:0})).w+=kindWeight(k);
   });
-  Object.values(rows).forEach(r=>{
-    r.ks.sort((a,b)=>(KINDS[b].pr||0)-(KINDS[a].pr||0));
-    r.core=r.ks.slice(0,Math.max(3,Math.min(12,Math.ceil(r.ks.length*0.3))));
-    const st=r.ks.map(aspectState);
-    r.done=st.filter(s=>s==='done').length;r.weak=st.filter(s=>s==='weak').length;r.going=st.filter(s=>s==='going').length;
-    r.coreDone=r.core.filter(k=>aspectState(k)==='done').length;
-    r.closed=r.coreDone>=Math.ceil(r.core.length*0.7);
+  // вес темы — доля настоящих экзаменационных заданий номера, которые к ней относятся (math_topic_weights.json); без файла — по числу заданий в банке
+  Object.values(rows).forEach(r=>{const ts=Object.values(r.gs),S=ts.reduce((s,x)=>s+x.w,0)||1;ts.forEach(x=>{x.w=TW&&TW[x.g]!=null?TW[x.g]:x.w/S})});
+  return Object.values(rows).sort((a,b)=>a.n-b.n).map(r=>{
+    r.topics=Object.values(r.gs).map(x=>Object.assign(x,{m:topicMastery(x.g),st:topicState(x.g)}));
+    const W=r.topics.reduce((s,x)=>s+x.w,0)||1;
+    r.m=r.topics.reduce((s,x)=>s+x.m*x.w,0)/W;
+    r.closed=r.m>=TOPIC_DONE;
+    r.weak=r.topics.filter(x=>x.st==='weak').length;
+    return r;
   });
-  return Object.values(rows).sort((a,b)=>a.n-b.n);
 }
 function pathCard(){
   if(!KINDS||!INDEX)return '';
   const rows=pathRows();if(!rows.length)return '';
   const closed=rows.filter(r=>r.closed).length;
-  // что делать дальше: сначала западающие, потом главные аспекты номера, в котором закрыто меньше всего
-  let next=null;
-  for(const r of rows){const w=r.ks.find(k=>aspectState(k)==='weak');if(w){next=w;break}}
-  if(!next){
-    const open=rows.filter(r=>!r.closed).sort((a,b)=>a.coreDone/a.core.length-b.coreDone/b.core.length||a.n-b.n);
-    if(open.length)next=open[0].core.find(k=>aspectState(k)!=='done')||open[0].ks.find(k=>aspectState(k)!=='done');
-  }
+  // что делать дальше: сначала западающая тема, потом самая слабая тема номера, где освоено меньше всего
+  // что делать дальше: западающая частая тема → пора повторить → тема, которая даёт больше всего балла (частота на экзамене × чего не хватает)
+  const all=[];rows.forEach(r=>r.topics.forEach(x=>all.push(x)));
+  const gain=x=>x.w*(1-x.m);
+  const pick=(st,min)=>all.filter(x=>x.st===st&&x.w>=min).sort((a,b)=>gain(b)-gain(a))[0];
+  const nx=pick('weak',0.08)||pick('review',0)||all.filter(x=>x.st==='new'||x.st==='going'||x.st==='weak').sort((a,b)=>gain(b)-gain(a)||a.g.localeCompare(b.g))[0];
+  const next=nx?nx.g:'';
   let h='<div class="card"><div class="tag">Путь к максимальному баллу</div><b>Закрыто номеров первой части: '+closed+' из '+rows.length+'</b>'
-    +'<p class="src" style="margin:4px 0 8px">Номер закрыт, когда изучено 70% его главных приёмов — тех, что чаще всего встречаются в заданиях. Каждый номер даёт балл на экзамене.</p>';
-  h+=rows.map(r=>'<div class="skrow" style="margin:5px 0"><span class="nm" style="min-width:34px;font-weight:700">№'+r.n+'</span><div class="bar" style="flex:1"><i style="width:'+Math.round(100*r.coreDone/r.core.length)+'%"></i></div><small style="min-width:78px;text-align:right;color:'+(r.weak?'var(--r,#ff6b81)':r.closed?'var(--g,#38d39f)':'var(--m)')+'">'+(r.closed?'закрыт ✓':r.coreDone+' из '+r.core.length+' главных')+(r.weak?' · западает '+r.weak:'')+'</small></div>').join('');
-  if(next)h+='<button class="btn" id="pathnext" data-go="'+next+'" style="margin-top:8px">Дальше: №'+KINDS[next].n+' — '+esc(KINDS[next].t)+'</button>';
+    +'<p class="src" style="margin:4px 0 8px">Номер закрыт, когда освоено 70% его тем с учётом того, как часто они бывают на экзамене. Сначала идут самые частые темы — они дают больше всего баллов. Освоенная тема через две–три недели вернётся на повторение.</p>';
+  h+=rows.map(r=>'<div class="skrow" style="margin:5px 0"><span class="nm" style="min-width:34px;font-weight:700">№'+r.n+'</span><div class="bar" style="flex:1"><i style="width:'+Math.round(100*r.m)+'%"></i></div><small style="min-width:78px;text-align:right;color:'+(r.weak?'var(--r,#ff6b81)':r.closed?'var(--g,#38d39f)':'var(--m)')+'">'+(r.closed?'закрыт ✓':Math.round(100*r.m)+'%')+(r.weak?' · западает '+r.weak:'')+'</small></div>').join('');
+  if(next)h+='<button class="btn" id="pathnext" data-go="'+next+'" style="margin-top:8px">Дальше: '+esc(groupName(next))+'</button>';
   return h+'</div>';
 }
-function goAspect(k){
-  const n=KINDS[k].n,meta=INDEX.packs.find(p=>p.numbers.includes(n));if(!meta)return;
+// открыть тему из любого места: подгружаем раздел и начинаем занятие по теме (force — конкретный приём, например после диагностики)
+function goTopic(g,force){
+  const n=+((String(g).match(/^p(\d+)_/)||[])[1])||(KINDS[force]&&KINDS[force].n)||0,meta=INDEX.packs.find(p=>p.numbers.includes(n));if(!meta)return;
   loadPack(meta.id).then(p=>{
-    PACK=p;openHelp=null;pracNum=PACK.numbers.length>1?n:0;pracSkill='';pracGroup=(KINDS[k].gs||[KINDS[k].g])[0];
+    PACK=p;openHelp=null;pracNum=PACK.numbers.length>1?n:0;pracSkill='';pracGroup=g;
     const sk=packSkin(meta.id);['--col','--ink-p','--bigc'].forEach((v,i)=>document.body.style.setProperty(v,sk[i]));
-    packTab='practice';startLearn(k);
+    packTab='practice';startTopicLearn(g,force);
   });
 }
+function goAspect(k){return goTopic(kindGroup(k),k)}
 function home(){
   $('#title').textContent='Математика (ЕГЭ)';
   let h='<h1>Математика</h1><p class="sub">Выбери раздел: теория, практика, игры.</p>';
@@ -287,7 +295,7 @@ function home(){
   if(session.length)h+='<button class="btn ok" id="send">Сохранить результат</button>';
     app.innerHTML=h;
   app.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>openPack(b.dataset.p));
-  const pn=$('#pathnext');if(pn)pn.onclick=()=>goAspect(pn.dataset.go);
+  const pn=$('#pathnext');if(pn)pn.onclick=()=>goTopic(pn.dataset.go);
   $('#variant').onclick=variantStart;
   const sb=$('#send');if(sb)sb.onclick=sendToBot;
 }
@@ -298,6 +306,7 @@ function openPack(id){loadPack(id).then(p=>{
 })}
 
 function packView(){
+  pracKind='';
   $('#title').textContent=PACK.title;
   if(packTab==='steps')packTab='practice';   // раздела «По шагам» нет: разбор открывается из практики
   const T=[['practice','Практика'],['theory','Теория'],['games','Игры']];
@@ -378,6 +387,7 @@ function practiceTab(){
   return h+'<div id="pracbox"><div class="card"><div class="sub" style="margin:0">Загружаю задания…</div></div></div>';
 }
 function pracNums(){return pracNum?[pracNum]:PACK.numbers}
+let pracKind='';   // задания только этого типа (из плана дня #prac=<тип>)
 let pracOpen=false;   // «Изучить тему» в практике свёрнуто, пока ученик сам не откроет
 // без выбранной темы — теория всех тем номера (свёрнутыми карточками)
 function thGroupCards(){
@@ -385,7 +395,7 @@ function thGroupCards(){
   const gs=[].concat(...pracNums().map(n=>(MTH.numbers[n]||[]).filter(g=>MTH.topics[g])));
   return gs.length?'<p class="src" style="margin:6px 0">Выбери тему выше, чтобы открыть разбор по шагам и «Изучить». Теория тем:</p>'+gs.map(g=>thCard(MTH.topics[g],false)).join(''):'<p class="src">Теории по этому номеру пока нет.</p>';
 }
-function pracFilter(a){if(pracGroup)a=a.filter(t=>t.g===pracGroup);if(!pracSkill)return a;const f=a.filter(t=>t.sk===pracSkill);return f.length>=3?f:a}
+function pracFilter(a){if(pracGroup)a=a.filter(t=>t.g===pracGroup);if(pracKind){const f=a.filter(t=>t.k===pracKind);if(f.length>=5)a=f}if(!pracSkill)return a;const f=a.filter(t=>t.sk===pracSkill);return f.length>=3?f:a}
 function pracInit(){
   app.querySelectorAll('[data-pn]').forEach(b=>b.onclick=()=>{pracNum=+b.dataset.pn;pracGroup='';setView('pack')});
   Promise.all(pracNums().map(loadPractice)).then(lists=>{
@@ -407,9 +417,14 @@ function pracInit(){
         +(topicSteps(pracGroup).length?'<p class="src" style="margin:0">Задача решается маленькими шагами: видно, на каком ты запнулся. Задач по шагам в этой теме: '+topicSteps(pracGroup).length+'.</p><button class="btn sec" id="tsteps">Разобрать по шагам</button>':'<p class="src" style="margin:0">Шагов по этой теме пока нет — переходи к самостоятельным заданиям.</p>')
         +'</div>';
     }
-    const learnBox='<details class="kth lbox"'+(pracOpen?' open':'')+'><summary>Изучить тему: теория, разбор по шагам, приёмы</summary>'+(topic||thGroupCards())+'</details>';
+    const learnBox='<details class="kth lbox"'+(pracOpen?' open':'')+'><summary>Теория и приёмы темы (справочник)</summary>'+(topic||thGroupCards())+'</details>';
+    const lt=learnTarget();
+    const nk=lt?pickKind(lt):'';
+    const learnHint=lt?'<div class="src" style="margin:6px 0 0">Тема «'+esc(groupName(lt))+'»: сегодня приём «'+esc(nk&&KINDS[nk]?KINDS[nk].t:'')+'» — теория, короткий тест, разбор по шагам и пять заданий. Приёмы подбираются сами.</div>':'';
     const diagBtns=PACK.numbers.map(n=>'<button class="btn sec" data-diag="'+n+'">Проверить, что я уже знаю в №'+n+'</button>').join('');
-    $('#pracbox').innerHTML=chips+'<div class="card">'+(pracSkill&&PACK.skills[pracSkill]?'<div class="src" style="margin:0 0 6px">Только по навыку «'+esc(PACK.skills[pracSkill].name)+'» <button class="nb" id="pall" style="margin-left:8px">все задания раздела</button></div>':'')+'<b>Реши задания этого раздела</b><button class="btn" id="pstart">Решать</button></div>'+learnBox+diagBtns;
+    $('#pracbox').innerHTML=chips+'<div class="card">'+(pracSkill&&PACK.skills[pracSkill]?'<div class="src" style="margin:0 0 6px">Только по навыку «'+esc(PACK.skills[pracSkill].name)+'» <button class="nb" id="pall" style="margin-left:8px">все задания раздела</button></div>':'')+'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'+(lt?'<button class="btn" id="plearn">Изучить тему</button>':'')+'<button class="btn'+(lt?' sec':'')+'" id="pstart"'+(lt?'':' style="grid-column:1/3"')+'>Решать</button></div>'+learnHint+'</div>'+learnBox+diagBtns;
+    mathRender();
+    const pl=$('#plearn');if(pl)pl.onclick=()=>{pracGroup=lt;startTopicLearn(lt)};
     app.querySelectorAll('[data-diag]').forEach(b=>b.onclick=()=>diagStartMath(+b.dataset.diag));
     const lb=app.querySelector('.lbox');if(lb)lb.addEventListener('toggle',()=>{pracOpen=lb.open});
     $('#pstart').onclick=()=>startPractice();
@@ -417,19 +432,27 @@ function pracInit(){
     app.querySelectorAll('[data-pg]').forEach(b=>b.onclick=()=>{pracGroup=b.dataset.pg;pracSkill='';setView('pack')});
     const ts=$('#tsteps');if(ts)ts.onclick=()=>startTopic(pracGroup);
     app.querySelectorAll('[data-kind]').forEach(b=>b.onclick=()=>startKind(b.dataset.kind));
-    app.querySelectorAll('[data-learn]').forEach(b=>b.onclick=()=>startLearn(b.dataset.learn));
+    app.querySelectorAll('[data-learn]').forEach(b=>b.onclick=()=>{pracGroup=b.dataset.learn;startTopicLearn(b.dataset.learn)});
   }).catch(()=>{const b=$('#pracbox');if(b)b.innerHTML='<div class="card"><div class="sub" style="margin:0">Не получилось загрузить задания. Проверь интернет и зайди ещё раз.</div></div>'});
+}
+// куда ведёт «Изучить тему»: выбранная тема; иначе — западающая тема номера, потом самая слабая из неосвоенных
+function learnTarget(){
+  if(!KINDS)return '';
+  if(pracGroup&&aspectsOf(pracGroup).length)return pracGroup;
+  const rows=pathRows().filter(r=>pracNums().includes(r.n));
+  for(const r of rows){const w=r.topics.find(x=>x.st==='weak');if(w)return w.g}
+  const tp=[].concat(...rows.map(r=>r.topics)).filter(x=>x.st!=='done').sort((a,b)=>a.m-b.m||b.w-a.w)[0];
+  return tp?tp.g:'';
 }
 // «Приёмы темы»: по каждому типу задач — теория и кнопка разбора именно этого типа
 function topicKinds(gid){
   if(!KINDS)return '';
   const ks=Object.keys(KINDS).filter(k=>(KINDS[k].gs||[KINDS[k].g]).includes(gid)).sort((x,y)=>(kindSteps(y).length>0)-(kindSteps(x).length>0)||(KINDS[y].pr||0)-(KINDS[x].pr||0));
   if(!ks.length)return '';
-  return '<div class="tag" style="margin-top:12px">Приёмы этой темы</div>'+ks.map(k=>{
+  return '<div class="tag" style="margin-top:12px">Приёмы этой темы · справочник</div>'+ks.map(k=>{
     const hs=kindSteps(k).length>0;
     const as=aspectState(k);
     return '<details class="kth"><summary>'+esc(KINDS[k].t)+' <span class="src" style="color:'+ST_COLOR[as]+'">· '+ST_LABEL[as]+'</span></summary>'+kindFig(k)+'<ul>'+KINDS[k].th.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul>'+kindErrs(k)
-      +'<button class="btn" data-learn="'+k+'">Изучить этот аспект</button>'
       +(hs?'<button class="btn sec" data-kind="'+k+'">Разобрать этот тип по шагам</button>':'')+'</details>';
   }).join('');
 }
@@ -459,17 +482,60 @@ function aspectState(k){
 }
 const ST_LABEL={new:'не начат',going:'в процессе',done:'изучен ✓',weak:'западает'};
 const ST_COLOR={new:'var(--m)',going:'var(--y,#f5c542)',done:'var(--g,#38d39f)',weak:'var(--r,#ff6b81)'};
-function nextAspect(gid){const a=aspectsOf(gid);return a.find(k=>aspectState(k)==='weak')||a.find(k=>aspectState(k)!=='done')||a[0]}
+const TOPIC_DONE=0.7;   // тема освоена, когда уверенно решаются 70% её приёмов (с поправкой на частоту в заданиях)
+// «кредит» приёма: доля верных среди последних пяти ответов, пока их меньше трёх — не больше доли от трёх
+function kindCredit(k,raw){
+  const s=lprog[k]||{},rc=s.rec||[];
+  if(!rc.length)return 0;
+  const base=rc.reduce((x,y)=>x+y,0)/rc.length*Math.min(1,rc.length/3);
+  return raw?base:base*forget(s.ts);
+}
+// забывание: первые три дня ничего не теряется, дальше уверенность падает, и через две–три недели тема просит повторения
+function forget(ts){if(!ts)return 1;const d=(Date.now()-ts)/864e5;return d<=3?1:Math.max(0.4,1-(d-3)*0.03)}
+function markKind(k,ok){const s=lk(k),p=s.pr||(s.pr=[0,0]);p[1]++;if(ok)p[0]++;s.rec=(s.rec||[]).concat(ok?1:0).slice(-5);s.ts=Date.now()}
+function kindWeight(k){return Math.sqrt(Math.max(1,(KINDS[k]&&KINDS[k].pr)||1))}
+function topicMastery(g,raw){
+  const a=aspectsOf(g);if(!a.length)return 0;
+  let w=0,s=0;a.forEach(k=>{const x=kindWeight(k);w+=x;s+=x*Math.min(1,kindCredit(k,raw)/0.6)});
+  return s/w;
+}
+// статус темы: new — не начата, going — идёт, weak — западает (приём с ошибками), done — освоена
+function topicState(g){
+  const a=aspectsOf(g),m=topicMastery(g);
+  if(m>=TOPIC_DONE)return 'done';
+  if(a.some(k=>aspectState(k)==='weak'))return 'weak';
+  if(topicMastery(g,true)>=TOPIC_DONE)return 'review';          // была освоена, но давно не повторялась
+  return m>0||a.some(k=>aspectState(k)!=='new')?'going':'new';
+}
+// какой приём темы разбирать сегодня: западающий → ни разу не тронутый (сначала лёгкие и частые) → недоученный → повторение самых частых
+function pickKind(g,not){
+  const a=aspectsOf(g).filter(k=>k!==not);if(!a.length)return not||'';
+  const byW=(x,y)=>kindWeight(y)-kindWeight(x);
+  const weak=a.filter(k=>aspectState(k)==='weak').sort(byW);if(weak.length)return weak[0];
+  const fresh=a.filter(k=>{const s=lprog[k];return !(s&&((s.rec&&s.rec.length)||s.test||s.steps))});if(fresh.length)return fresh[0];
+  const open=a.filter(k=>kindCredit(k)<0.6).sort((x,y)=>kindCredit(x)-kindCredit(y)||byW(x,y));if(open.length)return open[0];
+  return a.slice().sort(byW)[Math.floor(Math.random()*Math.min(3,a.length))];
+}
+function topicLabel(st){return {new:'не начата',going:'в процессе',weak:'западает',review:'пора повторить',done:'освоена ✓'}[st]}
 function learnSummary(gid){
   const a=aspectsOf(gid);if(!a.length)return '';
-  const cnt={new:0,going:0,done:0,weak:0};a.forEach(k=>cnt[aspectState(k)]++);
+  const m=topicMastery(gid),st=topicState(gid),nk=pickKind(gid);
   const weak=a.filter(k=>aspectState(k)==='weak').map(k=>KINDS[k].t);
-  const nx=nextAspect(gid);
-  return '<div class="tag" style="margin-top:12px">Изучение темы по аспектам</div>'
-    +'<p class="src" style="margin:0">Изучено: <b>'+cnt.done+'</b> из '+a.length+(cnt.going?' · в процессе: '+cnt.going:'')+'. '+(weak.length?'<b style="color:var(--r,#ff6b81)">Западает:</b> '+weak.map(esc).join('; ')+'.':'Каждый аспект — отдельный приём из заданий: теория, короткий тест, разбор по шагам, самостоятельная задача.')+'</p>'
-    +(nx?'<button class="btn" id="learnnext" data-learn="'+nx+'">'+(cnt.done+cnt.going+cnt.weak===0?'Изучить тему: начать':'Изучать дальше')+' — '+esc(KINDS[nx].t)+'</button>':'');
+  return '<div class="tag" style="margin-top:12px">Изучение темы · '+topicLabel(st)+'</div>'
+    +'<div class="skrow" style="margin:4px 0"><div class="bar" style="flex:1"><i style="width:'+Math.round(100*m)+'%"></i></div><small style="min-width:60px;text-align:right">'+Math.round(100*m)+'%</small></div>'
+    +'<p class="src" style="margin:0">'+(st==='done'?'Тема освоена: через две–три недели предложу её повторить, чтобы не забылась.':st==='review'?'Тема была освоена, но давно не повторялась — реши пару заданий, чтобы не забыть.':'Каждое занятие — один приём темы: теория, короткий тест, разбор и пять заданий. '+(weak.length?'<b style="color:var(--r,#ff6b81)">Западает:</b> '+weak.map(esc).join('; ')+'. ':'')+'Следующий приём: «'+esc(KINDS[nk].t)+'».')+'</p>'
+    +'<button class="btn" id="learnnext" data-learn="'+gid+'">'+(m>0||st==='going'||st==='weak'?'Продолжить тему':'Изучить тему')+'</button>';
 }
-function startLearn(k){L={k,stage:'theory',tq:null};lk(k).th=1;saveLearn();setView('ltheory')}
+// занятие по теме: приём подбирается сам; если по нему уже сдан тест — сразу разбор
+function startTopicLearn(g,force){
+  const k=force||pickKind(g);if(!k||!KINDS[k])return;
+  L={g,k,stage:'theory',tq:null,m0:topicMastery(g)};
+  lk(k).th=1;saveLearn();
+  const tst=lk(k).test;
+  if(!force&&tst&&tst[0]*3>=tst[1]*2){L.stage='steps';return learnToSteps()}
+  setView('ltheory');
+}
+function startLearn(k){startTopicLearn(kindGroup(k),k)}
 function stageBar(){
   const S=[['theory','Теория'],['test','Тест'],['steps','Разбор'],['solo','Сам']];
   const i=S.findIndex(x=>x[0]===L.stage);
@@ -479,10 +545,10 @@ function stageBar(){
 function fmStr(f){return Array.isArray(f)?(f[1]?f[0]+' ('+f[1]+')':f[0]):f}
 function ltheoryView(){
   const d=KINDS[L.k];
-  $('#title').textContent='Изучаем аспект';
+  $('#title').textContent='Изучаем тему';
   const ex=d.ex&&d.ex.t?{t:d.ex.t,s:(d.ex.s||[]).map(x=>Array.isArray(x)?x[0]+' '+x[1]:x),a:d.ex.a}:null;
   // своя теория аспекта (как в русском): главное → правило → формулы → алгоритм → пример → ловушки
-  let h=stageBar()+'<div class="card"><div class="tag">'+(d.lv?['','Базовый','Средний','Сложный'][d.lv]+' уровень · ':'')+'аспект темы</div><b>'+esc(d.t)+'</b>'+kindFig(L.k,'',true)
+  let h=stageBar()+'<div class="card"><div class="tag">'+(d.lv?['','Базовый','Средний','Сложный'][d.lv]+' уровень · ':'')+'приём · тема «'+esc(groupName(L.g||kindGroup(L.k)))+'»</div><b>'+esc(d.t)+'</b>'+kindFig(L.k,'',true)
     +AnikTheory.topic({key:d.key,rule:d.rl&&d.rl.length?d.rl:d.th,formulas:(d.fm||[]).map(fmStr),steps:d.al,example:ex,traps:d.tr},{fmt:esc,stepsLabel:'Как решать',trapLabel:'Частые ошибки'})
     +(d.tr&&d.tr.length?'':kindErrs(L.k))+'</div>';
   const tt=thOf(kindGroup(L.k));
@@ -541,7 +607,7 @@ function ltestDone(){
     +'<div class="fb '+(pass?'good':'bad')+'">'+(pass?'Теория усвоена — переходим к решению.':'Пока шатко. Перечитай теорию и пройди тест ещё раз — или иди дальше, а к теории вернись позже.')+'</div>'
     +'<button class="btn" id="lgo">'+(pass?'Дальше: разбор по шагам':'Всё равно дальше')+'</button>'
     +(pass?'':'<button class="btn sec" id="lre">Перечитать теорию</button>')
-    +'<button class="btn sec" id="lmenu">← К аспектам темы</button>';
+    +'<button class="btn sec" id="lmenu">← К теме</button>';
   app.innerHTML=h;
   $('#lgo').onclick=()=>{L.stage='steps';learnToSteps()};
   const re=$('#lre');if(re)re.onclick=()=>{L.stage='theory';setView('ltheory')};
@@ -557,34 +623,54 @@ function learnToSteps(){
 }
 function learnToSolo(){
   L.stage='solo';
-  const k=L.k,n=(KINDS[k]&&KINDS[k].n)||PACK.numbers[0];
+  const k=L.k,g=L.g||kindGroup(k),n=(KINDS[k]&&KINDS[k].n)||PACK.numbers[0];
   loadPractice(n).then(list=>{
-    // только задачи ЭТОГО типа: если в практике их меньше трёх — добираем из разбора по шагам того же типа (ответ — итог разбора)
+    const mk=t=>Object.assign({n},t);
+    // три задания приёма сегодняшнего занятия (настоящие — первыми); меньше трёх — добираем итогами разбора по шагам того же приёма
     const pool=list.filter(t=>t.k===k);
     const real=shuffle(pool.filter(t=>t.r)),own=shuffle(pool.filter(t=>!t.r));
-    let items=real.concat(own).slice(0,3).map(t=>Object.assign({n},t));
+    let items=real.concat(own).slice(0,3).map(mk);
     if(items.length<3){const seen=new Set(items.map(t=>t.t));
-      shuffle(kindSteps(k)).forEach(x=>{if(items.length<3&&x.f&&!seen.has(x.t)){seen.add(x.t);items.push({n,t:x.t,a:[String(x.f)],k:x.k||k,g:x.g||KINDS[k].g,sk:x.sk,fig:x.fig,id:'st_'+items.length})}});}
+      shuffle(kindSteps(k)).forEach(x=>{if(items.length<3&&x.f&&!seen.has(x.t)){seen.add(x.t);items.push({n,t:x.t,a:[String(x.f)],k:x.k||k,g:x.g||g,sk:x.sk,fig:x.fig,id:'st_'+items.length})}});}
+    // и два задания других приёмов этой темы: сначала западающие, потом недоученные — так тема не сводится к одному приёму
+    const others=aspectsOf(g).filter(x=>x!==k).sort((a,b)=>(aspectState(b)==='weak')-(aspectState(a)==='weak')||kindCredit(a)-kindCredit(b)||kindWeight(b)-kindWeight(a));
+    for(const o of others){
+      if(items.length>=5)break;
+      const t=shuffle(list.filter(x=>x.k===o)).sort((a,b)=>b.r-a.r)[0];
+      if(t)items.push(mk(t));
+    }
     if(!items.length){packTab='practice';return setView('pack')}
     pr={items,i:0,res:[],tries:0,fb:null,gain:0,learn:true};
     setView('prac');
   });
 }
+// результаты по приёмам уходят боту (репетитор и план дня видят занятие по теме)
+function sendKindResults(){
+  const by={};
+  pr.items.forEach((it,i)=>{if(it.k&&pr.res[i]!==undefined){const b=by[it.k]||(by[it.k]=[0,0]);b[1]++;if(pr.res[i])b[0]++}});
+  Object.keys(by).slice(0,6).forEach(x=>sendLearn(x,'p',by[x][0],by[x][1]));
+}
 function learnSoloDone(){
   if(pr.res.length>=Math.min(3,pr.items.length))setTimeout(function(){window.anikPlanDone&&anikPlanDone();},700);   // шаг «Изучить» в плане дня пройден
-  const ok=pr.res.filter(Boolean).length,tot=pr.res.length,s=lk(L.k);
-  s.solo=[Math.max(ok,(s.solo&&s.solo[0])||0),tot];saveLearn();sendLearn(L.k,'p',ok,tot);
-  const st=aspectState(L.k),gid=(KINDS[L.k].gs||[KINDS[L.k].g])[0],nx=aspectsOf(gid).find(k=>k!==L.k&&aspectState(k)!=='done');
-  $('#title').textContent='Аспект пройден';
+  const ok=pr.res.filter(Boolean).length,tot=pr.res.length,s=lk(L.k),g=L.g||kindGroup(L.k);
+  const own=pr.items.map((it,i)=>[it,pr.res[i]]).filter(x=>x[0].k===L.k&&x[1]!==undefined);
+  const okK=own.filter(x=>x[1]).length;
+  s.solo=[Math.max(okK,(s.solo&&s.solo[0])||0),own.length];saveLearn();
+  if(!pr.kindsSent){pr.kindsSent=1;sendKindResults()}
+  const m1=topicMastery(g),m0=L.m0||0,closed=m1>=TOPIC_DONE,nk=pickKind(g,L.k);
+  $('#title').textContent=closed?'Тема освоена':'Занятие по теме';
   let h='<div class="stars"><b>'+ok+'</b> из '+tot+'<small>с первой попытки</small></div>'
-    +'<div class="fb '+(st==='done'?'good':'bad')+'">'+esc(KINDS[L.k].t)+': '+(st==='done'?'аспект изучен ✓':ok<tot/2?'много ошибок — вернись к теории и разбору, потом попробуй ещё раз':'почти получилось — ещё одна попытка закрепит')+'</div>';
-  h+='<button class="btn" id="lagain">Ещё три задания по этому аспекту</button>';
-  if(nx)h+='<button class="btn sec" id="lnx" data-learn="'+nx+'">Следующий аспект: '+esc(KINDS[nx].t)+'</button>';
-  h+='<button class="btn sec" id="lmenu">← К аспектам темы</button>';
+    +'<div class="card"><div class="tag">Тема «'+esc(groupName(g))+'»</div>'
+    +'<div class="skrow" style="margin:6px 0"><div class="bar" style="flex:1"><i style="width:'+Math.round(100*m1)+'%"></i></div><b style="min-width:52px;text-align:right">'+Math.round(100*m1)+'%</b></div>'
+    +'<p class="src" style="margin:0">'+(m1>m0+0.005?'Было '+Math.round(100*m0)+'%. ':'')+'Сегодня: приём «'+esc(KINDS[L.k].t)+'».</p></div>'
+    +'<div class="fb '+(closed||okK*2>=Math.max(1,own.length)?'good':'bad')+'">'+(closed?'Тема освоена ✓. Теперь она будет возвращаться в плане на повторение — так знания не забываются.':
+      okK*2<own.length?'Приём пока не закрепился — он вернётся в плане. Если нужно, перечитай теорию приёма.':'Приём получается. Следующее занятие по теме — новый приём'+(nk&&nk!==L.k?': «'+esc(KINDS[nk].t)+'»':'')+'.')+'</div>';
+  if(!closed&&nk&&nk!==L.k)h+='<button class="btn" id="lnx">Следующий приём прямо сейчас</button>';
+  h+='<button class="btn sec" id="lagain">Ещё три задания по этому приёму</button><button class="btn sec" id="lmenu">← К теме</button>';
   app.innerHTML=h;
   $('#lagain').onclick=()=>learnToSolo();
-  const b=$('#lnx');if(b)b.onclick=()=>startLearn(nx);
-  $('#lmenu').onclick=()=>{packTab='practice';setView('pack')};
+  const b=$('#lnx');if(b)b.onclick=()=>startTopicLearn(g);
+  $('#lmenu').onclick=()=>{packTab='practice';pracGroup=g;setView('pack')};
 }
 
 function startPractice(){
@@ -661,7 +747,7 @@ function pracFinish(ok,skipped){
   const t=pr.items[pr.i],first=ok&&pr.tries===0;
   pr.res.push(first);const g=first?10:ok?5:0;pr.gain+=g;xp+=g;   // XP — сразу, как на экране «+10 XP»
   AnikBank.mark('ege-math',t.id,first);
-  if(t.k){const s=lk(t.k),p=s.pr||(s.pr=[0,0]);p[1]++;if(first)p[0]++;s.rec=(s.rec||[]).concat(first?1:0).slice(-5);saveLearn()}
+  if(t.k){markKind(t.k,first);saveLearn()}
   if(t.sk)record(t.sk,first?1:0);
   const msg=ok?(first?'Верно! +10 XP':'Верно со второй попытки. +5 XP'):'Правильный ответ: '+t.a[0]+(kindSteps(t.k).length?'':'\nПовтори теорию этого типа задач и реши ещё несколько таких.');
   pr.reveal={cls:ok?'good':'bad',text:msg,k:ok||!kindSteps(t.k).length?'':t.k};
@@ -682,7 +768,7 @@ function pracDone(){
     $('#simmore').onclick=()=>similarStart(t);$('#simback').onclick=()=>setView('vdone');
     return;
   }
-  if(!pr.kindsSent){pr.kindsSent=1;const by={};pr.items.forEach((it,i)=>{if(it.k&&pr.res[i]!==undefined){const b=by[it.k]||(by[it.k]=[0,0]);b[1]++;if(pr.res[i])b[0]++}});Object.keys(by).slice(0,6).forEach(k=>sendLearn(k,'p',by[k][0],by[k][1]))}
+  if(!pr.kindsSent){pr.kindsSent=1;sendKindResults()}
   if(pr.res.length>=Math.min(5,pr.items.length))setTimeout(function(){window.anikPlanDone&&anikPlanDone();},700);
   $('#title').textContent='Итог';
   const ok=pr.res.filter(Boolean).length,tot=pr.res.length,sentAuto=autoSend();
@@ -697,7 +783,7 @@ function pracDone(){
 }
 
 
-// ── Пробный вариант: вся первая часть ЕГЭ (12 заданий) в порядке экзамена, ответы проверяются в конце ──
+// ── Пробный вариант: вся первая часть ЕГЭ (13 заданий) в порядке экзамена, ответы проверяются в конце ──
 // структура ЕГЭ 2027 (спецификация ФИПИ): первая часть — 13 заданий с кратким ответом, номера в банке совпадают с экзаменом
 const VARIANT_MAP=[1,2,3,4,5,6,7,8,9,10,11,12,13].map(n=>[n,n]);
 const VARIANT_N=VARIANT_MAP.length;
@@ -742,7 +828,7 @@ function variantFinish(){
   V.res=V.items.map((t,k)=>{const u=parseNum(V.ans[k]);return !!u&&t.a.some(a=>{const v=parseNum(a);return v&&u[0]*v[1]===v[0]*u[1]})});
   V.min=Math.max(1,Math.round((Date.now()-V.t0)/60000));V.done=true;
   const ok=V.res.filter(Boolean).length;
-  V.items.forEach((t,k)=>{if(t.sk)record(t.sk,V.res[k]?1:0);if(t.k)sendLearn(t.k,'p',V.res[k]?1:0,1)});
+  V.items.forEach((t,k)=>{if(t.sk)record(t.sk,V.res[k]?1:0);if(t.k){markKind(t.k,V.res[k]);sendLearn(t.k,'p',V.res[k]?1:0,1)}});saveLearn();
   try{const hist=JSON.parse(localStorage.getItem('math_variants')||'[]');hist.push({d:Date.now(),ok,n:VARIANT_N,min:V.min,res:V.res.map(Number)});localStorage.setItem('math_variants',JSON.stringify(hist.slice(-30)))}catch(e){}
   xp+=ok*10;saveAll();
   setView('vdone');
@@ -940,8 +1026,8 @@ function answer(ok){
 function next(msg){
   cur.i++;
   if(cur.i>=cur.t.st.length){
-    cur.t.st.forEach((st,k)=>record(st.s,cur.res[k]));
-    saveAll();
+    cur.t.st.forEach((st,k)=>record(st.s,cur.res[k],1));
+    saveAll();                                            // XP уже начислен по шагам
     return setView('done');
   }
   prepare();cur.fb={cls:msg.startsWith('Верно')?'good':'bad',text:msg};
@@ -1012,7 +1098,7 @@ function gameView(){
   app.innerHTML=h;
   if(gm.picked===null)app.querySelectorAll('.opt').forEach(b=>b.onclick=()=>{
     gm.picked=+b.dataset.k;const good=gm.order[gm.picked]===it.opts[0];
-    if(good)gm.ok++;record(it.sk,good);saveAll();render();
+    if(good)gm.ok++;record(it.sk,good,1);saveAll();render();
   });
   else $('#nx').onclick=()=>{
     gm.i++;
@@ -1042,17 +1128,19 @@ function fnv(str){let h=0x811c9dc5;for(let i=0;i<str.length;i++){h^=str.charCode
 function b62(n,w){let o='';for(let i=0;i<w;i++){o=B62[n%62]+o;n=Math.floor(n/62)}return o}
 
 // Короткая строка с результатами занятия: «код навыка + верных + всего», как её читает бот (game_sync.parse_math)
-function sessionPayload(){
+function sessionPayload(game){
   const agg={};
-  session.forEach(([sk,ok])=>{const a=agg[sk]||(agg[sk]=[0,0]);a[1]=Math.min(9,a[1]+1);a[0]=Math.min(a[1],a[0]+(ok?1:0))});
+  session.filter(x=>!!x[2]===!!game).forEach(([sk,ok])=>{const a=agg[sk]||(agg[sk]=[0,0]);a[1]=Math.min(9,a[1]+1);a[0]=Math.min(a[1],a[0]+(ok?1:0))});
   let body='';
   Object.keys(agg).slice(-15).forEach(sk=>{body+=b62(fnv(sk)%3844,2)+agg[sk][0]+agg[sk][1]});
-  return 'm_'+body;
+  return body?(game?'mg_':'m_')+body:'';
 }
 // Если подключено облако — результат уходит боту сам, кнопка не нужна. true — отправлено.
 function autoSend(){
   if(!session.length||!window.AnikSync||!AnikSync.enabled())return false;
-  if(!AnikSync.send(sessionPayload()))return false;
+  const real=sessionPayload(0),game=sessionPayload(1);         // задания — m_, игры и разбор — mg_ (в прогноз не идут)
+  if(real&&!AnikSync.send(real))return false;
+  if(game&&!AnikSync.send(game))return false;
   session=[];
   return true;
 }
@@ -1066,10 +1154,10 @@ function sendToBot(){
   // из кнопки на клавиатуре бота данные уходят напрямую, во всех остальных случаях — ссылкой с результатом
   const keyboardLaunch=TG&&TG.initDataUnsafe&&!TG.initDataUnsafe.query_id;
   if(keyboardLaunch){
-    TG.sendData(JSON.stringify({v:1,t:'math_stages',r:session.slice(-150)}));
+    TG.sendData(JSON.stringify({v:1,t:'math_stages',r:session.slice(-150).map(x=>[x[0],x[1]])}));
     return;
   }
-  const url='https://t.me/'+BOT_USERNAME+'?start='+sessionPayload();
+  const url='https://t.me/'+BOT_USERNAME+'?start='+(sessionPayload(0)||sessionPayload(1));
   session=[];
   if(TG&&TG.openTelegramLink)TG.openTelegramLink(url);else window.open(url,'_blank');
 }
@@ -1080,6 +1168,7 @@ fetch('math_theory.json').then(r=>r.json()).then(d=>{MTH=d;if(view==='pack'&&pac
 fetch('math_kinds.json').then(r=>r.json()).then(d=>{KINDS=d.kinds;if(view==='home')render();if(view==='task'||view==='prac'||(view==='pack'&&packTab==='practice'))render()}).catch(()=>{});
 fetch('math_topics.json').then(r=>r.json()).then(d=>{TOPICS_META=d.topics}).catch(()=>{});
 fetch('math_groups.json').then(r=>r.json()).then(d=>{GROUPS_META=d.numbers}).catch(()=>{});
+fetch('math_topic_weights.json').then(r=>r.json()).then(d=>{TW=d.w;if(view==='home')render()}).catch(()=>{});
 fetch('math_analysis.json').then(r=>r.json()).then(d=>{ANALYSIS=d.numbers;if(view==='pack'&&packTab==='theory')render()}).catch(()=>{});
 // план дня может сменить адрес на этой же странице (#learn= → #prac=): разбор адреса — при загрузке, поэтому перезагружаемся
 window.addEventListener('hashchange',function(){if(/^#(learn|prac|pack|skill|n|diag)=/.test(location.hash))location.reload();});
@@ -1093,11 +1182,12 @@ fetch('math_packs.json').then(r=>r.json()).then(idx=>{
     return loadPack(m[1]).then(p=>{PACK=p;packTab=m[2];setView('pack')}).catch(()=>setView('home'));
   }
   if((m=h.match(/^#diag=(\d+)$/))){ return diagStartMath(+m[1]); }       // входная диагностика номера (карта знаний)
-  if((m=h.match(/^#(learn|prac)=(\w+)$/))){                  // из плана дня: изучение типа задач или задания по нему
-    const go=()=>{const d=KINDS&&KINDS[m[2]];if(!d)return setView('home');
-      if(m[1]==='learn')return goAspect(m[2]);
+  if((m=h.match(/^#(learn|prac)=(\w+)$/))){                  // из плана дня: изучение темы (или типа задач) и задания по ней
+    const go=()=>{
+      const isTopic=/^p\d+_/.test(m[2]),d=isTopic?{n:+m[2].match(/^p(\d+)_/)[1],g:m[2],gs:[m[2]]}:(KINDS&&KINDS[m[2]]);if(!d)return setView('home');
+      if(m[1]==='learn')return isTopic?goTopic(m[2]):goAspect(m[2]);
       const meta=INDEX.packs.find(p=>p.numbers.includes(d.n));if(!meta)return setView('home');
-      return loadPack(meta.id).then(p=>{PACK=p;pracNum=PACK.numbers.length>1?d.n:0;pracSkill='';pracGroup=d.g||'';packTab='practice';startPractice()});};
+      return loadPack(meta.id).then(p=>{PACK=p;pracNum=PACK.numbers.length>1?d.n:0;pracSkill='';pracGroup=(d.gs&&d.gs[0])||d.g||'';pracKind=isTopic?'':m[2];packTab='practice';startPractice()});};
     if(KINDS)return go();
     return fetch('math_kinds.json').then(r=>r.json()).then(d=>{KINDS=d.kinds;go()}).catch(()=>setView('home'));
   }
