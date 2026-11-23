@@ -2250,7 +2250,17 @@ body.focus .lbar,body.focus .tools,body.focus .permbar{display:none}
 
   // ───────── панель: задачи из банка (репетитор) и звонок ─────────
   var BANKS = [['ege-rus', 'ЕГЭ · Русский', 1, 26], ['oge-rus', 'ОГЭ · Русский', 2, 12], ['ege-math', 'ЕГЭ · Профиль', 1, 13], ['ege-mathb', 'ЕГЭ · База', 1, 21], ['oge-math', 'ОГЭ · Математика', 1, 19]];
-  var bf = { bank: 'ege-rus', n: 0, off: 0, q: '', fig: false }, bankCache = {};
+  var bf = { bank: 'ege-rus', n: 0, off: 0, q: '', fig: false, g: '', k: '' }, bankCache = {}, mathNames = null;
+  function loadMathNames() {                            // названия тем (p9_tan) и типов (d_tangent_coef) профиля — те же, что в разделе математики
+    if (mathNames) return Promise.resolve(mathNames);
+    return Promise.all([fetch('math_groups.json').then(function (r) { return r.json(); }), fetch('math_kinds.json').then(function (r) { return r.json(); })])
+      .then(function (a) {
+        var g = {}, k = {};
+        Object.keys(a[0].numbers || {}).forEach(function (n) { a[0].numbers[n].forEach(function (x) { g[x.id] = x.name; }); });
+        Object.keys(a[1].kinds || {}).forEach(function (id) { k[id] = a[1].kinds[id].t; });
+        return (mathNames = { g: g, k: k });
+      }).catch(function () { return { g: {}, k: {} }; });
+  }
   function drawer(what) {
     var d = document.getElementById('drawer');
     if (!d) return;
@@ -2264,12 +2274,12 @@ body.focus .lbar,body.focus .tools,body.focus .permbar{display:none}
     d.innerHTML = '<h3>Задачи из банка <button class="x" id="dx" aria-label="Закрыть">×</button></h3><div class="row" style="margin-top:8px"><select class="inp" id="bb" aria-label="Экзамен" style="flex:1">' +
       BANKS.map(function (x) { return '<option value="' + x[0] + '"' + (x[0] === bf.bank ? ' selected' : '') + '>' + x[1] + '</option>'; }).join('') + '</select>' +
       '<select class="inp" id="bn" aria-label="Номер задания"><option value="0">№</option>' + nums.map(function (n) { return '<option' + (n === bf.n ? ' selected' : '') + '>' + n + '</option>'; }).join('') + '</select></div>' +
-      '<input class="inp" id="bq" placeholder="Поиск: слово, формула, $ — с формулами" aria-label="Поиск задачи по тексту" style="width:100%;margin-top:6px" value="' + esc(bf.q) + '">' +
+      '<div id="btop"></div><input class="inp" id="bq" placeholder="Поиск: слово, формула, $ — с формулами" aria-label="Поиск задачи по тексту" style="width:100%;margin-top:6px" value="' + esc(bf.q) + '">' +
       '<label class="chk" style="margin-top:4px"><input type="checkbox" id="bfig"' + (bf.fig ? ' checked' : '') + '> только с рисунком</label>' +
       '<p class="muted" style="margin-top:6px">Задача встанет туда, куда вы смотрите, крупно, с формулами и рисунком. Рукой её можно двигать и тянуть за угол.</p><div id="bl"></div>';
     on('dx', function () { d.hidden = true; resize(); });
-    document.getElementById('bb').onchange = function (e) { bf.bank = e.target.value; bf.n = 0; bankUi(d); };
-    document.getElementById('bn').onchange = function (e) { bf.n = +e.target.value; bf.off = 0; bankUi(d); };
+    document.getElementById('bb').onchange = function (e) { bf.bank = e.target.value; bf.n = 0; bf.g = bf.k = ''; bankUi(d); };
+    document.getElementById('bn').onchange = function (e) { bf.n = +e.target.value; bf.off = 0; bf.g = bf.k = ''; bankUi(d); };
     var tq; document.getElementById('bq').oninput = function (e) { clearTimeout(tq); tq = setTimeout(function () { bf.q = e.target.value; bf.off = 0; bankList(b); }, 250); };
     document.getElementById('bfig').onchange = function (e) { bf.fig = e.target.checked; bf.off = 0; bankList(b); };
     bankList(b);
@@ -2280,11 +2290,18 @@ body.focus .lbar,body.focus .tools,body.focus .permbar{display:none}
     (bankCache[key] ? Promise.resolve(bankCache[key]) : fetch('trainer/' + key + '.json').then(function (r) { if (!r.ok) throw 0; return r.json(); }))
       .then(function (j) {
         bankCache[key] = j;
+        return (b[0] === 'ege-math' ? loadMathNames() : Promise.resolve(null)).then(function (nm) { return [j, nm]; });
+      })
+      .then(function (jn) {
+        var j = jn[0], nm = jn[1];
         var list = (Array.isArray(j) ? j : j.tasks || []).map(function (t) {
           var text = t.t || t.text || '', opts = t.options || [];
           if (opts.length) text += '\n\n' + opts.map(function (o, i) { return (i + 1) + ') ' + o; }).join('\n');
-          return { id: t.id, text: text, ans: (Array.isArray(t.a) ? t.a[0] : t.a) || t.answer || '', fig: (t.f || [])[0] || '' };
+          return { id: t.id, text: text, ans: (Array.isArray(t.a) ? t.a[0] : t.a) || t.answer || '', fig: (t.f || [])[0] || '', g: t.g || '', k: t.k || '' };
         });
+        topicFilter(list, nm, b);
+        if (bf.g) list = list.filter(function (it) { return it.g === bf.g; });
+        if (bf.k) list = list.filter(function (it) { return it.k === bf.k; });
         var q = bf.q.trim().toLowerCase();
         if (q) list = list.filter(function (it) { return it.text.toLowerCase().indexOf(q) >= 0; });
         if (bf.fig) list = list.filter(function (it) { return it.fig; });
@@ -2298,7 +2315,29 @@ body.focus .lbar,body.focus .tools,body.focus .permbar{display:none}
         bl.querySelectorAll('[data-k]').forEach(function (btn) { btn.onclick = function () { place(part[+btn.dataset.k], b); }; });
       }).catch(function () { document.getElementById('bl').innerHTML = '<p class="muted" style="margin-top:8px">Не получилось загрузить задачи этого номера.</p>'; });
   }
-  function place(it, b) { placeTask({ head: b[1] + ' · №' + bf.n, text: it.text, fig: it.fig }); toast('Задача на доске'); }
+  function topicFilter(list, nm, b) {                  // профиль: тема номера, внутри — тип задачи (у остальных банков номер = одна тема)
+    var top = document.getElementById('btop');
+    if (!top) return;
+    var cg = {}, ck = {};
+    list.forEach(function (it) { if (it.g) cg[it.g] = (cg[it.g] || 0) + 1; });
+    if (!nm || Object.keys(cg).length < 2) { top.innerHTML = ''; bf.g = bf.k = ''; return; }
+    if (bf.g && !cg[bf.g]) bf.g = bf.k = '';
+    list.forEach(function (it) { if (bf.g && it.g === bf.g && it.k) ck[it.k] = (ck[it.k] || 0) + 1; });
+    if (bf.k && !ck[bf.k]) bf.k = '';
+    var opts = function (cnt, names, cur, all) {
+      return '<option value="">' + all + '</option>' + Object.keys(cnt).sort(function (x, y) { return cnt[y] - cnt[x]; }).map(function (id) {
+        return '<option value="' + esc(id) + '"' + (id === cur ? ' selected' : '') + '>' + esc((names[id] || id).replace(/\$/g, '')) + ' · ' + cnt[id] + '</option>'; }).join('');
+    };
+    top.innerHTML = '<select class="inp" id="bg" aria-label="Тема задачи" style="width:100%;margin-top:6px">' + opts(cg, nm.g, bf.g, 'Все темы номера') + '</select>' +
+      (Object.keys(ck).length > 1 ? '<select class="inp" id="bk" aria-label="Тип задачи" style="width:100%;margin-top:6px">' + opts(ck, nm.k, bf.k, 'Все типы темы') + '</select>' : '');
+    document.getElementById('bg').onchange = function (e) { bf.g = e.target.value; bf.k = ''; bf.off = 0; bankList(b); };
+    var bk = document.getElementById('bk');
+    if (bk) bk.onchange = function (e) { bf.k = e.target.value; bf.off = 0; bankList(b); };
+  }
+  function place(it, b) {
+    var t = bf.g && mathNames && mathNames.g[bf.g];
+    placeTask({ head: b[1] + ' · №' + bf.n + (t ? ' · ' + t : ''), text: it.text, fig: it.fig }); toast('Задача на доске');
+  }
   function placeTask(t, at) {
     var r = stage.getBoundingClientRect(), y = Math.round(at ? at[1] : view.y + 30 / view.z), x = Math.round(at ? at[0] : view.x + 20 / view.z), w = Math.round(Math.min(1400, Math.max(600, r.width / view.z - 60)));
     var it = t;
