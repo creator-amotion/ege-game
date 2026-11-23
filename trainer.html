@@ -19,7 +19,7 @@
 <script src="anik-theory.js?v=4"></script>
 <script src="anik-look.js?v=1"></script>
 <script src="anik-bank.js?v=1"></script>
-<script src="anik-sync.js?v=7"></script>
+<script src="anik-sync.js?v=8"></script>
 <script src="anik-nav.js?v=9" defer></script>
 <script src="anik-ask.js?v=1" defer></script>
 <style>
@@ -172,9 +172,10 @@ b.mark{background:var(--yellow);padding:0 3px}
 .lstep.cur{border-color:var(--ink);box-shadow:4px 4px 0 var(--yellow)}
 .lstep b{display:block;font-size:16px}
 .lstages{display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 12px}
-.lstages span{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:5px 10px;border:2px solid var(--line2);color:var(--muted)}
+.lstages span,.lstages button{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:5px 10px;border:2px solid var(--line2);color:var(--muted);background:transparent;font-family:inherit}
+.lstages button{cursor:pointer;min-height:36px;color:var(--ink);border-color:var(--ink)}.lstages button:hover{background:var(--yellow-t,#fff6cc)}
 .lstages span.on{border-color:var(--ink);color:var(--ink);background:var(--yellow)}
-.lstages span.ok{color:var(--blue);border-color:var(--blue)}
+.lstages .ok{color:var(--blue);border-color:var(--blue)}
 .lsum{font-size:14px;color:var(--muted);margin:6px 0 10px}
 .lsum b{color:var(--ink)}
 .lq{font-family:var(--display);font-size:20px;font-weight:800;line-height:1.25;margin:10px 0 12px}
@@ -464,9 +465,11 @@ function partBar(){
   if(hasGame(c.p))st.push(['game','Игра',s.game&&s.game[0]/s.game[1]>=0.7]);
   st.push(['tasks','Задания',s.pr&&s.pr[1]>=3&&s.pr[0]/s.pr[1]>=0.6]);
   return '<div class="ph"><span><b>'+esc(c.p.title)+'</b></span><button class="back" id="lpback" style="min-height:32px;height:32px;font-size:13px">Все части</button></div>'+
-    '<div class="lstages">'+st.map(function(x){return '<span class="'+(x[0]===c.stage?'on':x[2]?'ok':'')+'">'+(x[2]?'✓ ':'')+x[1]+'</span>';}).join('')+'</div>';
+    '<div class="lstages">'+st.map(function(x){return x[0]===c.stage?'<span class="on" aria-current="step">'+(x[2]?'✓ ':'')+x[1]+'</span>'   // этапы — кнопки: перейти к любому
+      :'<button type="button" class="'+(x[2]?'ok':'')+'" data-stage="'+x[0]+'">'+(x[2]?'✓ ':'')+x[1]+'</button>';}).join('')+'</div>';
 }
-function partWire(){var b=document.getElementById('lpback');if(b)b.onclick=function(){LRN.cur=null;partsView();window.scrollTo(0,0);};}
+function partWire(){var b=document.getElementById('lpback');if(b)b.onclick=function(){LRN.cur=null;partsView();window.scrollTo(0,0);};
+  [].forEach.call(document.querySelectorAll('.lstages [data-stage]'),function(x){x.onclick=function(){partOpen(LRN.cur.p,x.dataset.stage);};});}
 function shuf(a){return a.slice().sort(function(){return Math.random()-.5;});}
 function partOpen(p,stage){
   LRN.cur={p:p,stage:stage};
@@ -503,7 +506,8 @@ function partTestEnd(){
   lbox().innerHTML=partBar()+'<div class="fin"><div class="fs '+(pass?'g':'r')+'">'+ok+'/'+tot+'</div><p class="lead" style="margin-top:8px">'+
     (pass?'Теорию знаешь. Теперь — '+(nxt==='game'?'игра по этой части.':'настоящие задания этой части.'):'Перечитай теорию и пройди тест ещё раз — без этого задачи пойдут тяжело.')+'</p></div>'+
     (pass?'<button class="btn" id="lgo">'+(nxt==='game'?'Играть':'Решать задания')+'</button><button class="btn sec" id="lre">Перечитать теорию</button>':
-      '<button class="btn" id="lre">Перечитать теорию</button><button class="btn sec" id="lagain">Пройти тест ещё раз</button>');
+      '<button class="btn" id="lre">Перечитать теорию</button><button class="btn sec" id="lagain">Пройти тест ещё раз</button>'+
+      '<button class="btn sec" id="lgo">'+(nxt==='game'?'Всё равно к игре':'Всё равно к заданиям')+'</button>');
   partWire();
   var g=document.getElementById('lgo');if(g)g.onclick=function(){partOpen(p,nxt);};
   document.getElementById('lre').onclick=function(){partOpen(p,'theory');};
@@ -524,8 +528,9 @@ function partGameDone(ok,tot){
   var good=ok/tot>=0.7;
   gbox().innerHTML='<div class="fin"><div class="fs '+(good?'g':ok/tot>=.5?'y':'r')+'">'+ok+'/'+tot+'</div><p class="lead" style="margin-top:8px">'+
     (good?'Отлично! Теперь — настоящие задания этой части.':'Сыграй ещё раз: в игре ошибки не страшны, а в задачах они будут стоить баллов.')+'</p></div>'+
-    '<button class="btn" id="lgtask">'+(good?'Решать задания части':'Ещё раунд')+'</button><button class="btn sec" id="lgparts">К частям темы</button>';
+    '<button class="btn" id="lgtask">'+(good?'Решать задания части':'Ещё раунд')+'</button>'+(good?'':'<button class="btn sec" id="lgskip">Всё равно к заданиям</button>')+'<button class="btn sec" id="lgparts">К частям темы</button>';
   document.getElementById('lgtask').onclick=function(){if(good){openTab('l');partOpen(p,'tasks');}else partGame();};
+  var sk=document.getElementById('lgskip');if(sk)sk.onclick=function(){openTab('l');partOpen(p,'tasks');};
   document.getElementById('lgparts').onclick=function(){openTab('l');LRN.cur=null;partsView();};
 }
 function partTasks(){

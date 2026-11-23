@@ -69,7 +69,7 @@
   }
 
   function send(payload) {
-    if (payload) markDay();                       // календарь занятий работает и без облака
+    if (payload && !/^[as]_/.test(payload)) markDay();   // календарь занятий работает и без облака; цель (a_) и предметы (s_) — настройки, не занятие
     if (!payload) return false;
     if (!enabled()) {
       if (API && outside()) {                     // вне Telegram и ещё не связано: копим, уйдёт после связки с ботом

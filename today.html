@@ -17,7 +17,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@700;800&family=Golos+Text:wght@400..700&display=swap">
 <link rel="stylesheet" href="anik.css?v=7">
 <script src="anik-look.js?v=1"></script>
-<script src="anik-sync.js?v=7"></script>
+<script src="anik-sync.js?v=8"></script>
 <script src="anik-nav.js?v=9" defer></script>
 <script src="anik-call.js?v=2" defer></script>
 <script src="anik-tutor.js?v=5" defer></script>
@@ -71,7 +71,7 @@ h1{font-family:var(--display);font-size:38px;font-weight:800;letter-spacing:-1.5
 .mhead{display:flex;align-items:flex-end;justify-content:space-between}
 .mhead .cnt{font-family:var(--display);font-size:34px;font-weight:800;letter-spacing:-1.2px;line-height:.9;margin-bottom:6px}
 .mhead .cnt small{font-size:16px;letter-spacing:0;color:var(--muted)}
-.tabs3{display:flex;gap:6px;overflow-x:auto;margin:14px -16px 0;padding:0 16px;scrollbar-width:none}
+.tabs3{display:flex;gap:6px;flex-wrap:wrap;margin:14px 0 0}   /* в несколько строк: при прокрутке вбок последние вкладки было не видно */
 .tabs3::-webkit-scrollbar{display:none}
 .tabs3 button{flex:none;min-height:40px;padding:0 14px;border:2px solid var(--ink);background:transparent;color:var(--ink);font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap}
 .tabs3 button.on{background:var(--ink);color:var(--paper)}
@@ -240,16 +240,17 @@ function chipsHTML(sel){return SETS.map(function(x){return '<button class="chip'
 function profileHTML(prof){
   if(editingProfile||(!prof.length&&!skipped())){
     var sel=editingProfile?draft:[];
-    return '<div class="onb"><b>Что готовишь?</b><div class="chips" id="pchips">'+chipsHTML(sel)+'</div><button class="btn" id="pok" style="margin-top:0">Готово</button></div>';
+    return '<div class="onb"><b>Что готовишь?</b><div class="chips" id="pchips">'+chipsHTML(sel)+'</div><button class="btn" id="pok" style="margin-top:0">'+(sel.length?'Готово':'Пропустить')+'</button></div>';
   }
-  if(!prof.length)return '';
+  if(!prof.length)return '<div class="prof"><span>Предметы не выбраны.</span><button class="chip link" id="pedit">выбрать</button></div>';   // пропустил — вернуться к выбору
   return '<div class="prof"><span>Готовлюсь:</span>'+prof.map(function(k){return '<span class="chip on" style="cursor:default">'+esc(setName(k))+'</span>';}).join('')+'<button class="chip link" id="pedit">изменить</button></div>';
 }
 function bindProfile(){
   var box=document.getElementById('pchips');
   if(box){
     if(!editingProfile)draft=[];
-    Array.prototype.forEach.call(box.querySelectorAll('.chip'),function(b){b.onclick=function(){var k=b.dataset.k,i=draft.indexOf(k);if(i<0)draft.push(k);else draft.splice(i,1);b.classList.toggle('on');};});
+    Array.prototype.forEach.call(box.querySelectorAll('.chip'),function(b){b.onclick=function(){var k=b.dataset.k,i=draft.indexOf(k);if(i<0)draft.push(k);else draft.splice(i,1);b.classList.toggle('on');
+      document.getElementById('pok').textContent=draft.length?'Готово':'Пропустить';};});   // пустой выбор — честно «Пропустить», а не «Готово»
     document.getElementById('pok').onclick=function(){
       if(!draft.length){try{localStorage.setItem('anik_profile_skip','1');}catch(e){}}
       else{
@@ -396,7 +397,11 @@ function aimAskHTML(s){
   var pend=null;try{pend=JSON.parse(localStorage.getItem('anik_goal_pending')||'null');}catch(e){}
   if(!aimEdit&&pend&&Date.now()-pend.t<10*60*1000&&!(s&&s.aim&&s.aim.s===pend.s&&s.aim.t===pend.v)){
     var pl=AIM_OPT[pend.s][0]<10?'«'+pend.v+'»':pend.v+' '+plural(pend.v,'балл','балла','баллов');
-    return '<div class="aim"><div class="aim-k"><span>Путь к цели · '+AIM_NAME[pend.s]+'</span><b>'+pl+'</b></div><div class="aim-t">Цель сохранена, считаю прогноз…</div></div>';
+    // прогноз считает бот: без связи с ботом он не придёт — так и говорим; цель можно поменять сразу
+    var linked=!window.AnikSync||!AnikSync.linked||AnikSync.linked(),late=Date.now()-pend.t>90*1000;
+    var why=!linked?'Цель запомнена. Прогноз посчитает бот — свяжи приложение с ботом (карточка выше).':late?'Цель сохранена. Прогноз пока не пришёл — появится, когда бот ответит.':'Цель сохранена, считаю прогноз…';
+    return '<div class="aim"><div class="aim-k"><span>Путь к цели · '+AIM_NAME[pend.s]+'</span><b>'+pl+'</b></div><div class="aim-t">'+why+'</div>'+
+      '<button class="chip link" id="aimedit" style="margin-top:6px">изменить цель</button></div>';
   }
   var sub=aimPick||aimDefault(s),grade=AIM_OPT[sub][0]<10;
   var h='<div class="aim"><div class="aim-k"><span>Путь к цели</span></div>'+

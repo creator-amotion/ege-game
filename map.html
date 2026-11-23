@@ -17,7 +17,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@700;800&family=Golos+Text:wght@400..700&display=swap">
 <link rel="stylesheet" href="anik.css?v=7">
 <script src="anik-look.js?v=1"></script>
-<script src="anik-sync.js?v=7"></script>
+<script src="anik-sync.js?v=8"></script>
 <script src="anik-nav.js?v=9" defer></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -52,7 +52,7 @@ h1{font-family:var(--display);font-size:36px;font-weight:800;letter-spacing:-1.4
 .part .pt{font-size:13.5px;line-height:1.35}
 .part .lv{font-size:12px;color:var(--muted);display:block;margin-top:2px}
 .part .lv b{color:var(--ink)}
-.part a{font-size:13px;font-weight:600;color:var(--ink);text-decoration:none;border:2px solid var(--ink);padding:5px 8px;white-space:nowrap}
+.part a{font-size:14px;font-weight:600;color:var(--ink);text-decoration:none;border:2px solid var(--ink);padding:0 12px;min-height:44px;display:inline-flex;align-items:center;white-space:nowrap}
 .tag{display:inline-block;font-size:11px;font-weight:700;padding:1px 6px;margin-left:4px;vertical-align:1px}
 .tag.weak{background:#E5332A;color:#111}.tag.rev{background:#F6CE2E}
 .advice{font-size:12.5px;color:var(--ink);margin-top:3px;line-height:1.4}
@@ -90,15 +90,29 @@ function codeFromState(){
   return k&&/^1\./.test(k)?k.slice(2):'';
 }
 // своя карта: то, что уже пройдено в «Изучить» на этом устройстве, видно сразу, ещё до ответа бота
-var LOCAL_RUS=(function(){if(TUTOR)return {};try{return JSON.parse(localStorage.getItem('ege_learn')||'{}')||{};}catch(e){return {};}})();
+function lsJson(k){if(TUTOR)return {};try{return JSON.parse(localStorage.getItem(k)||'{}')||{};}catch(e){return {};}}
+var LOCAL_RUS=lsJson('ege_learn'),LOCAL_TRL=lsJson('anik_trl'),LOCAL_MATH=lsJson('math_learn'),MATH_GROUP={};   // MATH_GROUP: часть карты → [прогресс типов задач]
+function rate(a){return a&&a[1]?a[0]/a[1]:-1;}
+// прогресс «Изучить» на этом устройстве → уровень части. Лесенка, как у бота: 1 — открыл, 2 — тест по теории от 2/3,
+// 3 — после сданного теста игра/разбор от 70% (или настоящие задания части от 60%, не меньше 5)
+function localLevel(s){
+  if(!s)return null;
+  var l=(s.th||s.test||s.game||s.solo||s.pr)?1:0,good=false;
+  if(rate(s.test)*3>=2)l=2;
+  if(l>=2&&(rate(s.game)>=0.7||rate(s.solo)>=0.67))good=true;
+  if(s.pr&&s.pr[1]>=5&&rate(s.pr)>=0.6)good=true;
+  if(good&&l>=1)l=3;
+  return {l:l,good:good,bad:!!(s.game&&s.game[1]>=5&&rate(s.game)<0.5)};
+}
+function localOf(key,n,id){
+  if(key==='ege.rus')return localLevel((LOCAL_RUS[n]||{})[id]);
+  if(key==='ege.mathb'||key==='oge.math')return localLevel((LOCAL_TRL[key.replace('.','-')+'_'+n]||{})[id]);
+  if(key==='ege.math'){var best=null;(MATH_GROUP[id]||[]).forEach(function(s){var r=localLevel(s);if(r&&(!best||r.l>best.l))best=r;});return best;}
+  return null;
+}
 function overlayLocal(key,n,id,c){
-  if(key!=='ege.rus')return c;
-  var s=(LOCAL_RUS[n]||{})[id];if(!s)return c;
-  var l=c.l,weak=c.weak,g=s.game,t=s.test;
-  if(t&&t[1]&&t[0]*3>=t[1]*2)l=Math.max(l,2);
-  if(g&&g[1]&&g[0]/g[1]>=0.7){l=Math.max(l,3);weak=false;}
-  else if(s.th||t||g)l=Math.max(l,1);
-  return {l:l,weak:weak,rev:c.rev&&!(g&&g[0]/g[1]>=0.7)};
+  var r=localOf(key,n,id);if(!r)return c;
+  var l=Math.max(c.l,r.l),weak=(c.weak&&!r.good)||r.bad;return {l:weak?Math.min(l,3):l,weak:weak,rev:c.rev&&!r.good};
 }
 // куда вести из части: в изучение этой части (как в плане дня)
 function learnLink(subj,n,id){
@@ -167,14 +181,18 @@ function render(cat,code){
     });
   });
   h+='<div class="stl"><span>Как считается уровень</span></div><div class="how"><ol>'+
-    '<li><b>1</b> — открыл тему или решил хотя бы одно задание.</li><li><b>2</b> — тест по теории в «Изучить» не ниже 2 из 3.</li>'+
-    '<li><b>3</b> — игра или разбор по части от 70%, либо задания номера от 60%.</li><li><b>4</b> — настоящие задания от 75% (не меньше 8 ответов) в два разных дня.</li>'+
+    '<li><b>1</b> — открыл тему или решил хотя бы одно задание.</li><li><b>2</b> — тест по теории в «Изучить»: верно хотя бы две трети ответов.</li>'+
+    '<li><b>3</b> — после сданного теста игра или разбор по части от 70%; либо настоящие задания номера от 60% (не меньше 5 ответов).</li><li><b>4</b> — настоящие задания от 75% (не меньше 8 ответов) в два разных дня.</li>'+
     '<li><b>5</b> — от 90% (не меньше 15 ответов), и занятия растянуты хотя бы на неделю.</li></ol>'+
     '<p style="margin-top:6px">Свежие ошибки по части ставят метку «западает» и ограничивают уровень тройкой. Если долго не заниматься — «пора повторить».</p></div>';
   app.innerHTML=h;
 }
-fetch('knowledge_catalog.json').then(function(r){return r.json();}).then(function(cat){
-  var draw=function(){render(cat,codeFromState());};
+// математика (профиль): прогресс хранится по типам задач — раскладываем по частям карты (группам) через math_kinds.json
+var mathReady=Object.keys(LOCAL_MATH).length?fetch('math_kinds.json').then(function(r){return r.json();}).then(function(d){
+  Object.keys(LOCAL_MATH).forEach(function(k){var K=d.kinds&&d.kinds[k];if(!K)return;(K.gs||[K.g]).forEach(function(g){(MATH_GROUP[g]=MATH_GROUP[g]||[]).push(LOCAL_MATH[k]);});});
+}).catch(function(){}):Promise.resolve();
+Promise.all([fetch('knowledge_catalog.json').then(function(r){return r.json();}),mathReady]).then(function(a){
+  var cat=a[0],draw=function(){render(cat,codeFromState());};
   draw();
   if(window.AnikSync&&AnikSync.onState&&!TUTOR)AnikSync.onState(draw);
 }).catch(function(){app.innerHTML='<div class="empty">Не получилось загрузить карту. Проверь интернет и обнови страницу.</div>';});

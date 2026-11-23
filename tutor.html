@@ -16,7 +16,7 @@
 <script defer src="vendor/katex/auto-render.min.js"></script>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script src="anik-move.js?v=1"></script>
-<script src="tutor-api.js?v=7"></script>
+<script src="tutor-api.js?v=8"></script>
 </head>
 <body>
 <header class="bar"><span class="wm">Аник<i>.</i> кабинет</span><span class="row" style="gap:12px;justify-content:flex-end"><a class="b sm sec" href="today.html" title="Ученическая часть: «Сегодня», задания. Вернуться — кнопкой «Кабинет репетитора» на «Сегодня»">В приложение</a><span class="who" id="who"></span></span></header>
@@ -56,14 +56,23 @@
     });
   }
 
-  function callState() { return me.call_url ? (/telemost/.test(me.call_url) ? 'Телемост подключён' : 'своя ссылка на звонок') : '<span style="color:var(--red)">ссылка не задана</span>'; }
+  function callState() {
+    var own = me.students.filter(function (s) { return s.call_url; }).length;
+    var base = me.call_url ? (/telemost/.test(me.call_url) ? 'общая ссылка на Телемост' : 'общая ссылка на звонок') : '';
+    if (!base && !own) return '<span style="color:var(--red)">ссылка не задана</span>';
+    return (base || '<span style="color:var(--muted)">общей ссылки нет</span>') + (own ? ' · личных: ' + own : '');
+  }
+  function studentCall(sid) {                              // ссылка, которую получит ученик: своя, иначе общая
+    var s = me.students.filter(function (x) { return x.id === sid; })[0];
+    return (s && s.call_url) || me.call_url || '';
+  }
 
   function render() {
     var h = '<div class="row" style="justify-content:space-between;align-items:flex-end"><h1>Ученики и задания</h1>' +
       '<button class="b blue" id="givetop">Задать ДЗ' + (basket.length ? ' · ' + basket.length : '') + '</button></div><p class="lead">Код приглашения: <b>' + esc(me.code) + '</b> — ученик отправляет боту <b>/start t_' + esc(me.code) + '</b> и подтверждает доступ.</p>';
     h += '<details class="card prof"' + (me.call_url ? '' : ' open') + '><summary><b>Звонки на уроке</b> · <span id="pst">' + callState() + '</span></summary>' +
-      '<p class="muted" style="margin-top:6px">Создайте в Яндекс Телемосте постоянную встречу и вставьте ссылку. На уроке у вас и у ученика будет кнопка «Позвонить в Телемост», ученик получит ссылку вместе с приглашением.</p>' +
-      '<form class="row" id="pf" style="margin-top:8px"><label class="sr" for="curl">Моя ссылка на Телемост</label><input class="inp" id="curl" style="flex:1;min-width:220px" placeholder="https://telemost.yandex.ru/j/…" value="' + esc(me.call_url) + '" inputmode="url">' +
+      '<p class="muted" style="margin-top:6px"><b>Общая ссылка</b> — для всех учеников. Если нужна отдельная встреча для каждого ученика, откройте карточку ученика: там можно задать его личную ссылку. Создайте в Яндекс Телемосте постоянную встречу и вставьте ссылку. На уроке у вас и у ученика будет кнопка «Позвонить в Телемост», ученик получит ссылку вместе с приглашением.</p>' +
+      '<form class="row" id="pf" style="margin-top:8px"><label class="sr" for="curl">Общая ссылка на Телемост</label><input class="inp" id="curl" style="flex:1;min-width:220px" placeholder="https://telemost.yandex.ru/j/…" value="' + esc(me.call_url) + '" inputmode="url">' +
       '<button class="b">Сохранить</button></form><p class="msg" id="pmsg" role="status"></p></details>';
     h += '<div class="tabs" role="tablist">' + [['students', 'Ученики'], ['builder', 'Конструктор ДЗ']].map(function (t) {
       return '<button role="tab" data-tab="' + t[0] + '" aria-selected="' + (tab === t[0]) + '">' + t[1] + (t[0] === 'builder' && basket.length ? ' · ' + basket.length : '') + '</button>'; }).join('') + '</div>';
@@ -153,6 +162,11 @@
     h += '<p class="muted">' + (c.days_left != null ? esc(c.exam_word) + ' ' + new Date(c.exam_date + 'T12:00:00').toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' }) :
       esc(c.exam_word) + ' · дата экзамена не указана: ученик вводит её в боте') + '</p>';
     h += '<div id="roomlink"></div>';
+    var mine = me.students.filter(function (x) { return x.id === c.id; })[0] || {};
+    h += '<details class="card prof" style="margin-top:10px"' + (mine.call_url ? '' : '') + '><summary><b>Звонок с этим учеником</b> · <span id="spst">' + (mine.call_url ? 'личная ссылка' : (me.call_url ? 'общая ссылка' : '<span style="color:var(--red)">ссылка не задана</span>')) + '</span></summary>' +
+      '<p class="muted" style="margin-top:6px">Своя встреча в Яндекс Телемосте для ' + esc(c.name) + '. Её получит ученик в приглашении на урок и на странице урока. Пусто — будет общая ссылка из блока «Звонки на уроке».</p>' +
+      '<form class="row" id="spf" style="margin-top:8px"><label class="sr" for="scurl">Ссылка на Телемост для ' + esc(c.name) + '</label><input class="inp" id="scurl" style="flex:1;min-width:220px" placeholder="https://telemost.yandex.ru/j/… (пусто — общая)" value="' + esc(mine.call_url || '') + '" inputmode="url">' +
+      '<button class="b">Сохранить</button></form><p class="msg" id="spmsg" role="status"></p></details>';
     h += asksBlock(c.asks, false);
     h += '<div class="kpis" style="margin-top:10px">' + (c.days_left != null ? '<div class="kpi red"><div class="n">' + c.days_left + '</div><div class="l">' + (c.days_left % 10 === 1 && c.days_left % 100 !== 11 ? 'день' : c.days_left % 10 >= 2 && c.days_left % 10 <= 4 && (c.days_left % 100 < 10 || c.days_left % 100 >= 20) ? 'дня' : 'дней') + ' до ' + esc(c.exam_word) + '</div></div>' : '') + '<div class="kpi yel"><div class="n">' + c.streak + '</div><div class="l">серия, дней</div></div>' +
       '<div class="kpi"><div class="n">' + c.days.filter(function (d) { return d >= new Date(Date.now() - 13 * 864e5).toISOString().slice(0, 10); }).length + '</div><div class="l">дней за 2 недели</div></div>' +
@@ -207,8 +221,25 @@
     el.innerHTML = h;
     bindAsks(el);
     document.getElementById('give').onclick = function () { tab = 'builder'; render(); toBuilder(); };
+    document.getElementById('spf').onsubmit = function (e) {
+      e.preventDefault();
+      var msg = document.getElementById('spmsg');
+      api.post('/api/tutor/profile', { sid: c.id, call_url: document.getElementById('scurl').value }).then(function (r) {
+        me.students.forEach(function (s) { if (s.id === c.id) s.call_url = r.call_url; });
+        document.getElementById('spst').innerHTML = r.call_url ? 'личная ссылка' : (me.call_url ? 'общая ссылка' : '<span style="color:var(--red)">ссылка не задана</span>');
+        var pst = document.getElementById('pst'); if (pst) pst.innerHTML = callState();
+        msg.style.color = r.warning ? 'var(--red)' : 'var(--blue)';
+        msg.textContent = r.warning ? 'Сохранено. ' + r.warning : (r.call_url ? 'Сохранено: личная ссылка для ' + c.name + '.' : 'Личная ссылка удалена, будет общая.');
+      }).catch(function (err) { msg.style.color = 'var(--red)'; msg.textContent = err.status === 400 ? 'Нужна ссылка, начинающаяся с https:// — например https://telemost.yandex.ru/j/…' : 'Не сохранилось.'; });
+    };
     document.getElementById('lesson').onclick = startLesson;
     document.getElementById('unlink').onclick = askUnlink;
+    el.querySelectorAll('[data-mark]').forEach(function (b) {
+      b.onclick = function () {
+        b.disabled = true;
+        api.post('/api/tutor/hw/mark', { item: +b.dataset.mark, ok: b.dataset.v === '1' }).then(function () { toast('Отмечено'); loadCard(); }).catch(function (e) { b.disabled = false; fail(e); });
+      };
+    });
     el.querySelectorAll('details.hwd').forEach(function (d) { d.addEventListener('toggle', function () { if (d.open && !d.dataset.m) { d.dataset.m = 1; A.math(d); } }); });
     api.post('/api/tutor/notes', { sid: cur }).then(function (r) {
       document.getElementById('notes').innerHTML = r.notes.length ? r.notes.map(function (n) {
@@ -250,11 +281,13 @@
     var st = hw.done >= hw.total ? '<span class="tag blue">выполнено ' + hw.ok + '/' + hw.total + '</span>' : '<span class="tag yel">' + hw.done + ' из ' + hw.total + '</span>';
     return '<details class="hw"><summary><span><b>' + esc(hw.title) + '</b><br><span class="muted">до ' + esc(hw.due) + (hw.note ? ' · ' + esc(hw.note) : '') + '</span></span>' + st + '</summary>' +
       hw.items.map(function (i) {
-        var s = i.status === 'todo' ? '…' : i.status === 'skipped' ? '—' : i.ok ? 'да' : 'нет';
-        return '<div class="hwi"><span class="st" style="color:' + (i.ok ? 'var(--blue)' : i.status === 'done' ? 'var(--red)' : 'var(--muted)') + '">' + s + '</span>' +
+        var manual = i.status === 'done' && i.ok === null;
+        var s = i.status === 'todo' ? '…' : i.status === 'skipped' ? '—' : manual ? '?' : i.ok ? 'да' : 'нет';
+        return '<div class="hwi"><span class="st" style="color:' + (i.ok ? 'var(--blue)' : i.status === 'done' && !manual ? 'var(--red)' : 'var(--muted)') + '">' + s + '</span>' +
           '<details class="hwd"><summary><b>' + esc(i.topic) + '</b> <span class="more">целиком</span><br><span class="short">' + esc(i.text.slice(0, 180)) + '</span></summary>' +
-          '<div class="full">' + esc(i.full || i.text) + '</div>' + (i.fig ? '<img src="' + esc(i.fig) + '" alt="Рисунок к задаче" loading="lazy">' : '') + '</details>' +
-          '<span class="muted">ответ: ' + esc(i.answer || '—') + '<br>верно: ' + esc(i.correct) + '</span></div>'; }).join('') + '</details>';
+          '<div class="full">' + esc(i.full || i.text) + '</div>' + (i.fig ? '<img src="' + esc(figUrl(i.fig)) + '" alt="Рисунок к задаче" loading="lazy">' : '') + '</details>' +
+          '<span class="muted">ответ: ' + esc(i.answer || '—') + '<br>' + (manual ? '<b>проверьте ответ:</b> <button class="b sm" data-mark="' + i.id + '" data-v="1">Верно</button> <button class="b sm sec" data-mark="' + i.id + '" data-v="0">Неверно</button>'
+            : 'верно: ' + esc(i.correct || (i.status === 'todo' ? 'проверяете вы' : '—'))) + '</span></div>'; }).join('') + '</details>';
   }
 
   function startLesson() {
@@ -265,7 +298,7 @@
       if (w) w.location = mine;
       document.getElementById('roomlink').innerHTML = '<div class="card" style="margin-top:10px;background:var(--yellow-t)"><b>Урок создан.</b> Ссылка для ученика (откроет у себя, войдя своим кодом из бота):' +
         '<div class="row" style="margin-top:6px"><input class="inp" style="flex:1;min-width:200px" readonly value="' + esc(theirs) + '" aria-label="Ссылка для ученика"><button class="b sm" id="cp">Копировать</button>' +
-        '<a class="b sm sec" href="' + esc(mine) + '" target="_blank" rel="noopener">Открыть доску</a></div><p class="muted" style="margin-top:4px">Ученику уже ушло приглашение в бот' + (me.call_url ? ' со ссылкой на звонок' : '') + ', и урок появился у него в приложении на «Сегодня».</p></div>';
+        '<a class="b sm sec" href="' + esc(mine) + '" target="_blank" rel="noopener">Открыть доску</a></div><p class="muted" style="margin-top:4px">Ученику уже ушло приглашение в бот' + (studentCall(cur) ? ' со ссылкой на звонок' : '') + ', и урок появился у него в приложении на «Сегодня».</p></div>';
       document.getElementById('cp').onclick = function () { navigator.clipboard && navigator.clipboard.writeText(theirs).then(function () { toast('Скопировано'); }); };
     }).catch(function (e) {
       if (w) w.close();
@@ -280,6 +313,14 @@
     if (!meta) { pane.innerHTML = '<div class="empty" style="margin-top:14px">Загружаю банк…</div>'; api.get('/api/tutor/bank/meta').then(function (m) { meta = m; renderBuilder(); search(); }).catch(fail); return; }
     var subj = meta.subjects[filt.subject], num = subj.numbers.filter(function (n) { return String(n.n) === String(filt.n); })[0];
     var h = '<div class="builder" style="margin-top:14px"><div>';
+    h += '<details class="card" id="cc"' + (customDraft.text || customDraft.fig ? ' open' : '') + '><summary><b>+ Своё задание</b> <span class="muted">— свой текст, ответ и картинка</span></summary>' +
+      '<div style="margin-top:8px"><input class="inp" id="c-topic" placeholder="Тема (необязательно), например «Планиметрия»" maxlength="80" style="width:100%" value="' + esc(customDraft.topic) + '">' +
+      '<textarea class="inp" id="c-text" placeholder="Условие задания. Формулы можно писать между знаками $: $x^2-5x+6=0$" maxlength="2000" style="width:100%;margin-top:6px;min-height:90px">' + esc(customDraft.text) + '</textarea>' +
+      '<input class="inp" id="c-ans" placeholder="Ответ (необязательно). Пусто — ответ ученика проверите вы" maxlength="200" style="width:100%;margin-top:6px" value="' + esc(customDraft.answer) + '">' +
+      '<div class="row" style="margin-top:6px"><label class="b sec sm" for="c-file">Прикрепить картинку</label><input type="file" id="c-file" accept="image/*" hidden><span id="c-fn" class="muted">' + (customDraft.fig ? 'картинка прикреплена' : '') + '</span>' +
+      (customDraft.fig ? '<button class="b sec sm" id="c-nofig" type="button">Убрать</button>' : '') + '</div>' +
+      '<div class="row" style="margin-top:8px"><button class="b blue sm" id="c-add" type="button">+ В вариант</button><button class="b sec sm" id="c-lib" type="button">Мои прошлые задания</button></div>' +
+      '<p class="msg" id="c-msg" role="status"></p><div id="c-list"></div></div></details>';
     h += '<div class="filters" role="search">' +
       sel('subject', 'Экзамен и предмет', Object.keys(meta.subjects).map(function (k) { return [k, meta.subjects[k].name]; })) +
       sel('n', 'Номер', [['', 'все номера']].concat(subj.numbers.map(function (n) { return [n.n, '№' + n.n + ' (' + n.count + ')']; }))) +
@@ -308,7 +349,78 @@
     var t; document.getElementById('q').oninput = function (e) { clearTimeout(t); t = setTimeout(function () { filt.q = e.target.value; filt.offset = 0; search(); }, 300); };
     document.getElementById('tosend').onclick = function () { document.getElementById('basket').scrollIntoView({ behavior: 'smooth', block: 'start' }); };
     document.getElementById('send').onclick = send;
+    bindCustom();
     drawBasket(); drawFound();
+  }
+
+  // ───────── свои задания в ДЗ ─────────
+  var customDraft = { topic: '', text: '', answer: '', fig: '' }, customSeq = 0;
+  function figUrl(f) { return f ? (f.indexOf('/api/') === 0 ? A.API : '') + f : ''; }
+  function shrinkImage(file) {                              // картинка: длинная сторона ≤ 1600 px, WebP/JPEG до 1,5 МБ
+    return createImageBitmap(file).then(function (bmp) {
+      var k = Math.min(1, 1600 / Math.max(bmp.width, bmp.height)), c = document.createElement('canvas');
+      c.width = Math.max(1, Math.round(bmp.width * k)); c.height = Math.max(1, Math.round(bmp.height * k));
+      var g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(bmp, 0, 0, c.width, c.height);
+      var enc = function (q) { return new Promise(function (ok) { c.toBlob(function (b) { if (b && b.type === 'image/webp') ok(b); else c.toBlob(ok, 'image/jpeg', q); }, 'image/webp', q); }); };
+      return enc(0.82).then(function (b) { return b.size <= 1500000 ? b : enc(0.6); }).then(function (b) { return b.size <= 1500000 ? b : enc(0.4); });
+    });
+  }
+  function uploadHwImage(file) {
+    return shrinkImage(file).then(function (blob) {
+      var h = api.auth() || {}; h['Content-Type'] = blob.type || 'image/jpeg';
+      return fetch(A.API + '/api/tutor/hw/file', { method: 'POST', headers: h, body: blob }).then(function (r) {
+        return r.json().catch(function () { return {}; }).then(function (j) {
+          if (!r.ok) throw new Error({ too_large: 'картинка больше 1,5 МБ даже после сжатия', quota: 'место под картинки закончилось', bad_type: 'нужна картинка PNG, JPEG или WebP', disk_full: 'на сервере кончилось место' }[j.error] || 'не загрузилась');
+          return j;
+        });
+      });
+    });
+  }
+  function bindCustom() {
+    var msg = document.getElementById('c-msg');
+    var say = function (t, bad) { msg.style.color = bad ? 'var(--red)' : 'var(--blue)'; msg.textContent = t; };
+    var keep = function () { customDraft.topic = document.getElementById('c-topic').value; customDraft.text = document.getElementById('c-text').value; customDraft.answer = document.getElementById('c-ans').value; };
+    ['c-topic', 'c-text', 'c-ans'].forEach(function (id) { document.getElementById(id).oninput = keep; });
+    document.getElementById('c-file').onchange = function (e) {
+      var f = e.target.files[0]; if (!f) return;
+      keep(); say('Загружаю картинку…');
+      uploadHwImage(f).then(function (j) { customDraft.fig = j.id; renderBuilder(); document.getElementById('cc').open = true; })
+        .catch(function (err) { say('Картинка не прикрепилась: ' + err.message, true); });
+    };
+    var nf = document.getElementById('c-nofig'); if (nf) nf.onclick = function () { keep(); customDraft.fig = ''; renderBuilder(); document.getElementById('cc').open = true; };
+    document.getElementById('c-add').onclick = function () {
+      keep();
+      var text = customDraft.text.trim();
+      if (!text) return say('Напишите условие задания.', true);
+      if (basket.length >= 60) return say('В варианте уже 60 заданий.', true);
+      basket.push({ subject: 'custom', id: 'n' + (++customSeq), n: '', topic: customDraft.topic.trim(), text: text, fig: figUrl(customDraft.fig ? '/api/file/' + customDraft.fig : ''),
+        custom: { text: text, answer: customDraft.answer.trim(), topic: customDraft.topic.trim(), fig: customDraft.fig } });
+      customDraft = { topic: '', text: '', answer: '', fig: '' };
+      renderBuilder(); document.getElementById('cc').open = true;
+      document.getElementById('c-msg').style.color = 'var(--blue)'; document.getElementById('c-msg').textContent = 'Задание добавлено в вариант.';
+    };
+    document.getElementById('c-lib').onclick = function () {
+      var box = document.getElementById('c-list');
+      if (box.dataset.open) { box.dataset.open = ''; box.innerHTML = ''; return; }
+      api.get('/api/tutor/custom/list').then(function (r) {
+        box.dataset.open = '1';
+        box.innerHTML = r.items.length ? r.items.map(function (c, i) {
+          var inb = basket.some(function (b) { return b.custom_id === c.id; });
+          return '<article class="task"><div class="row" style="justify-content:space-between"><span><b>' + esc(c.topic || 'Своё задание') + '</b></span>' +
+            '<button class="b sm ' + (inb ? 'sec' : '') + '" type="button" data-lib="' + i + '">' + (inb ? 'Убрать' : '+ В вариант') + '</button></div>' +
+            '<div class="tx">' + esc(c.text.slice(0, 220)) + (c.text.length > 220 ? '…' : '') + '</div>' + (c.fig ? '<img src="' + esc(figUrl('/api/file/' + c.fig)) + '" alt="Картинка к заданию" loading="lazy" style="max-width:100%">' : '') +
+            '<div class="ans">Ответ: <b>' + esc(c.answer || 'проверяете вы') + '</b></div></article>'; }).join('') : '<p class="muted">Своих заданий пока нет.</p>';
+        A.math(box);
+        box.querySelectorAll('[data-lib]').forEach(function (b) {
+          b.onclick = function () {
+            var c = r.items[+b.dataset.lib];
+            if (basket.some(function (x) { return x.custom_id === c.id; })) basket = basket.filter(function (x) { return x.custom_id !== c.id; });
+            else if (basket.length < 60) basket.push({ subject: 'custom', id: 'c' + c.id, n: '', topic: c.topic, text: c.text, custom_id: c.id });
+            drawBasket(); document.getElementById('c-lib').onclick(); document.getElementById('c-lib').onclick();
+          };
+        });
+      }).catch(fail);
+    };
   }
 
   function sel(k, label, opts) {
@@ -350,7 +462,7 @@
     var sb = document.getElementById('sbn'); if (sb) sb.textContent = basket.length;
     var gt = document.getElementById('givetop'); if (gt) gt.textContent = 'Задать ДЗ' + (basket.length ? ' · ' + basket.length : '');
     document.getElementById('bl').innerHTML = basket.map(function (b, i) {
-      return '<li>' + (b.subject.indexOf('oge') === 0 ? 'ОГЭ ' : '') + '№' + b.n + ' ' + esc(b.text.slice(0, 60)) + '… <a href="#" data-x="' + i + '" aria-label="Убрать из варианта">×</a></li>'; }).join('') || '<li class="muted" style="list-style:none;margin-left:-20px">Добавьте задачи из списка слева.</li>';
+      return '<li>' + (b.subject === 'custom' ? 'Своё' + (b.topic ? ' · ' + esc(b.topic) : '') + ': ' : (b.subject.indexOf('oge') === 0 ? 'ОГЭ ' : '') + '№' + b.n + ' ') + esc(b.text.slice(0, 60)) + '… <a href="#" data-x="' + i + '" aria-label="Убрать из варианта">×</a></li>'; }).join('') || '<li class="muted" style="list-style:none;margin-left:-20px">Добавьте задачи из списка слева.</li>';
     document.querySelectorAll('[data-x]').forEach(function (a) { a.onclick = function (e) { e.preventDefault(); basket.splice(+a.dataset.x, 1); drawBasket(); drawFound(); }; });
     var tb = document.querySelector('[data-tab=builder]'); if (tb) tb.textContent = 'Конструктор ДЗ' + (basket.length ? ' · ' + basket.length : '');
   }
@@ -360,7 +472,7 @@
     if (!basket.length) return toast('Вариант пустой');
     if (!sids.length) return toast('Отметьте ученика');
     var btn = document.getElementById('send'); btn.disabled = true;
-    api.post('/api/tutor/hw', { sids: sids, items: basket.map(function (b) { return { subject: b.subject, id: b.id }; }),
+    api.post('/api/tutor/hw', { sids: sids, items: basket.map(function (b) { return b.subject === 'custom' ? (b.custom_id ? { custom_id: b.custom_id } : { custom: b.custom }) : { subject: b.subject, id: b.id }; }),
       days: +document.getElementById('days').value, note: document.getElementById('note').value, title: document.getElementById('title').value })
       .then(function (r) {
         toast('Отправлено: ' + r.items + ' зад. × ' + r.homeworks.length + ' учен.');
