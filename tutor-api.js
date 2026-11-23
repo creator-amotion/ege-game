@@ -5,7 +5,7 @@
    ID учеников в адреса не попадают. */
 (function () {
   var local = /^(127\.0\.0\.1|localhost|\[::1\])$/.test(location.hostname);
-  var API = local ? location.origin : 'https://2-29-119-233.sslip.io';     // локально — тот же сервер (bot/tutor_demo.py)
+  var API = location.hostname === 'creator-amotion.github.io' ? 'https://2-29-119-233.sslip.io' : location.origin;   // сайт и API — на одном домене; локально — тот же сервер (bot/tutor_demo.py)
   var KEYS = { tutor: 'anik_tutor', student: 'anik_dev' };
   var tg = window.Telegram && window.Telegram.WebApp, initData = (tg && tg.initData) || '';
 
