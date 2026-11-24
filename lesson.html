@@ -2290,14 +2290,14 @@ body.focus .lbar,body.focus .tools,body.focus .permbar{display:none}
     (bankCache[key] ? Promise.resolve(bankCache[key]) : fetch('trainer/' + key + '.json').then(function (r) { if (!r.ok) throw 0; return r.json(); }))
       .then(function (j) {
         bankCache[key] = j;
-        return (b[0] === 'ege-math' ? loadMathNames() : Promise.resolve(null)).then(function (nm) { return [j, nm]; });
+        return (b[0] === 'ege-math' ? loadMathNames() : Promise.resolve({ g: {}, k: {} })).then(function (nm) { return [j, nm]; });   // у остальных банков tp — уже название
       })
       .then(function (jn) {
         var j = jn[0], nm = jn[1];
         var list = (Array.isArray(j) ? j : j.tasks || []).map(function (t) {
           var text = t.t || t.text || '', opts = t.options || [];
           if (opts.length) text += '\n\n' + opts.map(function (o, i) { return (i + 1) + ') ' + o; }).join('\n');
-          return { id: t.id, text: text, ans: (Array.isArray(t.a) ? t.a[0] : t.a) || t.answer || '', fig: (t.f || [])[0] || '', g: t.g || '', k: t.k || '' };
+          return { id: t.id, text: text, ans: (Array.isArray(t.a) ? t.a[0] : t.a) || t.answer || '', fig: (t.f || [])[0] || '', g: t.g || t.tp || '', k: b[0] === 'ege-math' ? t.k || '' : '' };   // k у других банков — вид ответа, не тип
         });
         topicFilter(list, nm, b);
         if (bf.g) list = list.filter(function (it) { return it.g === bf.g; });
@@ -2315,7 +2315,7 @@ body.focus .lbar,body.focus .tools,body.focus .permbar{display:none}
         bl.querySelectorAll('[data-k]').forEach(function (btn) { btn.onclick = function () { place(part[+btn.dataset.k], b); }; });
       }).catch(function () { document.getElementById('bl').innerHTML = '<p class="muted" style="margin-top:8px">Не получилось загрузить задачи этого номера.</p>'; });
   }
-  function topicFilter(list, nm, b) {                  // профиль: тема номера, внутри — тип задачи (у остальных банков номер = одна тема)
+  function topicFilter(list, nm, b) {                  // тема задачи в номере (профиль — g, остальные — tp из bank_topics); у профиля внутри темы ещё тип
     var top = document.getElementById('btop');
     if (!top) return;
     var cg = {}, ck = {};
@@ -2335,7 +2335,7 @@ body.focus .lbar,body.focus .tools,body.focus .permbar{display:none}
     if (bk) bk.onchange = function (e) { bf.k = e.target.value; bf.off = 0; bankList(b); };
   }
   function place(it, b) {
-    var t = bf.g && mathNames && mathNames.g[bf.g];
+    var t = bf.g && (b[0] === 'ege-math' ? mathNames && mathNames.g[bf.g] : bf.g);
     placeTask({ head: b[1] + ' · №' + bf.n + (t ? ' · ' + t : ''), text: it.text, fig: it.fig }); toast('Задача на доске');
   }
   function placeTask(t, at) {
