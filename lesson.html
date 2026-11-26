@@ -202,11 +202,104 @@ body.focus .lbar,body.focus .tools,body.focus .permbar{display:none}
 .recb::before{content:'';display:inline-block;width:9px;height:9px;border-radius:50%;background:#111;margin-right:6px;vertical-align:1px}
 .tocr{display:flex;gap:8px;width:100%;text-align:left;background:#fff;border:0;border-left:4px solid var(--line2);padding:8px 10px;margin-top:6px;font:500 14px 'Golos Text',sans-serif;cursor:pointer;color:var(--ink)}
 .tocr:hover{border-left-color:var(--ink)}.tocr .tt{font-weight:700;font-variant-numeric:tabular-nums;color:var(--muted);flex:0 0 auto}
+/* ══ Светлый вид доски (как Miro): белые плавающие панели, скругления, мягкие тени.
+   Рисование — в панели слева, урок — справа, масштаб и страницы — внизу, остальное — в «⋯». Телефон — своя раскладка ниже. ══ */
+:root{--ui:#fff;--ui-line:#E7E7EC;--ui-ink:#2C2C30;--ui-mute:#6E6E76;--ui-hover:#F2F2F5;--ui-on:#E8EEFC;--ui-on-ink:#2E55C9;--ui-sh:0 4px 18px rgba(20,20,40,.10),0 1px 3px rgba(20,20,40,.06);--ui-r:12px}
+body.lesson{background:#F7F7F8}
+.lbar{background:var(--ui);border-bottom:1px solid var(--ui-line);min-height:56px;gap:10px}
+.lbar .wm{font-size:22px}
+.peer{font-size:13.5px;color:var(--ui-ink)}.peer i{width:9px;height:9px}
+.peer.on i{background:#1F8A4C;box-shadow:0 0 0 3px rgba(31,138,76,.15)}
+.callb{min-height:38px;padding:0 14px;border:0;border-radius:10px;font-weight:600;font-size:14px}
+.callb.off{background:var(--ui-hover);color:var(--ui-ink)}
+.callb.red{background:#FDE8E7;color:#B42318}
+.callb.more{min-width:38px;padding:0 10px;font-size:18px;letter-spacing:1px}
+.perm{border:0;border-radius:10px;background:var(--ui-hover);padding:3px;gap:2px;font-size:13px}
+.perm b{font-weight:500;color:var(--ui-mute);padding:0 6px 0 8px}
+.perm button{height:32px;border:0;border-radius:8px;background:transparent;color:var(--ui-ink);font-weight:500}
+.perm button[aria-pressed=true]{background:var(--ui);color:var(--ui-ink);box-shadow:0 1px 3px rgba(20,20,40,.15);font-weight:600}
+.stage{background:#fff}
+.lmain>.tools{position:absolute;z-index:9;left:12px;top:12px;flex-direction:column;flex-wrap:nowrap;gap:2px;padding:6px;border:0;border-radius:14px;background:var(--ui);box-shadow:var(--ui-sh);max-height:calc(100% - 24px);overflow-y:auto;scrollbar-width:none}
+.lmain>.tools::-webkit-scrollbar{display:none}
+.lmain>.tools .tool{width:40px;min-width:40px;height:40px;border:0;border-radius:10px;background:transparent;color:var(--ui-ink);padding:0}
+.lmain>.tools .tool:hover{background:var(--ui-hover)}
+.lmain>.tools .tool[aria-pressed=true]{background:var(--ui-on);color:var(--ui-on-ink)}
+.lmain>.tools .tool small{display:none}
+.lmain>.tools .tool svg{width:22px;height:22px;stroke-width:1.8}
+.lmain>.tools .sep{flex:0 0 1px;width:28px;height:1px;margin:4px auto;background:var(--ui-line)}
+.tool .dot{border:2px solid #fff;box-shadow:0 0 0 1px var(--ui-line)}
+[data-tip]{position:relative}
+.lmain>.tools [data-tip]:hover::after,.dock [data-tip]:hover::after{content:attr(data-tip);position:absolute;left:calc(100% + 10px);top:50%;transform:translateY(-50%);background:var(--ui-ink);color:#fff;font:500 12.5px 'Golos Text',sans-serif;padding:5px 9px;border-radius:7px;white-space:nowrap;pointer-events:none;z-index:30}
+.dock [data-tip]:hover::after{left:50%;top:auto;bottom:calc(100% + 8px);transform:translateX(-50%)}
+.dock{position:absolute;z-index:8;display:flex;gap:2px;align-items:center;padding:4px;border-radius:12px;background:var(--ui);box-shadow:var(--ui-sh)}
+.dock button{min-width:36px;height:36px;border:0;border-radius:9px;background:transparent;color:var(--ui-ink);font:500 14px 'Golos Text',sans-serif;cursor:pointer;padding:0 10px;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.dock button:hover{background:var(--ui-hover)}
+.dock button[aria-pressed=true]{background:var(--ui-ink);color:#fff}
+.dock svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.dock .zoomv{min-width:52px;font-size:13px;font-weight:600}
+.dock.zoom{right:12px;bottom:12px}
+.dock.pages{left:50%;bottom:12px;transform:translateX(-50%);max-width:calc(100% - 300px);overflow-x:auto;scrollbar-width:none}
+.dock.pages .pg{max-width:160px;overflow:hidden;text-overflow:ellipsis}
+.dock.pages .pg i{font-style:normal;color:var(--ui-mute);font-weight:600}
+.dock.pages .empty{font-size:13px;color:var(--ui-mute);padding:0 8px}
+.dock.lesson{right:12px;top:12px;flex-direction:column;align-items:stretch;padding:6px}
+.dock.lesson button{justify-content:flex-start;height:38px}
+.dock.lesson .badge{background:#E5332A;color:#fff;border-radius:9px;font-size:11.5px;font-weight:700;padding:1px 7px;margin-left:auto}
+.dock.lesson .pri{background:var(--ui-on);color:var(--ui-on-ink);font-weight:600}
+.pop{border:0;border-radius:var(--ui-r);background:var(--ui);box-shadow:var(--ui-sh)}
+.lmain>.pop{left:66px;right:auto;top:12px;max-width:min(460px,calc(100% - 80px));padding:12px;gap:8px}
+.pop .lab{font-size:12px;font-weight:600;letter-spacing:0;text-transform:none;color:var(--ui-mute)}
+.pop .opt{border:0;border-radius:9px;background:var(--ui-hover);font-weight:500}
+.pop .opt[aria-pressed=true]{background:var(--ui-ink);color:#fff}
+.pop .tool{border:0;border-radius:10px;background:var(--ui-hover)}
+.pop .tool[aria-pressed=true]{background:var(--ui-on);color:var(--ui-on-ink)}
+.pop .note{font-size:12.5px;color:var(--ui-mute)}
+.sw,.pop .sw{width:30px;height:30px;flex:0 0 30px;border:2px solid #fff;border-radius:50%;box-shadow:0 0 0 1px var(--ui-line)}
+.sw[aria-pressed=true]{outline:0;box-shadow:0 0 0 2px #fff,0 0 0 4px var(--ui-on-ink)}
+.wbtn{border:0;border-radius:10px;background:var(--ui-hover)}
+.wbtn[aria-pressed=true]{background:var(--ui-on)}
+.wbtn[aria-pressed=true] i{background:var(--ui-on-ink)}
+.pop input[type=color]{border:1px solid var(--ui-line);border-radius:8px}
+.lmenu{border:0;border-radius:var(--ui-r);background:var(--ui);box-shadow:var(--ui-sh)}
+.lmenu .mh{font-size:12px;font-weight:600;letter-spacing:0;text-transform:none;color:var(--ui-mute)}
+.lmenu .mi{border:0;border-radius:9px;background:transparent;font-weight:500}
+.lmenu .mi:hover{background:var(--ui-hover)}
+.lmenu .mi.yel{background:#FFF4C2}.lmenu .mi.red{background:#FDE8E7;color:#B42318}
+.drawer{border-left:1px solid var(--ui-line);background:var(--ui)}
+.drawer .x{border:0;border-radius:9px;background:var(--ui-hover)}
+.hint{border:0;border-radius:10px;background:var(--ui-ink);color:#fff;box-shadow:var(--ui-sh);font-size:13px;padding:8px 12px;transition:opacity .3s}
+.permbar{border-bottom:1px solid var(--ui-line);font-weight:500}
+.permbar.view{background:#F2F2F5}.permbar.pen,.permbar.all{background:#FFF4C2}
+.selbar,.cmbox,.player{border:0;border-radius:var(--ui-r);box-shadow:var(--ui-sh)}
+.selbar button,.cmbox button,.player button{border:0;border-radius:9px;background:var(--ui-hover)}
+.timer{border:0;border-radius:10px;box-shadow:var(--ui-sh);background:var(--ui)}
+.focusx{border:0;border-radius:10px;box-shadow:var(--ui-sh)}
+/* меню «⋯» на компьютере — выпадает из шапки справа */
+.tcard{background:#fff;border:1px solid var(--ui-line);border-radius:18px;box-shadow:0 6px 24px rgba(20,20,40,.08)}
+.tcard .hd{background:#FFF4C2;color:#7A5B00;border-radius:10px;letter-spacing:.5px}
+.timg{border-radius:12px;overflow:hidden;box-shadow:0 0 0 1px var(--ui-line),0 6px 24px rgba(20,20,40,.08)}
+.hand .tutor{box-shadow:0 0 0 3px var(--ui-on-ink),0 6px 24px rgba(20,20,40,.12)}
+.hdl{border-radius:10px;background:var(--ui-on-ink)}.del{border-radius:12px;background:#FDE8E7;color:#B42318}
+.toast{border-radius:10px;box-shadow:var(--ui-sh)}
+@media (min-width:601px){body.lesson .toast{bottom:76px}}
+.drawer .inp,.drawer select{border:1px solid var(--ui-line);border-radius:9px;background:#fff}
+.drawer .mini,.drawer .rvc{border-radius:10px;border:1px solid var(--ui-line)}
+.drawer .b{border-radius:9px}
+@media (min-width:601px){.lmain>.lmenu{top:8px;right:12px;width:300px;grid-template-columns:1fr;padding:8px}}
+/* телефон: инструменты — строкой над доской, как раньше, но в светлом виде */
+@media (max-width:600px), (max-height:500px) and (max-width:1000px){
+  .lmain{flex-direction:column}
+  .lmain>.tools{position:static;flex-direction:row;border-radius:0;box-shadow:none;border-bottom:1px solid var(--ui-line);max-height:none;padding:4px 6px}
+  .lmain>.tools .tool{flex:1 1 0;width:auto;max-width:56px}
+  .lmain>.tools .sep{width:1px;height:28px;margin:0 2px}
+  .lmain>.pop{left:0;right:0;top:0;max-width:none;border-radius:0 0 var(--ui-r) var(--ui-r)}
+  .lmain>.tools [data-tip]:hover::after{display:none}
+}
 </style>
 </head>
 <body class="lesson">
 <header class="lbar">
-  <span class="wm">Аник<i>.</i></span>
+  <span class="wm">аник<i>.</i></span>
   <span class="peer" id="peer"><i></i><span>…</span></span>
   <span class="grow"></span>
   <span id="permbox"></span>
@@ -290,7 +383,10 @@ body.focus .lbar,body.focus .tools,body.focus .permbar{display:none}
       return A.loginForm(api, app.firstChild, 'Вход на урок', api === studentApi ? 'Отправь боту «Аник» команду <b>/app</b> и введи код — так урок узнает, что это ты.' : 'Отправьте боту «Аник» команду <b>/app</b> и введите код — так урок узнает, что это вы.', function () { location.reload(); });
     }
     api.post('/api/room/join', { room: ROOM }).then(function (j) {
-      role = j.role; names = j.names; ice = j.ice || []; callUrl = j.call_url || ''; perm = j.perm || 'view'; if (j.now) skew = j.now + 0.5 - Date.now() / 1000;
+      role = j.role; names = j.names; ice = j.ice || [];
+      var bk = { 'ege.rus': 'ege-rus', 'oge.rus': 'oge-rus', 'ege.math': 'ege-math', 'ege.mathb': 'ege-mathb', 'oge.math': 'oge-math' }[j.subject];
+      try { bk = bk || localStorage.getItem('anik_bank_last'); } catch (e) {}
+      if (bk && BANKS.some(function (x) { return x[0] === bk; })) bf.bank = bk; callUrl = j.call_url || ''; perm = j.perm || 'view'; if (j.now) skew = j.now + 0.5 - Date.now() / 1000;
       who.textContent = role === 'tutor' ? names.tutor + ' · репетитор' : names.student;
       if (role === 'student') tool = perm === 'view' ? 'hand' : 'pen';
       build();
@@ -355,35 +451,58 @@ body.focus .lbar,body.focus .tools,body.focus .permbar{display:none}
   }
   function toolsHtml() {
     if (compact()) return toolsCompact();
-    var tb = tbtn('hand', 'Рука: двигать доску' + (role === 'tutor' ? ', задачи и материалы' : '') + ' (H)', 'рука');
-    var draw = [['sel', 'Выделение: обвести и двигать, менять, копировать (S)', 'выделить'], ['pen', 'Ручка (P)', 'ручка'], ['pc', 'Карандаш: нажим и наклон стилуса (B)', 'карандаш'], ['cg', 'Каллиграфическое перо (C)', 'перо'],
-      ['hl', 'Маркер — выделить (M)', 'маркер']].filter(function (x) { return allowed(x[0]); });
-    tb += draw.map(function (x) { return tbtn(x[0], x[1], x[2]); }).join('');
+    var tip = function (k, label) { return '<button class="tool" data-tool="' + k + '" data-tip="' + label + '" aria-label="' + label + '" aria-pressed="' + (tool === k) + '">' + svg(k) + '</button>'; };
+    var tb = tip('hand', 'Рука — двигать доску' + (role === 'tutor' ? ' и задачи' : '') + ' · H');
+    if (allowed('sel')) tb += tip('sel', 'Выделить — обвести и двигать · S');
+    var pens = DESK_PENS.filter(allowed), isPen = pens.indexOf(tool) >= 0, cur = isPen ? tool : pens[0];
+    if (pens.length) tb += '<button class="tool" id="pens" data-tip="' + PEN_TIP[cur] + ' · ещё раз — карандаш и перо" aria-label="Ручка, карандаш, перо" aria-haspopup="true" aria-expanded="false" aria-pressed="' + isPen + '" data-cur="' + cur + '">' + svg(cur) + '</button>';
+    if (allowed('hl')) tb += tip('hl', 'Маркер — выделить цветом · M');
+    if (allowed('er')) tb += tip('er', 'Ластик · E');
     var sh = SHAPES.filter(allowed), isSh = sh.indexOf(tool) >= 0;
-    if (sh.length) tb += '<button class="tool" id="shapes" title="Фигуры (R)" aria-label="Фигуры" aria-haspopup="true" aria-expanded="false" aria-pressed="' + isSh + '">' + svg(isSh ? tool : 'rect') + '<small>фигуры</small></button>';
-    tb += [['text', 'Текст (T)', 'текст'], ['er', 'Ластик (E). Ещё раз — целиком или частично, размер', 'ластик'], ['lz', 'Лазерная указка: не оставляет следа (L)', 'указка']]
-      .filter(function (x) { return allowed(x[0]); }).map(function (x) { return tbtn(x[0], x[1], x[2]); }).join('');
+    if (sh.length) tb += '<button class="tool" id="shapes" data-tip="Фигуры: прямая, стрелка, круг… · R" aria-label="Фигуры" aria-haspopup="true" aria-expanded="false" aria-pressed="' + isSh + '">' + svg(isSh ? tool : 'rect') + '</button>';
+    if (allowed('text')) tb += tip('text', 'Текст · T');
     var ins = INS.filter(function (x) { return allowed(x[0]); }), isIns = INS_T.indexOf(tool) >= 0;
-    if (ins.length) tb += '<button class="tool" id="ins" title="Вставить: наклейка, стикер, формула, график, лента, связь, комментарий, линейка" aria-label="Вставить" aria-haspopup="true" aria-expanded="false" aria-pressed="' + isIns + '">' + svg(isIns ? tool : 'ins') + '<small>' + (isIns ? INS_NAME[tool] : 'вставить') + '</small></button>';
-    if (!readOnly) tb += '<button class="tool" id="lsn" title="' + (role === 'tutor' ? 'Урок: фон, таймер, закладки, «следуйте за мной», фокус' : 'Закладки урока и режим фокуса') + '" aria-label="Урок" aria-haspopup="true" aria-expanded="false">' + svg('lsn') + '<small>урок</small></button>';
-    if (draw.length) {
-      tb += '<span class="sep"></span>' + COLORS.slice(0, 5).map(function (c) { return '<button class="sw" data-color="' + c[0] + '" style="background:' + c[0] + '" aria-label="Цвет: ' + c[1] + '" aria-pressed="' + (c[0] === color) + '"></button>'; }).join('');
-      tb += '<button class="tool" id="style" title="Цвет, толщина, линия, нажим, сглаживание" aria-label="Стиль" aria-haspopup="true" aria-expanded="false">' + dot() + '<small>стиль</small></button>';
-      tb += '<span class="sep"></span><button class="tool" id="undo" title="Отменить (Ctrl+Z, касание двумя пальцами)" aria-label="Отменить">' + svg('undo') + '<small>отменить</small></button>' +
-        '<button class="tool" id="redo" title="Повторить (Ctrl+Shift+Z, касание тремя пальцами)" aria-label="Повторить">' + svg('redo') + '<small>повторить</small></button>';
+    if (ins.length) tb += '<button class="tool" id="ins" data-tip="Вставить: формула, график, стикер, наклейка, линейка" aria-label="Вставить" aria-haspopup="true" aria-expanded="false" aria-pressed="' + isIns + '">' + svg(isIns ? tool : 'ins') + '</button>';
+    if (allowed('lz')) tb += tip('lz', 'Указка — видят все, следа не оставляет · L');
+    if (allowed('pen')) {
+      tb += '<span class="sep"></span><button class="tool" id="style" data-tip="Цвет и толщина" aria-label="Цвет и толщина" aria-haspopup="true" aria-expanded="false">' + dot() + '</button>';
+      tb += '<span class="sep"></span><button class="tool" id="undo" data-tip="Отменить · Ctrl+Z" aria-label="Отменить">' + svg('undo') + '</button>' +
+        '<button class="tool" id="redo" data-tip="Повторить · Ctrl+Shift+Z" aria-label="Повторить">' + svg('redo') + '</button>';
     }
-    if (draw.length) tb += '<button class="tool" id="gear" title="Настройки рисования: палец, фигуры, сетка" aria-label="Настройки рисования" aria-haspopup="true" aria-expanded="false">' + svg('gear') + '<small>настр.</small></button>';
-    tb += '<span class="sep"></span><button class="tool wide" id="zout" aria-label="Уменьшить">−</button><span class="zoomv" id="zv">100%</span><button class="tool wide" id="zin" aria-label="Увеличить">+</button>' +
-      '<button class="tool wide" id="zall">Показать всё</button><button class="tool wide" id="zhome">К началу</button>';
-    if (role === 'tutor') {
-      tb += '<button class="tool wide" id="here" title="Ученик перейдёт к месту доски, которое видно у вас">Позвать сюда</button><span class="sep"></span>' +
-        '<button class="tool wide" id="toboard" title="Ученик получит право рисовать, и его экран перейдёт к задаче">' + (atBoard ? 'Вернуть ученика на место' : 'Вывести к доске') + '</button>' +
-        '<button class="tool wide yel" id="rev">К разбору' + (reviewN ? ' · ' + reviewN : '') + '</button><button class="tool wide yel" id="bank">Задачи из банка</button><button class="tool wide yel" id="mat">Материалы</button><input type="file" id="matf" accept="image/png,image/jpeg,image/webp,application/pdf,.pdf" multiple hidden>' +
-        '<button class="tool wide" id="clr">Очистить доску</button><button class="tool wide" id="save">Сохранить конспект</button>';
-    }
-    if (readOnly) tb += '<span class="sep"></span><button class="tool wide yel" id="play" title="Доска растёт так, как шёл урок; если была запись — со звуком">Проиграть урок</button><button class="tool wide" id="tocb">Оглавление</button>';
-    tb += '<button class="tool wide" id="png">PNG</button><button class="tool wide" id="pdf">PDF</button>';
     return tb;
+  }
+  var DESK_PENS = ['pen', 'pc', 'cg'], PEN_TIP = { pen: 'Ручка · P', pc: 'Карандаш · B', cg: 'Перо · C' };
+  function penGroup() { return compact() ? PENS : DESK_PENS; }
+  /* панели вокруг доски на компьютере: справа — урок, внизу — страницы (закладки) и масштаб */
+  var DOCK_IC = { bank: '<path d="M4 5h16M4 12h10M4 19h7"/><circle cx="17.5" cy="17.5" r="3"/><path d="M20 20l2 2"/>', rev: '<path d="M5 21V4h11l-2 4 2 4H5"/>',
+    mat: '<path d="M20 11l-8 8a5 5 0 0 1-7-7l9-9a3.5 3.5 0 0 1 5 5l-9 9a2 2 0 0 1-3-3l8-8"/>', board: '<path d="M3 4h18v12H3z"/><path d="M12 16v4M8 20h8"/><path d="M8 9l3 3 5-5"/>',
+    fit: '<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>', plus: '<path d="M12 5v14M5 12h14"/>' };
+  function dsvg(k) { return '<svg viewBox="0 0 24 24" aria-hidden="true">' + DOCK_IC[k] + '</svg>'; }
+  function docksHtml() {
+    if (compact()) return '';
+    var h = '';
+    if (role === 'tutor' && !readOnly) h += '<div class="dock lesson" role="group" aria-label="Урок">' +
+      '<button id="bank" class="pri">' + dsvg('bank') + 'Задачи из банка</button>' +
+      '<button id="rev">' + dsvg('rev') + 'К разбору' + (reviewN ? '<span class="badge">' + reviewN + '</span>' : '') + '</button>' +
+      '<button id="mat">' + dsvg('mat') + 'Материалы</button><input type="file" id="matf" accept="image/png,image/jpeg,image/webp,application/pdf,.pdf" multiple hidden>' +
+      '<button id="toboard">' + dsvg('board') + (atBoard ? 'Вернуть ученика' : 'Вывести к доске') + '</button></div>';
+    h += '<div class="dock pages" id="pages" role="group" aria-label="Страницы урока"></div>';
+    h += '<div class="dock zoom" role="group" aria-label="Масштаб"><button id="zout" aria-label="Уменьшить" data-tip="Уменьшить">−</button><span class="zoomv" id="zv">100%</span>' +
+      '<button id="zin" aria-label="Увеличить" data-tip="Увеличить">+</button><button id="zall" aria-label="Показать всё" data-tip="Показать всё">' + dsvg('fit') + '</button></div>';
+    return h;
+  }
+  /* страницы урока — это закладки: место доски и масштаб. «+» запоминает то, что сейчас видно */
+  var pagesKey = '';
+  function pagesUi() {
+    var box = document.getElementById('pages'); if (!box) return;
+    var bms = model().bms, key = bms.map(function (b) { return b.id + b.name; }).join('|') + role;
+    if (key === pagesKey) return; pagesKey = key;
+    var h = bms.map(function (b, i) { return '<button class="pg" data-pg="' + esc(b.id) + '" data-tip="Перейти' + (role === 'tutor' ? ' — вместе с учеником' : '') + '"><i>' + (i + 1) + '</i> ' + esc(b.name) + '</button>'; }).join('');
+    if (!bms.length) h = '<span class="empty">' + (role === 'tutor' ? 'Страницы урока' : 'Страниц пока нет') + '</span>';
+    if (role === 'tutor' && !readOnly) h += '<button id="pgadd" aria-label="Новая страница: запомнить это место доски" data-tip="Запомнить это место как страницу">' + dsvg('plus') + '</button>';
+    box.innerHTML = h;
+    box.querySelectorAll('[data-pg]').forEach(function (b) { b.onclick = function () { var m = model().bms.filter(function (x) { return x.id === b.dataset.pg; })[0]; if (!m) return; jump(m); if (role === 'tutor' && !readOnly) send({ t: 'go', id: rid(), x: m.x, y: m.y, z: m.z }); }; });
+    var add = document.getElementById('pgadd'); if (add) add.onclick = function () { addBookmark('Страница ' + (model().bms.length + 1)); };
   }
   // телефон: одна строка инструментов; фигуры и цвет — во всплывающих полосах, остальное — в «Меню»
   function dot() { var d = { 3: 6, 6: 9, 10: 13, 18: 17, 30: 21 }[width] || 13; return '<i class="dot" style="width:' + d + 'px;height:' + d + 'px;background:' + color + '"></i>'; }
@@ -409,6 +528,14 @@ body.focus .lbar,body.focus .tools,body.focus .permbar{display:none}
   function mi(id, label, cls) { return '<button class="mi' + (cls ? ' ' + cls : '') + '" id="' + id + '">' + label + '</button>'; }
   function menuHtml() {
     var m = '', live = !readOnly;
+    if (!compact()) {
+      if (role === 'tutor' && live) m += '<div class="mh">Урок</div>' + mi('here', 'Позвать ученика к этому месту') + mi('save', 'Сохранить конспект') + mi('clr', 'Очистить доску');
+      if (live) m += '<div class="mh">Доска</div>' + mi('lsn', role === 'tutor' ? 'Фон, таймер, «следуйте за мной», запись' : 'Режим фокуса') + (allowed('pen') ? mi('gear', 'Настройки рисования') : '');
+      m += '<div class="mh">Вид</div>' + mi('zhome', 'К началу доски') + (readOnly ? mi('play', 'Проиграть урок', 'yel') + mi('tocb', 'Оглавление') : '');
+      m += '<div class="mh">Скачать доску</div>' + mi('png', 'Картинкой (PNG)') + mi('pdf', 'Документом (PDF)');
+      if (live) m += '<div class="mh">Звонок</div>' + mi('callmore', 'Другие способы звонка');
+      return m;
+    }
     if (role === 'tutor' && live) m += '<div class="mh">Урок</div>' + mi('here', 'Позвать сюда') + mi('rev', revText(), 'yel') + mi('bank', 'Задачи из банка', 'yel') + mi('mat', 'Материалы', 'yel') +
       '<input type="file" id="matf" accept="image/png,image/jpeg,image/webp,application/pdf,.pdf" multiple hidden>' + mi('save', 'Сохранить конспект') + mi('clr', 'Очистить доску');
     if (live && allowed('pen')) m += '<div class="mh">Рисование</div>' + mi('redo', 'Повторить') + mi('gear', 'Настройки рисования');
@@ -424,12 +551,20 @@ body.focus .lbar,body.focus .tools,body.focus .permbar{display:none}
   function revText() { return 'К разбору' + (reviewN ? ' · ' + reviewN : ''); }
   function revUpd() {
     var b = document.getElementById('rev'); if (b) b.textContent = revText();
-    var m = document.getElementById('menub'); if (m) m.textContent = 'Меню' + (role === 'tutor' && reviewN && !readOnly ? ' · ' + reviewN : '');
+    var m = document.getElementById('menub'); if (m && compact()) m.textContent = 'Меню' + (role === 'tutor' && reviewN && !readOnly ? ' · ' + reviewN : '');
+    var r = document.getElementById('rev'); if (r && !compact()) r.innerHTML = dsvg('rev') + 'К разбору' + (reviewN ? '<span class="badge">' + reviewN + '</span>' : '');
   }
   function menuBtn() {                                   // кнопка «Меню» в шапке — только на телефоне
     var box = document.getElementById('callbox'), b = document.getElementById('menub');
-    if (!compact()) { if (b) b.remove(); return; }
-    if (!b) { box.insertAdjacentHTML('beforeend', '<button class="callb off" id="menub" aria-haspopup="true" aria-expanded="false" aria-controls="lmenu">Меню</button>'); b = document.getElementById('menub'); }
+    if (readOnly && !compact()) { if (b) b.remove(); return; }
+    if (b && (b.dataset.c === '1') !== compact()) { b.remove(); b = null; }
+    if (!b) {
+      var btn = compact() ? '<button class="callb off" id="menub" data-c="1" aria-haspopup="true" aria-expanded="false" aria-controls="lmenu">Меню</button>'
+        : '<button class="callb off more" id="menub" data-c="0" aria-label="Ещё: конспект, скачать, фон и таймер" title="Ещё" aria-haspopup="true" aria-expanded="false" aria-controls="lmenu"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><circle cx="5" cy="12" r="1.8" fill="currentColor"/><circle cx="12" cy="12" r="1.8" fill="currentColor"/><circle cx="19" cy="12" r="1.8" fill="currentColor"/></svg></button>';
+      var end = document.getElementById('endb');
+      if (end) end.insertAdjacentHTML('beforebegin', btn); else box.insertAdjacentHTML('beforeend', btn);
+      b = document.getElementById('menub');
+    }
     b.onclick = function () { var m = document.getElementById('lmenu'); if (m && m.hidden) openMenu(); else closeMenu(); };
     revUpd();
   }
@@ -462,7 +597,7 @@ body.focus .lbar,body.focus .tools,body.focus .permbar{display:none}
       h += '<span class="note">Удобнее: нарисуйте фигуру ручкой и задержите перо — она станет ровной.</span>';
     } else if (what === 'pens') {
       h = '<span class="lab">Пишем</span>' + [['pen', 'Ручка', 'ручка'], ['pc', 'Карандаш', 'карандаш'], ['cg', 'Каллиграфическое перо', 'перо'], ['hl', 'Маркер', 'маркер'], ['lz', 'Лазерная указка', 'указка']]
-        .filter(function (x) { return allowed(x[0]); }).map(function (x) { return tbtn(x[0], x[1], x[2]); }).join('');
+        .filter(function (x) { return allowed(x[0]) && penGroup().indexOf(x[0]) >= 0; }).map(function (x) { return tbtn(x[0], x[1], x[2]); }).join('');
     } else if (what === 'style' || what === 'selstyle') {
       var forSel = what === 'selstyle';
       h = '<span class="lab">Цвет' + (forSel ? ' выделенного' : '') + '</span><div class="row1">' + COLORS.map(function (c) { return '<button class="sw" data-color="' + c[0] + '" style="background:' + c[0] + '" aria-label="Цвет: ' + c[1] + '" aria-pressed="' + (c[0] === color) + '"></button>'; }).join('') +
@@ -509,9 +644,9 @@ body.focus .lbar,body.focus .tools,body.focus .permbar{display:none}
           '<span class="lab">Таймер — виден обоим</span><div class="row1">' + [[60, '1 мин'], [180, '3 мин'], [300, '5 мин'], [600, '10 мин'], [900, '15 мин'], [1800, '30 мин']].map(function (t) { return opt('', t[1], false, 'data-tm="' + t[0] + '"'); }).join('') +
           (md.timer ? opt('tmstop', 'остановить', false) : '') + '</div>';
       } else if (md.timer) h += '<span class="note">Идёт таймер репетитора — он сверху доски.</span>';
-      h += '<span class="lab">Закладки</span><div class="bml">' + (md.bms.length ? md.bms.map(function (b) { return '<div class="bmi">' + opt('', esc(b.name), false, 'data-bmgo="' + esc(b.id) + '"') + (role === 'tutor' ? opt('', '×', false, 'data-bmdel="' + esc(b.id) + '" aria-label="Удалить закладку"') : '') + '</div>'; }).join('')
-        : '<span class="note">' + (role === 'tutor' ? 'Закладка запоминает место доски: потом к нему — одним касанием, у вас и у ученика.' : 'Репетитор ещё не ставил закладок.') + '</span>') + '</div>';
-      if (role === 'tutor') h += '<div class="row1"><input class="inp" id="bmname" maxlength="60" placeholder="Название: «Задача 3»" aria-label="Название закладки" style="flex:1">' + opt('bmadd', 'Добавить: это место', false) + '</div>' +
+      h += '<span class="lab">Страницы урока</span><div class="bml">' + (md.bms.length ? md.bms.map(function (b) { return '<div class="bmi">' + opt('', esc(b.name), false, 'data-bmgo="' + esc(b.id) + '"') + (role === 'tutor' ? opt('', '×', false, 'data-bmdel="' + esc(b.id) + '" aria-label="Удалить страницу"') : '') + '</div>'; }).join('')
+        : '<span class="note">' + (role === 'tutor' ? 'Страница запоминает место доски: потом к нему — одним касанием, у вас и у ученика.' : 'Репетитор ещё не добавлял страниц.') + '</span>') + '</div>';
+      if (role === 'tutor') h += '<div class="row1"><input class="inp" id="bmname" maxlength="60" placeholder="Название: «Задача 3»" aria-label="Название страницы" style="flex:1">' + opt('bmadd', 'Добавить: это место', false) + '</div>' +
         '<span class="lab">Ученик</span><div class="row1">' + opt('followb', 'следуйте за мной', following) + '</div><span class="note">Экран ученика повторяет ваш: куда вы смотрите и какой масштаб.</span>' +
         '<span class="lab">Звук урока</span><div class="row1">' + opt('recopt', recorder ? 'остановить запись' : 'записывать звук', !!recorder) + '</div><span class="note">Пишется микрофон этого устройства (звонок в Телемосте браузер не слышит: голос ученика попадёт, если звонок на громкой связи). Запись — в конспекте, ученик видит, что она идёт.</span>';
       h += '<span class="lab">Вид</span><div class="row1">' + opt('focusb', 'режим фокуса: только доска', document.body.classList.contains('focus')) + '</div>';
@@ -564,19 +699,19 @@ body.focus .lbar,body.focus .tools,body.focus .permbar{display:none}
     if (bmn) bmn.onkeydown = function (e) { if (e.key === 'Enter' && addBookmark(bmn.value)) popHtml(p, what); };
     var nr = p.querySelector('#nibr'); if (nr) nr.oninput = function () { nib = +nr.value; setPref('nib', nib); document.getElementById('nibv').textContent = nib + '°'; };
   }
-  function styleUpd() { var b = document.getElementById('style'); if (b) b.innerHTML = dot() + (compact() ? '' : '<small>стиль</small>'); }
+  function styleUpd() { var b = document.getElementById('style'); if (b) b.innerHTML = dot(); }
   function fingerDraws() { var f = pref('finger', null); return f == null ? !pref('penSeen', false) : f; }
   function build() {
-    app.innerHTML = '<div class="tools" id="tools" role="toolbar" aria-label="Инструменты доски"></div>' + (role === 'student' ? '<div class="permbar" id="permbar" role="status"></div>' : '') +
-      '<div class="lmain"><div class="pop" id="pop" hidden></div><div class="lmenu" id="lmenu" hidden aria-label="Меню урока"></div><div class="stage" id="stage"><div class="layer" id="layer"><div id="cards"></div><div id="mxl"></div></div><canvas id="board" aria-label="Общая доска"></canvas><div class="ring" id="ring"></div>' +
+    app.innerHTML = (role === 'student' ? '<div class="permbar" id="permbar" role="status"></div>' : '') +
+      '<div class="lmain"><div class="tools" id="tools" role="toolbar" aria-label="Инструменты доски"></div><div class="pop" id="pop" hidden></div><div class="lmenu" id="lmenu" hidden aria-label="Меню урока"></div><div class="stage" id="stage"><div class="layer" id="layer"><div id="cards"></div><div id="mxl"></div></div><canvas id="board" aria-label="Общая доска"></canvas><div class="ring" id="ring"></div><div id="docks"></div>' +
       '<div class="hint" id="hint">' + (compact() ? 'Доска бесконечная. Пальцем рисуем, двумя пальцами — двигаем и масштабируем. Масштаб, PNG и PDF' + (role === 'tutor' ? ', задачи и материалы' : '') + ' — в «Меню».'
-        : 'Доска бесконечная. Колесо — прокрутка, Ctrl + колесо — масштаб, «Рука» — тащить. На планшете: стилусом или пальцем рисуем, двумя пальцами — двигаем и масштабируем.' +
-      (role === 'tutor' ? ' Свои картинки и PDF — кнопкой «Материалы», перетаскиванием на доску или Ctrl+V.' : '')) + '</div><span class="sr" aria-live="polite" id="live"></span></div>' +
+        : 'Рисуйте сразу. Колесо — прокрутка, Ctrl + колесо — масштаб.' + (role === 'tutor' ? ' Картинку или PDF можно перетащить на доску или вставить Ctrl+V.' : '')) + '</div><span class="sr" aria-live="polite" id="live"></span></div>' +
       '<aside class="drawer" id="drawer" hidden></aside></div>';
     stage = document.getElementById('stage'); layer = document.getElementById('layer'); ringEl = document.getElementById('ring');
     canvas = document.getElementById('board'); ctx = canvas.getContext('2d'); B.mxCanvas = ctx; mxEls = {};
     renderTools();
-    setTimeout(function () { var h = document.getElementById('hint'); if (h) h.remove(); }, 10000);
+    var hideHint = function () { var h = document.getElementById('hint'); if (h) { h.style.opacity = 0; setTimeout(function () { h.remove(); }, 300); } };
+    setTimeout(hideHint, 8000); stage.addEventListener('pointerdown', hideHint, { once: true });
     pointer(); wheel(); if (role === 'tutor') dropAndPaste();
     window.addEventListener('resize', function () { resize(); });
     resize();
@@ -586,10 +721,11 @@ body.focus .lbar,body.focus .tools,body.focus .permbar{display:none}
     if (!allowed(tool)) tool = 'hand';
     closePop();
     document.getElementById('tools').innerHTML = toolsHtml();
-    var lm = document.getElementById('lmenu'); if (lm) { lm.innerHTML = compact() ? menuHtml() : ''; if (!compact()) closeMenu(); }
+    var lm = document.getElementById('lmenu'); if (lm) lm.innerHTML = menuHtml();
+    var dk = document.getElementById('docks'); if (dk) { dk.innerHTML = docksHtml(); pagesKey = ''; pagesUi(); }
     menuBtn();
     on('shapes', function () { if (SHAPES.indexOf(tool) < 0 && allowed(pref('shape', 'rect'))) setTool(pref('shape', 'rect')); openPop('shapes'); }); on('style', function () { openPop(sel ? 'selstyle' : 'style'); });
-    on('pens', function () { var b = document.getElementById('pens'); if (PENS.indexOf(tool) < 0) setTool(b.dataset.cur || 'pen'); openPop('pens'); });
+    on('pens', function () { var b = document.getElementById('pens'); if (penGroup().indexOf(tool) < 0) { setTool(b.dataset.cur || 'pen'); return; } openPop(compact() ? 'pens' : 'pens'); });
     on('gear', function () { closeMenu(); openPop('gear'); }); on('redo', redo);
     on('play', function () { closeMenu(); replayStart(); }); on('tocb', function () { closeMenu(); drawer('toc'); });
     on('ins', function () { closeMenu(); openPop('ins'); }); on('lsn', function () { closeMenu(); openPop('lsn'); });
@@ -630,11 +766,11 @@ body.focus .lbar,body.focus .tools,body.focus .permbar{display:none}
     if (t !== 'sel' && sel) clearSel();
     tool = t; press('[data-tool]', app.querySelector('#tools [data-tool=' + t + ']'));
     var sb = document.getElementById('shapes');
-    if (sb) { var isSh = SHAPES.indexOf(t) >= 0; sb.setAttribute('aria-pressed', String(isSh)); if (isSh) { sb.innerHTML = svg(t) + '<small>фигуры</small>'; setPref('shape', t); } }
+    if (sb) { var isSh = SHAPES.indexOf(t) >= 0; sb.setAttribute('aria-pressed', String(isSh)); if (isSh) { sb.innerHTML = svg(t) + (compact() ? '<small>фигуры</small>' : ''); setPref('shape', t); } }
     var pb = document.getElementById('pens');
-    if (pb) { var isP = PENS.indexOf(t) >= 0; pb.setAttribute('aria-pressed', String(isP)); if (isP) { pb.dataset.cur = t; pb.innerHTML = svg(t) + '<small>' + PEN_NAME[t] + '</small>'; } }
+    if (pb) { var isP = penGroup().indexOf(t) >= 0; pb.setAttribute('aria-pressed', String(isP)); if (isP) { pb.dataset.cur = t; pb.innerHTML = svg(t) + (compact() ? '<small>' + PEN_NAME[t] + '</small>' : ''); if (PEN_TIP[t]) pb.dataset.tip = PEN_TIP[t] + ' · ещё раз — карандаш и перо'; } }
     var ib = document.getElementById('ins');
-    if (ib && ib.classList.contains('tool')) { var isI = INS_T.indexOf(t) >= 0; ib.setAttribute('aria-pressed', String(isI)); ib.innerHTML = svg(isI ? t : 'ins') + '<small>' + (isI ? INS_NAME[t] : 'вставить') + '</small>'; }
+    if (ib && ib.classList.contains('tool')) { var isI = INS_T.indexOf(t) >= 0; ib.setAttribute('aria-pressed', String(isI)); ib.innerHTML = svg(isI ? t : 'ins') + (compact() ? '<small>' + (isI ? INS_NAME[t] : 'вставить') + '</small>' : ''); }
     if (cnFrom) { cnFrom = null; }
     stage.classList.toggle('hand', t === 'hand' && role === 'tutor');
     canvas.style.cursor = t === 'hand' ? 'grab' : t === 'text' ? 'text' : t === 'er' ? 'none' : t === 'lz' ? 'none' : 'crosshair';
@@ -674,8 +810,9 @@ body.focus .lbar,body.focus .tools,body.focus .permbar{display:none}
     canvas.style.width = r.width + 'px'; canvas.style.height = r.height + 'px';
     schedule();
   }
-  function fitZ() { return Math.max(0.1, (stage.clientWidth - 24) / W); }
-  function home() { view.z = stage.clientWidth < 600 ? 0.4 : fitZ(); view.x = -12 / view.z; view.y = -12 / view.z; schedule(); }
+  function railW() { return compact() ? 0 : 64; }   // ширина плавающей панели инструментов слева
+  function fitZ() { return Math.max(0.1, (stage.clientWidth - 24 - railW()) / W); }
+  function home() { view.z = stage.clientWidth < 600 ? 0.4 : fitZ(); view.x = -(12 + railW()) / view.z; view.y = -12 / view.z; schedule(); }
   function zoomAt(f, sx, sy) {
     var r = stage.getBoundingClientRect(); sx = sx == null ? r.width / 2 : sx; sy = sy == null ? r.height / 2 : sy;
     var wx = view.x + sx / view.z, wy = view.y + sy / view.z;
@@ -694,11 +831,14 @@ body.focus .lbar,body.focus .tools,body.focus .permbar{display:none}
     if (!b) return home();
     var pad = 40, z = Math.min((r.width - 2 * pad) / Math.max(200, b[2] - b[0]), (r.height - 2 * pad) / Math.max(200, b[3] - b[1]));
     z = Math.max(0.05, Math.min(initial ? (r.width < 600 ? 0.4 : fitZ()) : 2, z));
-    if (initial && b[2] - b[0] <= W + 100) { z = r.width < 600 ? 0.4 : fitZ(); view.z = z; view.x = Math.min(b[0], 0) - 12 / z; view.y = Math.min(b[1], 0) - 12 / z; return schedule(); }
+    if (initial && b[2] - b[0] <= W + 100) { z = r.width < 600 ? Math.min(0.4, (r.width - 24) / Math.max(200, b[2] - Math.min(b[0], 0))) : fitZ(); view.z = z; view.x = Math.min(b[0], 0) - (12 + railW()) / z; view.y = Math.min(b[1], 0) - 12 / z; return schedule(); }
     view.z = z; view.x = b[0] - (r.width / z - (b[2] - b[0])) / 2; view.y = b[1] - pad / z; schedule();
   }
   function jump(go) {
     var z = go.fw ? (stage.clientWidth - 16) / go.fw : go.z;    // «к доске»: задача целиком по ширине экрана ученика
+    if (!go.fw && role === 'student' && compact()) {        // телефон ученика: масштаб репетитора не влезает — подгоняем по ширине того, что на доске
+      var b = bounds(); if (b) z = Math.min(z || 1, (stage.clientWidth - 16) / Math.max(300, b[2] - go.x));
+    }
     view.z = Math.max(0.05, Math.min(4, z || view.z)); view.x = go.x; view.y = go.y; schedule();
     if (go.card) setTimeout(function () { flashCard(go.card); }, 120);
   }
@@ -823,6 +963,7 @@ body.focus .lbar,body.focus .tools,body.focus .permbar{display:none}
     var z = view.z;
     layer.style.transform = 'translate(' + (-view.x * z) + 'px,' + (-view.y * z) + 'px) scale(' + z + ')';
     var zv = document.getElementById('zv'); if (zv) zv.textContent = Math.round(z / fitZ() * 100) + '%';
+    pagesUi();
     ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.setTransform(z * dpr, 0, 0, z * dpr, -view.x * z * dpr, -view.y * z * dpr);
     var m = model();
@@ -1632,8 +1773,8 @@ body.focus .lbar,body.focus .tools,body.focus .permbar{display:none}
   // ── фон, таймер, закладки, «следуйте за мной», фокус ──
   function addBookmark(name) {
     name = String(name || '').trim().slice(0, 60);
-    if (!name) { toast('Назовите закладку'); return false; }
-    send({ t: 'bm', id: rid(), x: Math.round(view.x), y: Math.round(view.y), z: Math.round(view.z * 1000) / 1000, name: name }); toast('Закладка «' + name + '» — у вас и у ученика');
+    if (!name) { toast('Назовите страницу'); return false; }
+    send({ t: 'bm', id: rid(), x: Math.round(view.x), y: Math.round(view.y), z: Math.round(view.z * 1000) / 1000, name: name }); toast('Добавлено: «' + name + '» — у вас и у ученика');
     return true;
   }
   var timerEl = null, timerDone = '';
@@ -1967,7 +2108,7 @@ body.focus .lbar,body.focus .tools,body.focus .permbar{display:none}
         send(o); did({ show: [id], hide: hide });
       } else did({ hide: hide });
     }
-    ta.addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); commit(); } if (e.key === 'Escape') { ta.value = old ? old.s : ''; commit(); } });
+    ta.addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); commit(); } if (e.key === 'Escape') { e.preventDefault(); commit(); } });
     ta.addEventListener('blur', function () { if (Date.now() - born < 400) return setTimeout(function () { ta.focus(); }, 0); commit(); });
   }
 
@@ -2061,7 +2202,7 @@ body.focus .lbar,body.focus .tools,body.focus .permbar{display:none}
   function addFiles(files, at) {
     files = files.filter(function (f) { return f && (/^image\/(png|jpeg|webp|gif)$/.test(f.type) || f.type === 'application/pdf' || /\.pdf$/i.test(f.name || '')); });
     if (!files.length) return toast('Подходят картинки PNG, JPG и файлы PDF');
-    var r = stage.getBoundingClientRect(), x = at ? at[0] : view.x + 40 / view.z, y = at ? at[1] : view.y + 40 / view.z;
+    var r = stage.getBoundingClientRect(), x = at ? at[0] : view.x + (40 + railW()) / view.z, y = at ? at[1] : view.y + 40 / view.z;
     var w0 = Math.min(1400, Math.max(400, (r.width / view.z) * 0.7)), chain = Promise.resolve(), placed = 0;
     if (!at) document.querySelectorAll('#cards > div').forEach(function (el) {      // не поверх того, что уже лежит
       if (el.offsetLeft < x + w0 && el.offsetLeft + el.offsetWidth > x && el.offsetTop < y + 200 && el.offsetTop + el.offsetHeight > y - 40) y = Math.max(y, el.offsetTop + el.offsetHeight + 40);
@@ -2271,6 +2412,7 @@ body.focus .lbar,body.focus .tools,body.focus .permbar{display:none}
   function bankUi(d) {
     var b = BANKS.filter(function (x) { return x[0] === bf.bank; })[0], nums = [];
     for (var i = b[2]; i <= b[3]; i++) nums.push(i);
+    if (!bf.n) bf.n = b[2];                              // сразу показываем задачи первого номера, а не пустой список
     d.innerHTML = '<h3>Задачи из банка <button class="x" id="dx" aria-label="Закрыть">×</button></h3><div class="row" style="margin-top:8px"><select class="inp" id="bb" aria-label="Экзамен" style="flex:1">' +
       BANKS.map(function (x) { return '<option value="' + x[0] + '"' + (x[0] === bf.bank ? ' selected' : '') + '>' + x[1] + '</option>'; }).join('') + '</select>' +
       '<select class="inp" id="bn" aria-label="Номер задания"><option value="0">№</option>' + nums.map(function (n) { return '<option' + (n === bf.n ? ' selected' : '') + '>' + n + '</option>'; }).join('') + '</select></div>' +
@@ -2278,7 +2420,7 @@ body.focus .lbar,body.focus .tools,body.focus .permbar{display:none}
       '<label class="chk" style="margin-top:4px"><input type="checkbox" id="bfig"' + (bf.fig ? ' checked' : '') + '> только с рисунком</label>' +
       '<p class="muted" style="margin-top:6px">Задача встанет туда, куда вы смотрите, крупно, с формулами и рисунком. Рукой её можно двигать и тянуть за угол.</p><div id="bl"></div>';
     on('dx', function () { d.hidden = true; resize(); });
-    document.getElementById('bb').onchange = function (e) { bf.bank = e.target.value; bf.n = 0; bf.g = bf.k = ''; bankUi(d); };
+    document.getElementById('bb').onchange = function (e) { bf.bank = e.target.value; bf.n = 0; bf.g = bf.k = ''; try { localStorage.setItem('anik_bank_last', bf.bank); } catch (x) {} bankUi(d); };
     document.getElementById('bn').onchange = function (e) { bf.n = +e.target.value; bf.off = 0; bf.g = bf.k = ''; bankUi(d); };
     var tq; document.getElementById('bq').oninput = function (e) { clearTimeout(tq); tq = setTimeout(function () { bf.q = e.target.value; bf.off = 0; bankList(b); }, 250); };
     document.getElementById('bfig').onchange = function (e) { bf.fig = e.target.checked; bf.off = 0; bankList(b); };
@@ -2339,7 +2481,7 @@ body.focus .lbar,body.focus .tools,body.focus .permbar{display:none}
     placeTask({ head: b[1] + ' · №' + bf.n + (t ? ' · ' + t : ''), text: it.text, fig: it.fig }); toast('Задача на доске');
   }
   function placeTask(t, at) {
-    var r = stage.getBoundingClientRect(), y = Math.round(at ? at[1] : view.y + 30 / view.z), x = Math.round(at ? at[0] : view.x + 20 / view.z), w = Math.round(Math.min(1400, Math.max(600, r.width / view.z - 60)));
+    var r = stage.getBoundingClientRect(), y = Math.round(at ? at[1] : view.y + 30 / view.z), x = Math.round(at ? at[0] : view.x + (20 + railW()) / view.z), w = Math.round(Math.min(1400, Math.max(600, (r.width - railW() - 200) / view.z - 60)));
     var it = t;
     if (!at) document.querySelectorAll('#cards > div').forEach(function (el) { if (el.offsetLeft < x + w && el.offsetLeft + el.offsetWidth > x && el.offsetTop < y + 200 && el.offsetTop + el.offsetHeight > y - 40) y = Math.max(y, el.offsetTop + el.offsetHeight + 40); });
     if (y + 200 > view.y + r.height / view.z) { view.y = y - 40 / view.z; schedule(); }
@@ -2406,7 +2548,7 @@ body.focus .lbar,body.focus .tools,body.focus .permbar{display:none}
   function setStudentPerm(p) { return api.post('/api/room/perm', { room: ROOM, perm: p }).then(function (r) { perm = r.perm; permUi(); }); }
   function boardBtn() {
     var b = document.getElementById('toboard'); if (!b) return;
-    b.textContent = compact() ? (atBoard ? 'Вернуть' : 'К доске') : atBoard ? 'Вернуть ученика на место' : 'Вывести к доске';
+    if (compact()) b.textContent = atBoard ? 'Вернуть' : 'К доске'; else b.innerHTML = dsvg('board') + (atBoard ? 'Вернуть ученика' : 'Вывести к доске');
     b.title = atBoard ? 'Ученик снова только смотрит' : 'Ученик получит право рисовать, и его экран перейдёт к задаче';
   }
   function callStudent(cardId) {
@@ -2437,11 +2579,10 @@ body.focus .lbar,body.focus .tools,body.focus .permbar{display:none}
     }
     box.innerHTML = (callUrl ? '<button class="callb" id="tmb">' + (tm ? 'Позвонить в Телемост' : 'Позвонить') + '</button>'
       : (role === 'tutor' ? '<a class="callb off" href="tutor.html" target="_blank" rel="noopener" title="Ссылка на Телемост задаётся в кабинете">Ссылка на Телемост</a>' : '')) +
-      ' <button class="callb off" id="callmore" aria-label="Другие способы звонка">⋯</button>' +
       (role === 'tutor' ? ' <button class="callb red" id="endb">Завершить урок</button>' : '');
     on('tmb', function () { A.openCall(callUrl); });
-    on('callmore', function () { drawer('call'); });
     on('endb', endLesson);
+    menuBtn();
   }
   function callPanel(d) {
     d.innerHTML = '<h3>Звонок <button class="x" id="dx" aria-label="Закрыть">×</button></h3><div id="ringbox"></div>' +
