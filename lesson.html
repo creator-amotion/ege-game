@@ -24,6 +24,10 @@
 <style>
 html,body{height:100%}
 body.lesson{display:flex;flex-direction:column;height:100vh;height:100dvh;overflow:hidden}
+/* урок не выделяется и не листается целиком: стилус и ладонь на iPad выделяли доску и уводили шапку за экран; текст задачи — кнопкой «Копировать текст» */
+html:has(body.lesson){overflow:hidden;overscroll-behavior:none}
+body.lesson{overscroll-behavior:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+body.lesson input,body.lesson textarea,body.lesson select,body.lesson [contenteditable]{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
 :root{--safe-t:calc(max(env(safe-area-inset-top,0px),var(--tg-safe-area-inset-top,0px)) + var(--tg-content-safe-area-inset-top,0px));--safe-r:max(env(safe-area-inset-right,0px),var(--tg-safe-area-inset-right,0px));--safe-l:max(env(safe-area-inset-left,0px),var(--tg-safe-area-inset-left,0px));--safe-b:max(env(safe-area-inset-bottom,0px),var(--tg-safe-area-inset-bottom,0px))}
 body.lesson{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 .lbar{display:flex;align-items:center;gap:8px;padding:calc(6px + var(--safe-t)) calc(10px + var(--safe-r)) 6px calc(10px + var(--safe-l));border-bottom:2px solid var(--ink);background:var(--paper);flex-wrap:nowrap;min-height:54px;flex-shrink:0}
@@ -60,7 +64,7 @@ body.lesson{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 .zoomv{font-size:12px;font-weight:700;min-width:44px;text-align:center}
 .permbar{padding:6px 12px;font-size:14px;font-weight:600;border-bottom:2px solid var(--ink);flex-shrink:0}
 .permbar.view{background:var(--chip)}.permbar.pen,.permbar.all{background:var(--yellow)}
-.lmain{flex:1;display:flex;min-height:0;position:relative}
+.lmain{flex:1;display:flex;min-height:0;position:relative;overflow:hidden}
 .stage{flex:1;position:relative;overflow:hidden;background:#fff;touch-action:none;min-width:0}
 .stage.drop{outline:4px dashed var(--blue);outline-offset:-8px}
 .stage canvas{position:absolute;left:0;top:0;touch-action:none}
@@ -68,6 +72,7 @@ body.lesson{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 .tcard{position:absolute;background:var(--paper);border:3px solid var(--ink);padding:22px 28px 26px;font-size:34px;line-height:1.45;white-space:pre-wrap;overflow-wrap:anywhere}
 .tcard .hd{display:block;font-family:var(--display);font-size:24px;font-weight:800;letter-spacing:1px;text-transform:uppercase;margin:0 0 10px;background:var(--yellow);padding:4px 12px;width:max-content;max-width:100%}
 .tcard img{display:block;max-width:100%;max-height:900px;margin-top:14px;background:#fff}
+.tcard img.opt{max-height:300px}
 .tcard .katex{font-size:1.05em}
 .timg{position:absolute;background:#fff;box-shadow:0 0 0 2px var(--line)}
 .timg img{display:block;width:100%;height:100%;object-fit:contain;user-select:none}
@@ -76,7 +81,7 @@ body.lesson{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 .hand .tutor .hdl,.hand .tutor .del{display:block}
 .hand .tutor{cursor:move;box-shadow:8px 8px 0 var(--blue)}
 .ring{position:absolute;border:2px dashed var(--red);border-radius:50%;pointer-events:none;display:none;background:rgba(229,51,42,.08)}
-.drawer{width:340px;border-left:2px solid var(--ink);background:var(--paper);overflow:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-y;min-height:0;max-height:100%;padding:10px;flex-shrink:0}
+.drawer{width:340px;border-left:2px solid var(--ink);background:var(--paper);overflow:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-y;min-height:0;max-height:100%;align-self:stretch;padding:10px;flex-shrink:0}
 @media (max-width:820px){.drawer{position:absolute;right:0;top:0;bottom:0;width:min(92vw,360px);z-index:10;box-shadow:-6px 0 0 rgba(17,17,17,.15)}}
 .drawer h3{font-family:var(--display);font-size:18px;font-weight:800;display:flex;justify-content:space-between;align-items:center}
 .drawer .x{border:2px solid var(--ink);background:#fff;width:36px;height:36px;font-weight:800;cursor:pointer}
@@ -984,7 +989,10 @@ body.lesson{background:#F7F7F8}
         '<img src="' + esc(fileUrl(c.f)) + '" crossorigin="anonymous" alt="Материал урока" draggable="false" style="width:' + (w / vw) + 'px;height:' + (h / vh) + 'px;left:' + (-cr[0] * w / vw) + 'px;top:' + (-cr[1] * h / vh) + 'px"></div>' + tail;
     }
     return '<div class="tcard' + cls + '" data-id="' + esc(c.id) + '" style="left:' + c.x + 'px;top:' + c.y + 'px;width:' + c.w + 'px"><span class="hd">' + esc(c.head) + '</span>' +
-      esc(c.text) + (c.fig ? '<img src="' + esc(c.fig) + '" alt="Рисунок к задаче">' : '') + tail;
+      esc(c.text) + (c.fig ? '<img src="' + esc(c.fig) + '" alt="Рисунок к задаче">' : '') + optFigs(c.figs) + tail;
+  }
+  function optFigs(figs) {                                 // варианты ответа картинками (ОГЭ №13): у таких задач в банке несколько рисунков и все они — варианты
+    return (figs || []).map(function (f, i) { return '<img class="opt" src="' + esc(f) + '" alt="Вариант ' + (i + 1) + '" loading="lazy">'; }).join('');   // номер «1)» нарисован на самой картинке
   }
   function drawCards(cards) {
     var box = document.getElementById('cards');
@@ -1174,6 +1182,12 @@ body.lesson{background:#F7F7F8}
       preview = null; schedule();
     }
     canvas.addEventListener('pointerup', up); canvas.addEventListener('pointercancel', up);
+    // стилус на Windows «удержанием» открывает меню правой кнопки («Сохранить картинку…»), на iPad Pencil тянет выделение и лупу — всё это мешает писать
+    stage.addEventListener('contextmenu', function (e) { if (!e.target.closest('input,textarea,[contenteditable]')) e.preventDefault(); });
+    stage.addEventListener('selectstart', function (e) { if (!e.target.closest('input,textarea,[contenteditable]')) e.preventDefault(); });
+    ['touchstart', 'touchmove'].forEach(function (ev) {    // жест целиком у доски; «Текст» живёт на click, его касание не гасим
+      canvas.addEventListener(ev, function (e) { if (e.cancelable && !(tool === 'text' && allowed('text'))) e.preventDefault(); }, { passive: false });
+    });
     canvas.addEventListener('pointerleave', function () { ringEl.style.display = 'none'; });
     canvas.addEventListener('click', function (e) {
       if (tool !== 'text' || !allowed('text')) return;
@@ -1741,11 +1755,23 @@ body.lesson{background:#F7F7F8}
     ['x', 'y', 'w'].forEach(function (k) { if (k in ch) o[k] = Math.round(ch[k]); });
     send(o);
   }
+  function copyText(s) {                                 // текст на уроке не выделяется — копируем кнопкой; без clipboard API (http, старый Safari) — через скрытое поле
+    var done = function () { toast('Текст скопирован'); };
+    if (navigator.clipboard && window.isSecureContext) return navigator.clipboard.writeText(s).then(done, legacy);
+    legacy();
+    function legacy() {
+      var ta = document.createElement('textarea'); ta.value = s; ta.setAttribute('readonly', ''); ta.style.cssText = 'position:fixed;left:-9999px;top:0';
+      document.body.appendChild(ta); ta.select(); ta.setSelectionRange(0, s.length);
+      var ok = false; try { ok = document.execCommand('copy'); } catch (er) {}
+      ta.remove(); if (ok) done(); else toast('Не получилось скопировать');
+    }
+  }
   function cardBar(card, e) {
     var old = document.getElementById('selbar'); if (old) old.remove();
     var locked = !!model().locks[card.id], b = document.createElement('div'), r = stage.getBoundingClientRect(); b.className = 'selbar'; b.id = 'selbar';
     var bt = locked ? [['lk0', 'Открепить']] : (card.t === 'im' ? [['rot', 'Повернуть 90°'], ['fx', 'Отразить ↔'], ['fy', 'Отразить ↕'], ['crop', 'Обрезать']].concat(card.cr ? [['uncrop', 'Без обрезки']] : []) : [])
       .concat([['lk1', 'Закрепить'], ['up', 'Вперёд'], ['down', 'Назад']]);
+    if (card.t === 'tk') bt.unshift(['cp', 'Копировать текст']);
     b.innerHTML = bt.map(function (x) { return '<button data-c="' + x[0] + '">' + x[1] + '</button>'; }).join('');
     b.addEventListener('pointerdown', function (ev) { ev.stopPropagation(); });
     stage.appendChild(b);
@@ -1756,6 +1782,7 @@ body.lesson{background:#F7F7F8}
         ({ rot: function () { sendMv(card, { r: ((card.r || 0) + 90) % 360 }); }, fx: function () { sendMv(card, { fx: card.fx ? 0 : 1 }); }, fy: function () { sendMv(card, { fy: card.fy ? 0 : 1 }); },
           crop: function () { if (card.r) return toast('Обрезать можно без поворота: сначала поверните картинку обратно'); cropMode = { id: card.id }; toast('Обведите рамкой часть картинки, которую оставить'); },
           uncrop: function () { var cr = card.cr, vw = cr[2] - cr[0], vh = cr[3] - cr[1], h = cardDims(card)[1], W = card.w / vw; sendMv(card, { cr: null, x: card.x - cr[0] * W, y: card.y - cr[1] * h / vh, w: W }); },
+          cp: function () { copyText(card.text); },
           lk0: function () { send({ t: 'lk', id: rid(), s: card.id, v: 0 }); }, lk1: function () { send({ t: 'lk', id: rid(), s: card.id, v: 1 }); toast('Закреплено: не сдвинется и не удалится. Открепить — касанием рукой.'); },
           up: function () { send({ t: 'zo', id: rid(), s: card.id, v: 1 }); }, down: function () { send({ t: 'zo', id: rid(), s: card.id, v: -1 }); } })[x.dataset.c]();
       };
@@ -2439,22 +2466,24 @@ body.lesson{background:#F7F7F8}
         var list = (Array.isArray(j) ? j : j.tasks || []).map(function (t) {
           var text = t.t || t.text || '', opts = t.options || [];
           if (opts.length) text += '\n\n' + opts.map(function (o, i) { return (i + 1) + ') ' + o; }).join('\n');
-          return { id: t.id, text: text, ans: (Array.isArray(t.a) ? t.a[0] : t.a) || t.answer || '', fig: (t.f || [])[0] || '', g: t.g || t.tp || '', k: b[0] === 'ege-math' ? t.k || '' : '' };   // k у других банков — вид ответа, не тип
+          var f = t.f || [];
+          return { id: t.id, text: text, ans: (Array.isArray(t.a) ? t.a[0] : t.a) || t.answer || '', fig: f.length === 1 ? f[0] : '', figs: f.length > 1 ? f : null, g: t.g || t.tp || '', k: b[0] === 'ege-math' ? t.k || '' : '' };   // k у других банков — вид ответа, не тип
         });
         topicFilter(list, nm, b);
         if (bf.g) list = list.filter(function (it) { return it.g === bf.g; });
         if (bf.k) list = list.filter(function (it) { return it.k === bf.k; });
         var q = bf.q.trim().toLowerCase();
         if (q) list = list.filter(function (it) { return it.text.toLowerCase().indexOf(q) >= 0; });
-        if (bf.fig) list = list.filter(function (it) { return it.fig; });
+        if (bf.fig) list = list.filter(function (it) { return it.fig || it.figs; });
         var bl = document.getElementById('bl'), part = list.slice(0, bf.off + 15);
         bl.innerHTML = '<p class="muted" style="margin-top:6px">Задач: ' + list.length + '</p>' + part.map(function (it, i) {
-          return '<div class="mini"><div class="tx">' + esc(it.text) + '</div>' + (it.fig ? '<img src="' + esc(it.fig) + '" alt="" loading="lazy">' : '') +
-            '<div class="row" style="justify-content:space-between;margin-top:6px"><span class="muted">ответ: ' + esc(it.ans) + '</span><button class="b sm" data-k="' + i + '">На доску</button></div></div>'; }).join('') +
+          return '<div class="mini"><div class="tx">' + esc(it.text) + '</div>' + (it.fig ? '<img src="' + esc(it.fig) + '" alt="" loading="lazy">' : '') + optFigs(it.figs) +
+            '<div class="row" style="justify-content:space-between;margin-top:6px"><span class="muted">ответ: ' + esc(it.ans) + '</span><span class="row"><button class="b sm sec" data-cp="' + i + '">Копировать</button><button class="b sm" data-k="' + i + '">На доску</button></span></div></div>'; }).join('') +
           (part.length < list.length ? '<button class="b sec" id="bmore" style="margin-top:8px;width:100%">Ещё задачи</button>' : '');
         A.math(bl);
         on('bmore', function () { bf.off += 15; bankList(b); });
         bl.querySelectorAll('[data-k]').forEach(function (btn) { btn.onclick = function () { place(part[+btn.dataset.k], b); }; });
+        bl.querySelectorAll('[data-cp]').forEach(function (btn) { btn.onclick = function () { copyText(part[+btn.dataset.cp].text); }; });
       }).catch(function () { document.getElementById('bl').innerHTML = '<p class="muted" style="margin-top:8px">Не получилось загрузить задачи этого номера.</p>'; });
   }
   function topicFilter(list, nm, b) {                  // тема задачи в номере (профиль — g, остальные — tp из bank_topics); у профиля внутри темы ещё тип
@@ -2478,7 +2507,7 @@ body.lesson{background:#F7F7F8}
   }
   function place(it, b) {
     var t = bf.g && (b[0] === 'ege-math' ? mathNames && mathNames.g[bf.g] : bf.g);
-    placeTask({ head: b[1] + ' · №' + bf.n + (t ? ' · ' + t : ''), text: it.text, fig: it.fig }); toast('Задача на доске');
+    placeTask({ head: b[1] + ' · №' + bf.n + (t ? ' · ' + t : ''), text: it.text, fig: it.fig, figs: it.figs }); toast('Задача на доске');
   }
   function placeTask(t, at) {
     var r = stage.getBoundingClientRect(), y = Math.round(at ? at[1] : view.y + 30 / view.z), x = Math.round(at ? at[0] : view.x + (20 + railW()) / view.z), w = Math.round(Math.min(1400, Math.max(600, (r.width - railW() - 200) / view.z - 60)));
@@ -2488,6 +2517,8 @@ body.lesson{background:#F7F7F8}
     var fig = /^(figs|trainer\/figs)\/[A-Za-z0-9_.-]+$/.test(it.fig) ? it.fig : '';
     var id = rid(), op = { t: 'tk', id: id, x: x, y: y, w: w, head: String(t.head).slice(0, 120), text: it.text.slice(0, 3900), fig: fig };
     if (t.ask) op.ask = t.ask;
+    var figs = (it.figs || []).filter(function (f) { return /^(figs|trainer\/figs)\/[A-Za-z0-9_.-]+$/.test(f); }).slice(0, 6);
+    if (figs.length) op.figs = figs;
     did({ show: [id] }); lastCard = id;
     send(op);
     if (r.width < 820) { document.getElementById('drawer').hidden = true; resize(); }
