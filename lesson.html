@@ -26,7 +26,25 @@ html,body{height:100%}
 body.lesson{display:flex;flex-direction:column;height:100vh;height:100dvh;overflow:hidden}
 /* экран урока неподвижен: страница не масштабируется и не тянется «резинкой»; масштаб и сдвиг — только у самой доски */
 html:has(body.lesson){overflow:hidden;overscroll-behavior:none;touch-action:pan-x pan-y}
-body.lesson{position:fixed;inset:0;overscroll-behavior:none;touch-action:pan-x pan-y}
+body.lesson{position:fixed;left:0;right:0;top:var(--app-top,0px);height:100vh;height:100dvh;height:var(--app-h,100dvh);overscroll-behavior:none;touch-action:pan-x pan-y}
+/* всё, что длиннее экрана, прокручивается внутри своей панели: страница и доска при этом не двигаются */
+body.lesson .drawer,body.lesson .lmenu,body.lesson .pop,body.lesson .cmbox,body.lesson .fbox,body.lesson .over .card,body.lesson .tv-body{overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-y}
+body.lesson .lmenu,body.lesson .pop{max-height:calc(100% - 8px)}
+body.lesson .cmbox,body.lesson .fbox{max-height:calc(100% - 16px)}
+body.lesson .over{height:var(--app-h,100dvh);top:var(--app-top,0px);bottom:auto}
+body.lesson .over .card{max-height:calc(var(--app-h,100dvh) - 32px)}
+/* задание целиком: во весь экран, своя прокрутка, крестик */
+.tview{position:fixed;left:0;right:0;top:var(--app-top,0px);height:var(--app-h,100dvh);z-index:60;background:rgba(17,17,17,.45);display:flex;align-items:flex-end;justify-content:center;padding:calc(8px + var(--safe-t)) calc(8px + var(--safe-r)) calc(8px + var(--safe-b)) calc(8px + var(--safe-l))}
+.tv-card{background:var(--paper);width:100%;max-width:760px;max-height:100%;display:flex;flex-direction:column;border-radius:14px;overflow:hidden;box-shadow:0 10px 40px rgba(17,17,17,.25)}
+.tv-hd{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 8px 8px 14px;border-bottom:1px solid var(--line);flex-shrink:0}
+.tv-hd b{font-family:var(--display);font-size:17px;font-weight:800;min-width:0;overflow-wrap:anywhere}
+.tv-x{flex:0 0 44px;height:44px;border:0;border-radius:10px;background:var(--ui-hover,#EEE);font-size:24px;line-height:1;cursor:pointer;color:var(--ink)}
+.tv-body{padding:12px 14px 18px;min-height:0}
+.tv-tx{white-space:pre-wrap;font-size:17px;line-height:1.5;overflow-wrap:anywhere}
+.tv-tx .katex-display{overflow-x:auto;overflow-y:hidden}
+.tv-body img{display:block;max-width:100%;height:auto;margin-top:12px;background:#fff}
+#chips{position:absolute;inset:0;pointer-events:none;z-index:5;overflow:hidden}
+#chips .chip{position:absolute;pointer-events:auto;transform:translateX(-100%);min-height:36px;padding:0 12px;border:0;border-radius:18px;background:var(--ui-ink,#111);color:#fff;font:600 13px 'Golos Text',sans-serif;box-shadow:0 2px 8px rgba(17,17,17,.25);cursor:pointer;white-space:nowrap;touch-action:manipulation}
 /* долгое нажатие не выделяет текст и не открывает «Копировать / Вставить»; поля ввода — как обычно */
 body.lesson,body.lesson *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 body.lesson img,body.lesson canvas,body.lesson svg{-webkit-user-drag:none;user-drag:none}
@@ -133,7 +151,7 @@ body.lesson{-webkit-text-size-adjust:100%;text-size-adjust:100%}
   #permbox:empty{display:none}
 }
 /* телефон боком: всё в одну строку, чтобы доске осталась высота */
-@media (max-height:500px) and (max-width:1000px){
+@media (max-height:500px) and (max-width:1000px) and (orientation:landscape){
   body .lbar{grid-template-columns:auto minmax(0,1fr) auto auto;padding-top:calc(4px + var(--safe-t));padding-bottom:4px}
   body .lbar .wm{grid-area:1/1}body .lbar .peer{grid-area:1/2}body #permbox{grid-area:1/3}body #callbox{grid-area:1/4}
   body .perm{min-width:250px}
@@ -153,7 +171,7 @@ body.lesson{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 .selbar button.red{background:var(--red);color:#111}
 .ring.pen{border:2px solid var(--ink);background:transparent}
 .ring.dotp{border:0;opacity:.55}
-@media (max-width:600px), (max-height:500px) and (max-width:1000px){
+@media (max-width:600px), (max-height:500px) and (max-width:1000px) and (orientation:landscape){
   .lbar{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:6px 8px;min-height:0}
   .lbar .grow{display:none}
   .lbar .wm{font-size:18px;margin:0}
@@ -246,8 +264,8 @@ body.lesson{background:#F7F7F8}
 .dock button[aria-pressed=true]{background:var(--ui-ink);color:#fff}
 .dock svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .dock .zoomv{min-width:52px;font-size:13px;font-weight:600}
-.dock.zoom{right:12px;bottom:12px}
-.dock.pages{left:50%;bottom:12px;transform:translateX(-50%);max-width:calc(100% - 300px);overflow-x:auto;scrollbar-width:none}
+.dock.zoom{right:calc(12px + var(--safe-r));bottom:calc(12px + var(--safe-b))}
+.dock.pages{left:50%;bottom:calc(12px + var(--safe-b));transform:translateX(-50%);max-width:calc(100% - 300px);overflow-x:auto;scrollbar-width:none}
 .dock.pages .pg{max-width:160px;overflow:hidden;text-overflow:ellipsis}
 .dock.pages .pg i{font-style:normal;color:var(--ui-mute);font-weight:600}
 .dock.pages .empty{font-size:13px;color:var(--ui-mute);padding:0 8px}
@@ -296,13 +314,17 @@ body.lesson{background:#F7F7F8}
 .drawer .b{border-radius:9px}
 @media (min-width:601px){.lmain>.lmenu{top:8px;right:12px;width:300px;grid-template-columns:1fr;padding:8px}}
 /* телефон: инструменты — строкой над доской, как раньше, но в светлом виде */
-@media (max-width:600px), (max-height:500px) and (max-width:1000px){
+@media (max-width:600px), (max-height:500px) and (max-width:1000px) and (orientation:landscape){
   .lmain{flex-direction:column}
   .lmain>.tools{position:static;flex-direction:row;border-radius:0;box-shadow:none;border-bottom:1px solid var(--ui-line);max-height:none;padding:4px 6px}
   .lmain>.tools .tool{flex:1 1 0;width:auto;max-width:56px;height:44px;min-height:44px}   /* палец: зона касания не меньше 44 px */
   .lmain>.tools .sep{width:1px;height:28px;margin:0 2px}
   .lmain>.pop{left:0;right:0;top:0;max-width:none;border-radius:0 0 var(--ui-r) var(--ui-r)}
   .lmain>.tools [data-tip]:hover::after{display:none}
+  .dock.zoom{right:calc(8px + var(--safe-r));bottom:calc(8px + var(--safe-b));padding:3px;gap:0;border-radius:12px}
+  .dock.zoom button{min-width:40px;height:40px;padding:0 8px}
+  .dock.zoom .zoomv{min-width:48px}
+  .hint{bottom:calc(60px + var(--safe-b));max-width:calc(100% - 20px)}
 }
 </style>
 </head>
@@ -375,11 +397,23 @@ body.lesson{background:#F7F7F8}
   var localUrls = {};                                  // картинки материалов из копии на устройстве
   function fileUrl(f) { return localUrls[f] || A.API + '/api/file/' + f; }
   var IMG_MAX = 1600, IMG_Q = 0.8, FILE_LIMIT = 1500000;  // материалы ужимаются на устройстве репетитора
-  var PHONE = window.matchMedia ? window.matchMedia('(max-width:600px), (max-height:500px) and (max-width:1000px)') : null, SHAPES = ['line', 'arrow', 'rect', 'circle', 'ell', 'tri', 'rhomb', 'star', 'ngon'];
+  var PHONE = window.matchMedia ? window.matchMedia('(max-width:600px), (max-height:500px) and (max-width:1000px) and (orientation:landscape)') : null, SHAPES = ['line', 'arrow', 'rect', 'circle', 'ell', 'tri', 'rhomb', 'star', 'ngon'];
   function compact() { return !!(PHONE && PHONE.matches); }
   var tg = window.Telegram && window.Telegram.WebApp;
   /* страница урока не масштабируется: щипок (iOS gesture*), двойное касание, Ctrl + колесо и Ctrl +/− двигают только доску;
      долгое нажатие не выделяет текст и не открывает меню — кроме полей ввода */
+  /* экран урока — ровно видимая область: на iOS с клавиатурой и в Telegram 100dvh не совпадает с тем, что видно */
+  function fitScreen() {
+    var vv = window.visualViewport, h = vv ? vv.height : window.innerHeight, top = vv ? Math.max(0, vv.offsetTop) : 0;
+    if (tg && tg.initData && tg.viewportHeight) h = Math.min(h, tg.viewportHeight);
+    var de = document.documentElement;
+    de.style.setProperty('--app-h', Math.round(h) + 'px'); de.style.setProperty('--app-top', Math.round(top) + 'px');
+    if (window.scrollY || window.scrollX) window.scrollTo(0, 0);
+  }
+  fitScreen();
+  if (window.visualViewport) { visualViewport.addEventListener('resize', fitScreen); visualViewport.addEventListener('scroll', fitScreen); }
+  window.addEventListener('resize', fitScreen); window.addEventListener('orientationchange', function () { setTimeout(fitScreen, 300); });
+  if (tg && tg.onEvent) try { tg.onEvent('viewportChanged', fitScreen); } catch (e) {}
   (function lockPage() {
     var typing = function (t) { return t && t.closest && t.closest('input,textarea,select,[contenteditable]'); };
     ['gesturestart', 'gesturechange', 'gestureend'].forEach(function (k) { document.addEventListener(k, function (e) { e.preventDefault(); }, { passive: false }); });
@@ -507,8 +541,12 @@ body.lesson{background:#F7F7F8}
     mat: '<path d="M20 11l-8 8a5 5 0 0 1-7-7l9-9a3.5 3.5 0 0 1 5 5l-9 9a2 2 0 0 1-3-3l8-8"/>', board: '<path d="M3 4h18v12H3z"/><path d="M12 16v4M8 20h8"/><path d="M8 9l3 3 5-5"/>',
     fit: '<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>', plus: '<path d="M12 5v14M5 12h14"/>' };
   function dsvg(k) { return '<svg viewBox="0 0 24 24" aria-hidden="true">' + DOCK_IC[k] + '</svg>'; }
+  function zoomDock() {
+    return '<div class="dock zoom" role="group" aria-label="Масштаб"><button id="zout" aria-label="Уменьшить" data-tip="Уменьшить">−</button><button class="zoomv" id="zv" aria-label="Масштаб 100%: по ширине листа" data-tip="100% — по ширине листа">100%</button>' +
+      '<button id="zin" aria-label="Увеличить" data-tip="Увеличить">+</button><button id="zall" aria-label="Показать всё" data-tip="Показать всё">' + dsvg('fit') + '</button></div>';
+  }
   function docksHtml() {
-    if (compact()) return '';
+    if (compact()) return zoomDock();                     // телефон: только масштаб — компактной строкой внизу
     var h = '';
     if (role === 'tutor' && !readOnly) h += '<div class="dock lesson" role="group" aria-label="Урок">' +
       '<button id="bank" class="pri">' + dsvg('bank') + 'Задачи из банка</button>' +
@@ -516,8 +554,7 @@ body.lesson{background:#F7F7F8}
       '<button id="mat">' + dsvg('mat') + 'Материалы</button><input type="file" id="matf" accept="image/png,image/jpeg,image/webp,application/pdf,.pdf" multiple hidden>' +
       '<button id="toboard">' + dsvg('board') + (atBoard ? 'Вернуть ученика' : 'Вывести к доске') + '</button></div>';
     h += '<div class="dock pages" id="pages" role="group" aria-label="Страницы урока"></div>';
-    h += '<div class="dock zoom" role="group" aria-label="Масштаб"><button id="zout" aria-label="Уменьшить" data-tip="Уменьшить">−</button><button class="zoomv" id="zv" aria-label="Масштаб 100%: по ширине листа" data-tip="100% — по ширине листа">100%</button>' +
-      '<button id="zin" aria-label="Увеличить" data-tip="Увеличить">+</button><button id="zall" aria-label="Показать всё" data-tip="Показать всё">' + dsvg('fit') + '</button></div>';
+    h += zoomDock();
     return h;
   }
   /* страницы урока — это закладки: место доски и масштаб. «+» запоминает то, что сейчас видно */
@@ -569,8 +606,7 @@ body.lesson{background:#F7F7F8}
       '<input type="file" id="matf" accept="image/png,image/jpeg,image/webp,application/pdf,.pdf" multiple hidden>' + mi('save', 'Сохранить конспект') + mi('clr', 'Очистить доску');
     if (live && allowed('pen')) m += '<div class="mh">Рисование</div>' + mi('redo', 'Повторить') + mi('gear', 'Настройки рисования');
     if (live) m += '<div class="mh">Доска</div>' + (INS.some(function (x) { return allowed(x[0]); }) ? mi('ins', allowed('st') ? 'Вставить: наклейка, стикер, формула…' : 'Вопрос комментарием, линейка') : '') + mi('lsn', role === 'tutor' ? 'Фон, таймер, закладки' : 'Закладки и фокус');
-    m += '<div class="mh">Вид</div><div class="zr"><button class="mi" id="zout" aria-label="Уменьшить">−</button><button class="mi zoomv" id="zv" aria-label="Масштаб 100%: по ширине листа">100%</button><button class="mi" id="zin" aria-label="Увеличить">+</button></div>' +
-      mi('zall', 'Показать всё') + mi('zhome', 'К началу') + (readOnly ? '<div class="mh">Конспект</div>' + mi('play', 'Проиграть урок', 'yel') + mi('tocb', 'Оглавление') : '') + '<div class="mh">Скачать доску</div>' + mi('png', 'PNG') + mi('pdf', 'PDF');
+    m += '<div class="mh">Вид</div>' + mi('zhome', 'К началу доски', 'full') + (readOnly ? '<div class="mh">Конспект</div>' + mi('play', 'Проиграть урок', 'yel') + mi('tocb', 'Оглавление') : '') + '<div class="mh">Скачать доску</div>' + mi('png', 'PNG') + mi('pdf', 'PDF');
     if (live) {
       m += '<div class="mh">Звонок</div>' + (role === 'tutor' && !callUrl ? '<a class="mi full" href="tutor.html" target="_blank" rel="noopener">Ссылка на Телемост — в кабинете</a>' : '') + mi('callmore', 'Другие способы звонка', 'full');
       if (role === 'tutor') m += mi('endb', 'Завершить урок', 'red full');
@@ -586,11 +622,11 @@ body.lesson{background:#F7F7F8}
   function menuBtn() {                                   // кнопка «Меню» в шапке — только на телефоне
     var box = document.getElementById('callbox'), b = document.getElementById('menub');
     if (readOnly && !compact()) { if (b) b.remove(); return; }
-    if (b && (b.dataset.c === '1') !== compact()) { b.remove(); b = null; }
+    if (b && ((b.dataset.c === '1') !== compact() || !box.contains(b))) { b.remove(); b = null; }
     if (!b) {
       var btn = compact() ? '<button class="callb off" id="menub" data-c="1" aria-haspopup="true" aria-expanded="false" aria-controls="lmenu">Меню</button>'
         : '<button class="callb off more" id="menub" data-c="0" aria-label="Ещё: конспект, скачать, фон и таймер" title="Ещё" aria-haspopup="true" aria-expanded="false" aria-controls="lmenu"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><circle cx="5" cy="12" r="1.8" fill="currentColor"/><circle cx="12" cy="12" r="1.8" fill="currentColor"/><circle cx="19" cy="12" r="1.8" fill="currentColor"/></svg></button>';
-      var end = document.getElementById('endb');
+      var end = box.querySelector('#endb');                 // только в шапке: на телефоне «Завершить урок» — в самом меню
       if (end) end.insertAdjacentHTML('beforebegin', btn); else box.insertAdjacentHTML('beforeend', btn);
       b = document.getElementById('menub');
     }
@@ -732,8 +768,8 @@ body.lesson{background:#F7F7F8}
   function fingerDraws() { var f = pref('finger', null); return f == null ? !pref('penSeen', false) : f; }
   function build() {
     app.innerHTML = (role === 'student' ? '<div class="permbar" id="permbar" role="status"></div>' : '') +
-      '<div class="lmain"><div class="tools" id="tools" role="toolbar" aria-label="Инструменты доски"></div><div class="pop" id="pop" hidden></div><div class="lmenu" id="lmenu" hidden aria-label="Меню урока"></div><div class="stage" id="stage"><div class="layer" id="layer"><div id="cards"></div><div id="mxl"></div></div><canvas id="base" aria-hidden="true"></canvas><canvas id="board" aria-label="Общая доска"></canvas><div class="ring" id="ring"></div><div id="docks"></div>' +
-      '<div class="hint" id="hint">' + (compact() ? 'Доска бесконечная. Пальцем рисуем, двумя пальцами — двигаем и масштабируем. Масштаб, PNG и PDF' + (role === 'tutor' ? ', задачи и материалы' : '') + ' — в «Меню».'
+      '<div class="lmain"><div class="tools" id="tools" role="toolbar" aria-label="Инструменты доски"></div><div class="pop" id="pop" hidden></div><div class="lmenu" id="lmenu" hidden aria-label="Меню урока"></div><div class="stage" id="stage"><div class="layer" id="layer"><div id="cards"></div><div id="mxl"></div></div><canvas id="base" aria-hidden="true"></canvas><canvas id="board" aria-label="Общая доска"></canvas><div id="chips"></div><div class="ring" id="ring"></div><div id="docks"></div>' +
+      '<div class="hint" id="hint">' + (compact() ? 'Доска бесконечная. Пальцем рисуем, двумя пальцами — двигаем и масштабируем. Масштаб — внизу справа, PNG и PDF' + (role === 'tutor' ? ', задачи и материалы' : '') + ' — в «Меню». Длинное задание — кнопкой «Целиком».'
         : 'Рисуйте сразу. Колесо — прокрутка, Ctrl + колесо — масштаб.' + (role === 'tutor' ? ' Картинку или PDF можно перетащить на доску или вставить Ctrl+V.' : '')) + '</div><span class="sr" aria-live="polite" id="live"></span></div>' +
       '<aside class="drawer" id="drawer" hidden></aside></div>';
     stage = document.getElementById('stage'); layer = document.getElementById('layer'); ringEl = document.getElementById('ring');
@@ -744,6 +780,7 @@ body.lesson{background:#F7F7F8}
     setTimeout(hideHint, 8000); stage.addEventListener('pointerdown', hideHint, { once: true });
     pointer(); wheel(); if (role === 'tutor') dropAndPaste();
     window.addEventListener('resize', function () { resize(); });
+    if (window.ResizeObserver) { var roT = 0; new ResizeObserver(function () { cancelAnimationFrame(roT); roT = requestAnimationFrame(function () { if (stage && (Math.round(stage.clientHeight * dpr) !== canvas.height || Math.round(stage.clientWidth * dpr) !== canvas.width)) resize(); }); }).observe(stage); }
     resize();
     permUi(); callUi();
   }
@@ -856,7 +893,7 @@ body.lesson{background:#F7F7F8}
     var b = null, add = function (x1, y1, x2, y2) { if (!b) b = [x1, y1, x2, y2]; else { b[0] = Math.min(b[0], x1); b[1] = Math.min(b[1], y1); b[2] = Math.max(b[2], x2); b[3] = Math.max(b[3], y2); } };
     var m = model();
     m.items.forEach(function (o) { if (o.t === 'cm') return add(o.x, o.y, o.x, o.y); var x = B.box(ctx, o); if (x) add(x[0], x[1], x[2], x[3]); });   // значок комментария — точка: его размер зависит от масштаба
-    document.querySelectorAll('#cards > div').forEach(function (el) { add(el.offsetLeft, el.offsetTop, el.offsetLeft + el.offsetWidth, el.offsetTop + el.offsetHeight); });
+    m.cards.forEach(function (c) { var cb = cardBoxW(c); add(cb[0], cb[1], cb[2], cb[3]); });   // из модели: при входе задачи ещё не на странице
     return b;
   }
   function showAll(initial) {
@@ -1113,6 +1150,42 @@ body.lesson{background:#F7F7F8}
     frameMs = performance.now() - t0; lastMode = mode;
     var key = JSON.stringify([m.cards.map(function (c) { return [c.id, c.x, c.y, c.w, c.r, c.fx, c.fy, c.cr]; }), m.locks]);
     if (key !== cardsKey) { cardsKey = key; drawCards(m.cards); }
+    chipsUi(m);
+  }
+  function openTask(head, text, fig) {
+    closeTask();
+    var o = document.createElement('div'); o.className = 'tview'; o.id = 'tview'; o.setAttribute('role', 'dialog'); o.setAttribute('aria-modal', 'true'); o.setAttribute('aria-label', head || 'Задание');
+    o.innerHTML = '<div class="tv-card"><div class="tv-hd"><b>' + esc(head || 'Задание') + '</b><button class="tv-x" aria-label="Закрыть">×</button></div>' +
+      '<div class="tv-body"><div class="tv-tx">' + esc(text || '') + '</div>' + (fig ? '<img src="' + esc(fig) + '" alt="Рисунок к заданию">' : '') + '</div></div>';
+    document.body.appendChild(o); A.math(o);
+    o.addEventListener('click', function (e) { if (e.target === o || e.target.closest('.tv-x')) closeTask(); });
+    o.addEventListener('pointerdown', function (e) { e.stopPropagation(); });
+    var x = o.querySelector('.tv-x'); try { x.focus({ preventScroll: true }); } catch (e) {}
+  }
+  function closeTask() { var o = document.getElementById('tview'); if (o) o.remove(); }
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && document.getElementById('tview')) { e.stopPropagation(); closeTask(); } }, true);
+  /* на каждом задании на доске — кнопка «Целиком» в углу видимой части: длинное задание можно прочитать, не двигая доску */
+  var chipsKey = '';
+  function chipsUi(m) {
+    var box = document.getElementById('chips'); if (!box || readOnly && !m.cards.length) return;
+    var W2 = stage.clientWidth, H2 = stage.clientHeight, z = view.z, key = [view.x, view.y, z, W2, H2, cardsKey, role].join('|');
+    if (key === chipsKey) return; chipsKey = key;
+    var h = '', dl = document.querySelector('.dock.lesson'), sr = stage.getBoundingClientRect(), dr = dl ? dl.getBoundingClientRect() : null;
+    var avoid = dr && dr.width ? [dr.left - sr.left - 8, dr.bottom - sr.top + 6] : null;     // панель урока справа сверху — кнопка не под ней
+    m.cards.forEach(function (c) {
+      if (c.t !== 'tk') return;
+      var b = cardBoxW(c), x1 = (b[0] - view.x) * z, y1 = (b[1] - view.y) * z, x2 = (b[2] - view.x) * z, y2 = (b[3] - view.y) * z;
+      if (x2 < 40 || y2 < 30 || x1 > W2 - 40 || y1 > H2 - 30) return;
+      var right = Math.min(x2 - (role === 'tutor' ? 60 * z + 6 : 6), W2 - 8 - railW()), top = Math.min(Math.max(y1 + 6, 6 + (compact() ? 0 : 0)), y2 - 42);
+      if (avoid && top < avoid[1] && right > avoid[0]) right = avoid[0];
+      if (right - x1 < 100) return;
+      h += '<button class="chip" data-tv="' + esc(c.id) + '" style="left:' + Math.round(right) + 'px;top:' + Math.round(top) + 'px" aria-label="Задание целиком: ' + esc(c.head) + '">Целиком</button>';
+    });
+    box.innerHTML = h;
+    box.querySelectorAll('[data-tv]').forEach(function (bt) {
+      bt.addEventListener('pointerdown', function (e) { e.stopPropagation(); });
+      bt.onclick = function () { var c = model().cards.filter(function (x) { return x.id === bt.dataset.tv; })[0]; if (c) openTask(c.head, c.text, c.fig); };
+    });
   }
   function cardHtml(c) {
     var cls = (role === 'tutor' ? ' tutor' : '') + (c.id === calledCard ? ' called' : '') + (model().locks[c.id] ? ' locked' : ''), tail = '<span class="lockb" aria-hidden="true">закреплено</span><i class="hdl" aria-hidden="true"></i><b class="del" aria-hidden="true">×</b></div>';
@@ -2607,11 +2680,12 @@ body.lesson{background:#F7F7F8}
         var bl = document.getElementById('bl'), part = list.slice(0, bf.off + 15);
         bl.innerHTML = '<p class="muted" style="margin-top:6px">Задач: ' + list.length + '</p>' + part.map(function (it, i) {
           return '<div class="mini"><div class="tx">' + esc(it.text) + '</div>' + (it.fig ? '<img src="' + esc(it.fig) + '" alt="" loading="lazy">' : '') +
-            '<div class="row" style="justify-content:space-between;margin-top:6px"><span class="muted">ответ: ' + esc(it.ans) + '</span><button class="b sm" data-k="' + i + '">На доску</button></div></div>'; }).join('') +
+            '<div class="row" style="justify-content:space-between;margin-top:6px"><span class="muted">ответ: ' + esc(it.ans) + '</span><span class="row" style="gap:6px"><button class="b sm sec" data-full="' + i + '">Целиком</button><button class="b sm" data-k="' + i + '">На доску</button></span></div></div>'; }).join('') +
           (part.length < list.length ? '<button class="b sec" id="bmore" style="margin-top:8px;width:100%">Ещё задачи</button>' : '');
         A.math(bl);
         on('bmore', function () { bf.off += 15; bankList(b); });
         bl.querySelectorAll('[data-k]').forEach(function (btn) { btn.onclick = function () { place(part[+btn.dataset.k], b); }; });
+        bl.querySelectorAll('[data-full]').forEach(function (btn) { btn.onclick = function () { var it = part[+btn.dataset.full]; openTask(b[1] + ' · №' + bf.n, it.text, it.fig); }; });
       }).catch(function () { document.getElementById('bl').innerHTML = '<p class="muted" style="margin-top:8px">Не получилось загрузить задачи этого номера.</p>'; });
   }
   function topicFilter(list, nm, b) {                  // тема задачи в номере (профиль — g, остальные — tp из bank_topics); у профиля внутри темы ещё тип
@@ -2675,7 +2749,7 @@ body.lesson{background:#F7F7F8}
   function rvCard(it, key, cls, sub) {
     return '<article class="rvc ' + cls + (it.placed ? ' on' : '') + '" draggable="true" data-rv="' + key + '"><div class="hd">' + esc(it.head) + '</div><div class="muted">' + esc(sub) + '</div>' +
       (it.question ? '<div class="rvq">' + esc(it.question) + '</div>' : '') + '<div class="tx">' + esc(it.text) + '</div>' + (it.fig ? '<img src="' + esc(it.fig) + '" alt="" loading="lazy">' : '') +
-      '<div class="row"><button class="b sm" data-put="' + key + '">' + (it.placed ? 'Ещё раз' : 'На доску') + '</button><button class="b sm blue" data-call="' + key + '">К доске</button>' +
+      '<div class="row"><button class="b sm sec" data-full="' + key + '">Целиком</button><button class="b sm" data-put="' + key + '">' + (it.placed ? 'Ещё раз' : 'На доску') + '</button><button class="b sm blue" data-call="' + key + '">К доске</button>' +
       (it.id && !it.item ? '<button class="b sm sec" data-ok="' + it.id + '">Разобрали</button>' : '') + '</div></article>';
   }
   function drawReview(d) {
@@ -2688,6 +2762,7 @@ body.lesson{background:#F7F7F8}
     on('dx', function () { d.hidden = true; resize(); });
     d.querySelectorAll('[data-rv]').forEach(function (c) { c.ondragstart = function (e) { e.dataTransfer.setData('application/x-anik-review', c.dataset.rv); e.dataTransfer.effectAllowed = 'copy'; }; });
     d.querySelectorAll('[data-put]').forEach(function (b) { b.onclick = function () { placeReview(reviewItem(b.dataset.put)); }; });
+    d.querySelectorAll('[data-full]').forEach(function (b) { b.onclick = function () { var it = reviewItem(b.dataset.full); if (it) openTask(it.head, (it.question ? 'Вопрос ученика: ' + it.question + '\n\n' : '') + it.text, it.fig); }; });
     d.querySelectorAll('[data-call]').forEach(function (b) { b.onclick = function () { var it = reviewItem(b.dataset.call); callStudent(it.placed && cardById(it.placed) ? it.placed : placeReview(it)); }; });
     d.querySelectorAll('[data-ok]').forEach(function (b) {
       b.onclick = function () {
