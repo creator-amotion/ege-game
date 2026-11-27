@@ -111,7 +111,7 @@
   // ───────── «Просит разобрать» ─────────
   function askCard(a, withName) {
     return '<article class="askc"><div class="row" style="justify-content:space-between"><b>' + (withName ? esc(a.student) + ' · ' : '') + esc(a.head) + '</b><span class="tag">' + esc(a.source_label) + '</span></div>' +
-      (a.question ? '<p class="askq">' + esc(a.question) + '</p>' : '') + '<div class="askt">' + esc(a.text) + '</div>' + (a.fig ? '<img src="' + esc(a.fig) + '" alt="Рисунок к задаче" loading="lazy">' : '') +
+      (a.question ? '<p class="askq">' + esc(a.question) + '</p>' : '') + '<div class="askt">' + esc(a.text) + '</div>' + (a.fig ? '<img src="' + esc(figUrl(a.fig)) + '" alt="Рисунок к задаче" loading="lazy">' : '') +
       '<div class="muted">' + (a.answer ? 'ответ ученика: ' + esc(a.answer) + ' · ' : '') + esc(a.when) + '</div>' +
       '<div class="row" style="margin-top:6px"><button class="b sm" data-done="' + a.id + '">Разобрали</button>' + (withName ? '<button class="b sm sec" data-open="' + a.sid + '">К ученику</button>' : '') + '</div></article>';
   }
@@ -356,8 +356,19 @@
   // ───────── свои задания в ДЗ ─────────
   var customDraft = { topic: '', text: '', answer: '', fig: '' }, customSeq = 0;
   function figUrl(f) { return f ? (f.indexOf('/api/') === 0 ? A.API : '') + f : ''; }
+  function isHeic(f) { return /^image\/hei[cf]/i.test(f.type || '') || /\.hei[cf]$/i.test(f.name || ''); }
+  function decodeImage(file) {                              // createImageBitmap, а если не умеет (HEIC в Safari) — через <img>
+    return createImageBitmap(file).catch(function () {
+      return new Promise(function (ok, bad) {
+        var u = URL.createObjectURL(file), im = new Image();
+        im.onload = function () { URL.revokeObjectURL(u); ok(im); };
+        im.onerror = function () { URL.revokeObjectURL(u); bad(new Error(isHeic(file) ? 'heic' : 'decode')); };
+        im.src = u;
+      });
+    });
+  }
   function shrinkImage(file) {                              // картинка: длинная сторона ≤ 1600 px, WebP/JPEG до 1,5 МБ
-    return createImageBitmap(file).then(function (bmp) {
+    return decodeImage(file).then(function (bmp) {
       var k = Math.min(1, 1600 / Math.max(bmp.width, bmp.height)), c = document.createElement('canvas');
       c.width = Math.max(1, Math.round(bmp.width * k)); c.height = Math.max(1, Math.round(bmp.height * k));
       var g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(bmp, 0, 0, c.width, c.height);
@@ -385,7 +396,7 @@
       var f = e.target.files[0]; if (!f) return;
       keep(); say('Загружаю картинку…');
       uploadHwImage(f).then(function (j) { customDraft.fig = j.id; renderBuilder(); document.getElementById('cc').open = true; })
-        .catch(function (err) { say('Картинка не прикрепилась: ' + err.message, true); });
+        .catch(function (err) { say('Картинка не прикрепилась: ' + (err.message === 'heic' ? 'это снимок iPhone в формате HEIC, этот браузер его не открывает. Пришли картинку как JPEG или PNG (на iPhone: «Настройки → Камера → Форматы → Наиболее совместимый») или сделай скриншот снимка' : err.message === 'decode' ? 'файл не открылся как картинка' : err.message), true); });
     };
     var nf = document.getElementById('c-nofig'); if (nf) nf.onclick = function () { keep(); customDraft.fig = ''; renderBuilder(); document.getElementById('cc').open = true; };
     document.getElementById('c-add').onclick = function () {
@@ -442,7 +453,7 @@
       return '<article class="task' + (inBasket(it) ? ' picked' : '') + '"><div class="row" style="justify-content:space-between"><span><b>№' + it.n + '</b> ' +
         (it.topic ? '<span class="tag">' + esc(it.topic) + '</span> ' : '') + '<span class="tag ' + (it.level === 'hard' ? 'red' : it.level === 'fipi' ? 'yel' : '') + '">' + LVL[it.level] + '</span></span>' +
         '<button class="b sm ' + (inBasket(it) ? 'sec' : '') + '" data-i="' + i + '">' + (inBasket(it) ? 'Убрать' : '+ В вариант') + '</button></div>' +
-        '<div class="tx">' + esc(it.text) + '</div>' + (it.fig ? '<img src="' + esc(it.fig) + '" alt="Рисунок к задаче" loading="lazy">' : '') +
+        '<div class="tx">' + esc(it.text) + '</div>' + (it.fig ? '<img src="' + esc(figUrl(it.fig)) + '" alt="Рисунок к задаче" loading="lazy">' : '') +
         '<div class="ans">Ответ: <b>' + esc(it.answer) + '</b> · ' + esc(it.id) + '</div>' +
         (it.sol && it.sol.length ? '<details class="ans"><summary>Решение по шагам</summary><ol style="margin:4px 0 0 20px">' + it.sol.map(function (st) { return '<li>' + esc(st) + '</li>'; }).join('') + '</ol></details>' : '') + '</article>'; }).join('') || '<div class="empty">Ничего не нашлось — измените фильтры.</div>';
     el.querySelectorAll('[data-i]').forEach(function (b) {

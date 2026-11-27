@@ -31,6 +31,10 @@ body.lesson{position:fixed;left:0;right:0;top:var(--app-top,0px);height:100vh;he
 body.lesson .drawer,body.lesson .lmenu,body.lesson .pop,body.lesson .cmbox,body.lesson .fbox,body.lesson .over .card,body.lesson .tv-body{overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-y}
 body.lesson .lmenu,body.lesson .pop{max-height:calc(100% - 8px)}
 body.lesson .cmbox,body.lesson .fbox{max-height:calc(100% - 16px)}
+/* текст заданий можно выделить и скопировать (во «Целиком», в банке, в «К разбору»); запрет — только для доски и панелей */
+body.lesson .tv-body,body.lesson .tv-body *,body.lesson .drawer .tx,body.lesson .drawer .tx *,body.lesson .drawer .rvq{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default;cursor:text}
+.tv-copy{flex:0 0 auto;min-height:44px;padding:0 14px;border:0;border-radius:10px;background:var(--ui-ink,#111);color:#fff;font:600 14px 'Golos Text',sans-serif;cursor:pointer;white-space:nowrap}
+.tv-hd .acts{display:flex;gap:6px;align-items:center;flex-shrink:0}
 body.lesson .over{height:var(--app-h,100dvh);top:var(--app-top,0px);bottom:auto}
 body.lesson .over .card{max-height:calc(var(--app-h,100dvh) - 32px)}
 /* задание целиком: во весь экран, своя прокрутка, крестик */
@@ -98,8 +102,8 @@ body.lesson{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 .tcard .katex{font-size:1.05em}
 .timg{position:absolute;background:#fff;box-shadow:0 0 0 2px var(--line)}
 .timg img{display:block;width:100%;height:100%;object-fit:contain;user-select:none}
-.hdl{position:absolute;right:-3px;bottom:-3px;width:44px;height:44px;background:var(--ink);display:none}
-.del{position:absolute;right:-3px;top:-3px;width:52px;height:52px;background:var(--red);color:#111;font:800 36px/52px var(--display);text-align:center;display:none}
+.hdl{position:absolute;right:-3px;bottom:-3px;width:calc(var(--hdl,32px) / var(--z,1) / var(--ks,1));height:calc(var(--hdl,32px) / var(--z,1) / var(--ks,1));background:var(--ink);display:none}
+.del{position:absolute;right:-3px;top:-3px;width:calc(36px / var(--z,1) / var(--ks,1));height:calc(36px / var(--z,1) / var(--ks,1));background:var(--red);color:#111;font:800 calc(24px / var(--z,1) / var(--ks,1))/calc(36px / var(--z,1) / var(--ks,1)) var(--display);text-align:center;display:none}
 .hand .tutor .hdl,.hand .tutor .del{display:block}
 .hand .tutor{cursor:move;box-shadow:8px 8px 0 var(--blue)}
 .ring{position:absolute;border:2px dashed var(--red);border-radius:50%;pointer-events:none;display:none;background:rgba(229,51,42,.08)}
@@ -325,6 +329,7 @@ body.lesson{background:#F7F7F8}
   .dock.zoom button{min-width:40px;height:40px;padding:0 8px}
   .dock.zoom .zoomv{min-width:48px}
   .hint{bottom:calc(60px + var(--safe-b));max-width:calc(100% - 20px)}
+  #layer{--hdl:44px}                                   /* палец: ручка размера — 44 px */
 }
 </style>
 </head>
@@ -396,6 +401,8 @@ body.lesson{background:#F7F7F8}
   var reviewN = 0, reviewData = null, lastCard = '', atBoard = false, permBefore = 'view', calledAt = 0;
   var localUrls = {};                                  // картинки материалов из копии на устройстве
   function fileUrl(f) { return localUrls[f] || A.API + '/api/file/' + f; }
+  function figSrc(f) { return f && f.indexOf('/api/') === 0 ? A.API + f : f || ''; }
+  var FIG_OK = /^((figs|trainer\/figs)\/[A-Za-z0-9_.-]+|\/api\/file\/f[0-9a-f]{32})$/;
   var IMG_MAX = 1600, IMG_Q = 0.8, FILE_LIMIT = 1500000;  // материалы ужимаются на устройстве репетитора
   var PHONE = window.matchMedia ? window.matchMedia('(max-width:600px), (max-height:500px) and (max-width:1000px) and (orientation:landscape)') : null, SHAPES = ['line', 'arrow', 'rect', 'circle', 'ell', 'tri', 'rhomb', 'star', 'ngon'];
   function compact() { return !!(PHONE && PHONE.matches); }
@@ -415,7 +422,7 @@ body.lesson{background:#F7F7F8}
   window.addEventListener('resize', fitScreen); window.addEventListener('orientationchange', function () { setTimeout(fitScreen, 300); });
   if (tg && tg.onEvent) try { tg.onEvent('viewportChanged', fitScreen); } catch (e) {}
   (function lockPage() {
-    var typing = function (t) { return t && t.closest && t.closest('input,textarea,select,[contenteditable]'); };
+    var typing = function (t) { if (t && t.nodeType === 3) t = t.parentNode; return t && t.closest && t.closest('input,textarea,select,[contenteditable],.tv-body,.drawer .tx,.drawer .rvq'); };
     ['gesturestart', 'gesturechange', 'gestureend'].forEach(function (k) { document.addEventListener(k, function (e) { e.preventDefault(); }, { passive: false }); });
     document.addEventListener('touchmove', function (e) { if (e.touches && e.touches.length > 1) e.preventDefault(); }, { passive: false });
     document.addEventListener('wheel', function (e) { if (e.ctrlKey || e.metaKey) e.preventDefault(); }, { passive: false });
@@ -551,7 +558,7 @@ body.lesson{background:#F7F7F8}
     if (role === 'tutor' && !readOnly) h += '<div class="dock lesson" role="group" aria-label="Урок">' +
       '<button id="bank" class="pri">' + dsvg('bank') + 'Задачи из банка</button>' +
       '<button id="rev">' + dsvg('rev') + 'К разбору' + (reviewN ? '<span class="badge">' + reviewN + '</span>' : '') + '</button>' +
-      '<button id="mat">' + dsvg('mat') + 'Материалы</button><input type="file" id="matf" accept="image/png,image/jpeg,image/webp,application/pdf,.pdf" multiple hidden>' +
+      '<button id="mat">' + dsvg('mat') + 'Материалы</button><input type="file" id="matf" accept="image/png,image/jpeg,image/webp,image/heic,image/heif,.heic,application/pdf,.pdf" multiple hidden>' +
       '<button id="toboard">' + dsvg('board') + (atBoard ? 'Вернуть ученика' : 'Вывести к доске') + '</button></div>';
     h += '<div class="dock pages" id="pages" role="group" aria-label="Страницы урока"></div>';
     h += zoomDock();
@@ -603,7 +610,7 @@ body.lesson{background:#F7F7F8}
       return m;
     }
     if (role === 'tutor' && live) m += '<div class="mh">Урок</div>' + mi('here', 'Позвать сюда') + mi('rev', revText(), 'yel') + mi('bank', 'Задачи из банка', 'yel') + mi('mat', 'Материалы', 'yel') +
-      '<input type="file" id="matf" accept="image/png,image/jpeg,image/webp,application/pdf,.pdf" multiple hidden>' + mi('save', 'Сохранить конспект') + mi('clr', 'Очистить доску');
+      '<input type="file" id="matf" accept="image/png,image/jpeg,image/webp,image/heic,image/heif,.heic,application/pdf,.pdf" multiple hidden>' + mi('save', 'Сохранить конспект') + mi('clr', 'Очистить доску');
     if (live && allowed('pen')) m += '<div class="mh">Рисование</div>' + mi('redo', 'Повторить') + mi('gear', 'Настройки рисования');
     if (live) m += '<div class="mh">Доска</div>' + (INS.some(function (x) { return allowed(x[0]); }) ? mi('ins', allowed('st') ? 'Вставить: наклейка, стикер, формула…' : 'Вопрос комментарием, линейка') : '') + mi('lsn', role === 'tutor' ? 'Фон, таймер, закладки' : 'Закладки и фокус');
     m += '<div class="mh">Вид</div>' + mi('zhome', 'К началу доски', 'full') + (readOnly ? '<div class="mh">Конспект</div>' + mi('play', 'Проиграть урок', 'yel') + mi('tocb', 'Оглавление') : '') + '<div class="mh">Скачать доску</div>' + mi('png', 'PNG') + mi('pdf', 'PDF');
@@ -946,7 +953,7 @@ body.lesson{background:#F7F7F8}
     var hidden = {}, items = [], strokes = {}, cards = [], moves = {}, xfs = [], threads = {}, locks = {}, zos = [], bg = 'dots', timer = null, bms = [], rec = null;
     ops.forEach(function (o) { if (o.t === 'undo') hidden[o.s] = 1; else if (o.t === 'rdo') delete hidden[o.s]; });
     ops.forEach(function (o) {
-      if (o.t === 'mv') { moves[o.s] = o; return; }
+      if (o.t === 'mv') { if (!hidden[o.id]) moves[o.s] = o; return; }     // отменённый сдвиг/размер карточки не действует
       if (o.t === 'clr') {                                    // новая доска — очистить всё; старый лист — только его
         var keep = function (x) { return '_pg' in o ? x._pg !== o._pg : false; };
         items = items.filter(keep); cards = cards.filter(keep);
@@ -976,7 +983,7 @@ body.lesson{background:#F7F7F8}
           for (var i = k; i < p.length; i++) g.p.push(p[i]);
           ['pr', 'ta'].forEach(function (f) { if (g[f]) { if (o[f]) g[f] = g[f].concat(o[f].slice(k / 2)); else delete g[f]; } });
         }
-      } else if (o.t === 'tk' || o.t === 'im') { if (!hidden[o.id]) cards.push(Object.assign({}, o)); }
+      } else if (o.t === 'tk' || o.t === 'im') { if (!hidden[o.id]) cards.push(Object.assign({}, o, { w0: o.w })); }
       else if (CANVAS_T[o.t] && !hidden[o.id]) items.push(Object.assign({}, o));
     });
     items = items.filter(function (x) { return x.t !== 'ln' || strokes[x.s] === x; });
@@ -1132,6 +1139,7 @@ body.lesson{background:#F7F7F8}
     var t0 = performance.now(), z = view.z, k = z * dpr;
     view.x = Math.round(view.x * k) / k; view.y = Math.round(view.y * k) / k;       // сдвиг — целыми пикселями экрана: картинку можно переносить без размытия
     layer.style.transform = 'translate(' + (-view.x * z) + 'px,' + (-view.y * z) + 'px) scale(' + z + ')';
+    layer.style.setProperty('--z', z);
     var zv = document.getElementById('zv'); if (zv) zv.textContent = Math.round(z / fitZ() * 100) + '%';
     pagesUi();
     var m = model(); B.viewZ = z;
@@ -1155,13 +1163,56 @@ body.lesson{background:#F7F7F8}
   function openTask(head, text, fig) {
     closeTask();
     var o = document.createElement('div'); o.className = 'tview'; o.id = 'tview'; o.setAttribute('role', 'dialog'); o.setAttribute('aria-modal', 'true'); o.setAttribute('aria-label', head || 'Задание');
-    o.innerHTML = '<div class="tv-card"><div class="tv-hd"><b>' + esc(head || 'Задание') + '</b><button class="tv-x" aria-label="Закрыть">×</button></div>' +
-      '<div class="tv-body"><div class="tv-tx">' + esc(text || '') + '</div>' + (fig ? '<img src="' + esc(fig) + '" alt="Рисунок к заданию">' : '') + '</div></div>';
+    o.innerHTML = '<div class="tv-card"><div class="tv-hd"><b>' + esc(head || 'Задание') + '</b><span class="acts"><button class="tv-copy">Скопировать текст</button><button class="tv-x" aria-label="Закрыть">×</button></span></div>' +
+      '<div class="tv-body"><div class="tv-tx">' + esc(text || '') + '</div>' + (fig ? '<img src="' + esc(figSrc(fig)) + '" alt="Рисунок к заданию">' : '') + '</div></div>';
     document.body.appendChild(o); A.math(o);
     o.addEventListener('click', function (e) { if (e.target === o || e.target.closest('.tv-x')) closeTask(); });
+    o.querySelector('.tv-copy').onclick = function () {
+      var b = this; copyText(readableTex(text || '')).then(function () { b.textContent = 'Скопировано'; }, function () { b.textContent = 'Выдели текст и скопируй'; });
+      setTimeout(function () { if (b.isConnected) b.textContent = 'Скопировать текст'; }, 2500);
+    };
     o.addEventListener('pointerdown', function (e) { e.stopPropagation(); });
     var x = o.querySelector('.tv-x'); try { x.focus({ preventScroll: true }); } catch (e) {}
   }
+  /* формулы $…$ (LaTeX) → читаемый текст: ½ не нужен, достаточно понятных скобок и знаков */
+  function readableTex(src) {
+    var SYM = { cdot: '·', times: '×', div: '÷', le: '≤', leq: '≤', ge: '≥', geq: '≥', ne: '≠', neq: '≠', pm: '±', mp: '∓', approx: '≈', pi: 'π', infty: '∞', alpha: 'α', beta: 'β', gamma: 'γ', delta: 'δ', varphi: 'φ', phi: 'φ', lambda: 'λ', mu: 'μ', omega: 'ω', Delta: 'Δ',
+      angle: '∠', triangle: '△', parallel: '∥', perp: '⊥', in: '∈', cup: '∪', cap: '∩', circ: '°', degree: '°', to: '→', rightarrow: '→', Rightarrow: '⇒', Leftrightarrow: '⇔', ldots: '…', dots: '…', quad: ' ', qquad: '  ' };
+    var conv = function (t) {
+      var prev;
+      do {
+        prev = t;
+        t = t.replace(/\\[dt]?frac\{([^{}]*)\}\{([^{}]*)\}/g, function (m, a, b) { return (/^\w+$/.test(a) ? a : '(' + a + ')') + '/' + (/^\w+$/.test(b) ? b : '(' + b + ')'); })
+          .replace(/\\sqrt\[([^\]]*)\]\{([^{}]*)\}/g, '($2)^(1/$1)').replace(/\\sqrt\{([^{}]*)\}/g, '√($1)')
+          .replace(/\\(?:text|mathrm|mathbf|operatorname)\{([^{}]*)\}/g, '$1')
+          .replace(/\^\{\\circ\}/g, '°').replace(/\^\s*\\circ/g, '°').replace(/\^\{([^{}]*)\}/g, function (m, a) { return a.length > 1 ? '^(' + a + ')' : '^' + a; })
+          .replace(/_\{([^{}]*)\}/g, function (m, a) { return a.length > 1 ? '_(' + a + ')' : '_' + a; });
+      } while (t !== prev);
+      return t.replace(/\\left|\\right/g, '').replace(/\\[,;:! ]/g, ' ').replace(/\\([A-Za-z]+)/g, function (m, w) { return SYM[w] != null ? SYM[w] : w; })
+        .replace(/[{}]/g, '').replace(/\s+([,.;:])/g, '$1').replace(/ {2,}/g, ' ').trim();
+    };
+    return String(src).replace(/\$\$([\s\S]+?)\$\$|\$([^$]+)\$/g, function (m, a, b) { return conv(a || b); });
+  }
+  function copyText(t) {
+    if (navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(t).catch(function () { return legacyCopy(t); });
+    return legacyCopy(t);
+  }
+  function legacyCopy(t) {
+    return new Promise(function (ok, bad) {
+      var ta = document.createElement('textarea'); ta.value = t; ta.setAttribute('readonly', ''); ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;font-size:16px';
+      document.body.appendChild(ta); ta.select(); ta.setSelectionRange(0, t.length);
+      var done = false; try { done = document.execCommand('copy'); } catch (e) {}
+      ta.remove(); done ? ok() : bad(new Error('copy'));
+    });
+  }
+  /* обычное копирование выделенного текста: формулы KaTeX уходят читаемым текстом, а не дублями из MathML */
+  document.addEventListener('copy', function (e) {
+    var s = window.getSelection(); if (!s || !s.rangeCount || !e.clipboardData) return;
+    var frag = s.getRangeAt(0).cloneContents(); if (!frag.querySelector || !frag.querySelector('.katex')) return;
+    frag.querySelectorAll('.katex').forEach(function (k) { var an = k.querySelector('annotation'); k.replaceWith(document.createTextNode(an ? readableTex('$' + an.textContent + '$') : (k.querySelector('.katex-html') || k).textContent)); });
+    var d = document.createElement('div'); d.appendChild(frag);
+    e.clipboardData.setData('text/plain', d.textContent); e.preventDefault();
+  });
   function closeTask() { var o = document.getElementById('tview'); if (o) o.remove(); }
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && document.getElementById('tview')) { e.stopPropagation(); closeTask(); } }, true);
   /* на каждом задании на доске — кнопка «Целиком» в углу видимой части: длинное задание можно прочитать, не двигая доску */
@@ -1176,7 +1227,7 @@ body.lesson{background:#F7F7F8}
       if (c.t !== 'tk') return;
       var b = cardBoxW(c), x1 = (b[0] - view.x) * z, y1 = (b[1] - view.y) * z, x2 = (b[2] - view.x) * z, y2 = (b[3] - view.y) * z;
       if (x2 < 40 || y2 < 30 || x1 > W2 - 40 || y1 > H2 - 30) return;
-      var right = Math.min(x2 - (role === 'tutor' ? 60 * z + 6 : 6), W2 - 8 - railW()), top = Math.min(Math.max(y1 + 6, 6 + (compact() ? 0 : 0)), y2 - 42);
+      var right = Math.min(x2 - (role === 'tutor' ? 46 : 6), W2 - 8 - railW())          // у репетитора справа в углу — крестик карточки (36 px), top = Math.min(Math.max(y1 + 6, 6 + (compact() ? 0 : 0)), y2 - 42);
       if (avoid && top < avoid[1] && right > avoid[0]) right = avoid[0];
       if (right - x1 < 100) return;
       h += '<button class="chip" data-tv="' + esc(c.id) + '" style="left:' + Math.round(right) + 'px;top:' + Math.round(top) + 'px" aria-label="Задание целиком: ' + esc(c.head) + '">Целиком</button>';
@@ -1195,8 +1246,9 @@ body.lesson{background:#F7F7F8}
       return '<div class="timg' + cls + '" data-id="' + esc(c.id) + '" style="left:' + c.x + 'px;top:' + c.y + 'px;width:' + d[0] + 'px;height:' + d[1] + 'px"><div class="clip" style="left:' + (d[0] - w) / 2 + 'px;top:' + (d[1] - h) / 2 + 'px;width:' + w + 'px;height:' + h + 'px;transform:' + tf + '">' +
         '<img src="' + esc(fileUrl(c.f)) + '" crossorigin="anonymous" alt="Материал урока" draggable="false" style="width:' + (w / vw) + 'px;height:' + (h / vh) + 'px;left:' + (-cr[0] * w / vw) + 'px;top:' + (-cr[1] * h / vh) + 'px"></div>' + tail;
     }
-    return '<div class="tcard' + cls + '" data-id="' + esc(c.id) + '" style="left:' + c.x + 'px;top:' + c.y + 'px;width:' + c.w + 'px"><span class="hd">' + esc(c.head) + '</span>' +
-      esc(c.text) + (c.fig ? '<img src="' + esc(c.fig) + '" alt="Рисунок к задаче">' : '') + tail;
+    var ks = c.w0 ? c.w / c.w0 : 1;
+    return '<div class="tcard' + cls + '" data-id="' + esc(c.id) + '" style="left:' + c.x + 'px;top:' + c.y + 'px;width:' + (c.w0 || c.w) + 'px;transform:scale(' + ks + ');transform-origin:0 0;--ks:' + ks + '"><span class="hd">' + esc(c.head) + '</span>' +
+      esc(c.text) + (c.fig ? '<img src="' + esc(figSrc(c.fig)) + '" alt="Рисунок к задаче" crossorigin="anonymous" draggable="false">' : '') + tail;
   }
   function drawCards(cards) {
     var box = document.getElementById('cards');
@@ -1390,7 +1442,7 @@ body.lesson{background:#F7F7F8}
         var o = shapeOp(a);
         if (Math.hypot(a.a[2] - a.a[0], a.a[3] - a.a[1]) > 4) { o.id = rid(); send(o); did({ show: [o.id] }); }
       } else if (a.kind === 'move' || a.kind === 'size') {
-        if (a.moved) sendMv(a.card, {}); else if (a.kind === 'move') cardBar(a.card, e);
+        if (a.moved) did({ show: [sendMv(a.card, {})] }); else if (a.kind === 'move') cardBar(a.card, e);
       }
       preview = null; schedule();
     }
@@ -1486,10 +1538,11 @@ body.lesson{background:#F7F7F8}
         var card = model().cards.filter(function (c) { return c.id === els[i].dataset.id; })[0];
         if (!card) return null;
         if (model().locks[card.id]) return { kind: 'cardtap', card: card, sx: e.clientX, sy: e.clientY, vx: view.x, vy: view.y };   // закреплённую тянуть — двигается доска
-        if (e.clientX > r.right - Math.max(28, 52 * view.z) && e.clientY < r.top + Math.max(28, 52 * view.z)) return { kind: 'del', id: card.id };
-        var corner = e.clientX > r.right - Math.max(24, 44 * view.z) && e.clientY > r.bottom - Math.max(24, 44 * view.z);
+        var hit = e.pointerType === 'mouse' ? 32 : 44;           // палец и перо — зона 44 px
+        if (e.clientX > r.right - hit && e.clientY < r.top + hit) return { kind: 'del', id: card.id };
+        var corner = e.clientX > r.right - hit && e.clientY > r.bottom - hit;
         lastCard = card.id;
-        return { kind: corner ? 'size' : 'move', card: card, el: els[i], sx: e.clientX, sy: e.clientY, x0: card.x, y0: card.y, w0: card.w };
+        return { kind: corner ? 'size' : 'move', card: card, el: els[i], sx: e.clientX, sy: e.clientY, x0: card.x, y0: card.y, w0: card.w, h0: cardDims(card)[1] };
       }
     }
     return null;
@@ -1499,8 +1552,12 @@ body.lesson{background:#F7F7F8}
     if (!a.moved && Math.hypot(e.clientX - a.sx, e.clientY - a.sy) < 4) return;
     a.moved = true;
     if (a.kind === 'move') { a.card.x = a.x0 + dx; a.card.y = a.y0 + dy; }
-    else a.card.w = Math.max(a.card.t === 'im' ? 60 : 300, Math.min(8000, a.w0 + dx));
-    if (a.card.t === 'im' && a.kind === 'size') { var tmp = document.createElement('div'); tmp.innerHTML = cardHtml(a.card); var ne = tmp.firstChild; a.el.replaceWith(ne); a.el = ne; return; }
+    else {                                                   // угол: пропорционально — по диагонали, а не только вширь
+      var k = Math.max((a.w0 + dx) / a.w0, (a.h0 + dy) / Math.max(1, a.h0)), base = a.card.w0 || a.w0;
+      var lo = a.card.t === 'im' ? 60 : Math.max(300, base * 0.35), hi = a.card.t === 'im' ? 8000 : Math.min(6000, base * 3);
+      a.card.w = Math.max(lo, Math.min(hi, a.w0 * k));
+    }
+    if (a.kind === 'size') { var tmp = document.createElement('div'); tmp.innerHTML = cardHtml(a.card); var ne = tmp.firstChild; a.el.replaceWith(ne); a.el = ne; A.math(ne); return; }
     a.el.style.left = a.card.x + 'px'; a.el.style.top = a.card.y + 'px'; a.el.style.width = a.card.w + 'px';
   }
 
@@ -1531,15 +1588,23 @@ body.lesson{background:#F7F7F8}
 
   // ───────── выделение: лассо или рамка; двигать, масштаб, поворот, стиль, копия ─────────
   function selItems() { var bk = model().byKey; return sel ? sel.keys.map(function (k) { return bk[k]; }).filter(Boolean) : []; }
+  function selCards() { return sel && sel.cards && sel.cards.length ? model().cards.filter(function (c) { return sel.cards.indexOf(c.id) >= 0; }) : []; }
+  function cardAt(e) {                                      // карточка под точкой экрана (сверху — последняя)
+    var els = document.querySelectorAll('#cards > div');
+    for (var i = els.length - 1; i >= 0; i--) { var r = els[i].getBoundingClientRect(); if (e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom) return els[i].dataset.id; }
+    return null;
+  }
   function unionBox(list) {
     var b = null; list.forEach(function (o) { var x = B.box(ctx, o); if (!x) return; if (!b) b = x.slice(); else { b[0] = Math.min(b[0], x[0]); b[1] = Math.min(b[1], x[1]); b[2] = Math.max(b[2], x[2]); b[3] = Math.max(b[3], x[3]); } });
     return b;
   }
-  function setSel(keys) { sel = { keys: keys }; if (!selItems().length) return clearSel(); selBar(); schedule(); }
+  function setSel(keys, cards) { sel = { keys: keys || [], cards: cards || [] }; if (!selItems().length && !selCards().length) return clearSel(); selBar(); schedule(); }
   function clearSel() { sel = null; selDrag = null; var b = document.getElementById('selbar'); if (b) b.remove(); schedule(); }
   function selGeom() {                                     // рамка выделения на экране и её ручки
-    var list = selItems(); if (!list.length) return null;
-    var b = unionBox(list); if (!b) return null;
+    var list = selItems(), cs = selCards(); if (!list.length && !cs.length) return null;
+    var b = unionBox(list);
+    cs.forEach(function (c) { var x = cardBoxW(c); if (!b) b = x.slice(); else { b[0] = Math.min(b[0], x[0]); b[1] = Math.min(b[1], x[1]); b[2] = Math.max(b[2], x[2]); b[3] = Math.max(b[3], x[3]); } });
+    if (!b) return null;
     var pad = 8 / view.z;
     b = [b[0] - pad, b[1] - pad, b[2] + pad, b[3] + pad];
     return { b: b, cx: (b[0] + b[2]) / 2, cy: (b[1] + b[3]) / 2, rot: [(b[0] + b[2]) / 2, b[1] - 34 / view.z], sz: [b[2], b[3]] };
@@ -1568,7 +1633,7 @@ body.lesson{background:#F7F7F8}
     c.beginPath(); lasso.forEach(function (p, i) { if (i) c.lineTo(p[0], p[1]); else c.moveTo(p[0], p[1]); }); c.closePath(); c.fill(); c.stroke(); c.restore();
   }
   function selStart(e, w) {
-    if (sel && selItems().every(isLocked)) clearSel();
+    if (sel && !selCards().length && selItems().every(isLocked)) clearSel();
     if (sel) {
       var g = selGeom(), near = function (p) { return Math.hypot((p[0] - w[0]) * view.z, (p[1] - w[1]) * view.z) < 22; };
       if (g && near(g.rot)) return { kind: 'xform', mode: 'rot', g: g, a0: Math.atan2(w[1] - g.cy, w[0] - g.cx) };
@@ -1590,10 +1655,15 @@ body.lesson{background:#F7F7F8}
     else if (a.mode === 'scale') { var k = Math.max(0.05, Math.hypot(w[0] - g.b[0], w[1] - g.b[1]) / (a.d0 || 1)); m = B.about(g.b[0], g.b[1], B.scale(k)); }
     else { var ang = Math.atan2(w[1] - g.cy, w[0] - g.cx) - a.a0, st = Math.PI / 12; if (Math.abs(Math.round(ang / st) * st - ang) < 0.05 || e.shiftKey) ang = Math.round(ang / st) * st; m = B.about(g.cx, g.cy, B.rotate(ang)); }
     selDrag = { m: m }; schedule();
+    selCards().forEach(function (c) {                       // карточки двигаются вместе с рамкой
+      var el = document.querySelector('#cards > [data-id="' + c.id + '"]'); if (!el) return;
+      el.style.translate = a.mode === 'move' ? m[4] + 'px ' + m[5] + 'px' : '';
+    });
   }
   function selEnd(a, e) {
     if (a.kind === 'xform') {
       var m = selDrag && selDrag.m; selDrag = null;
+      document.querySelectorAll('#cards > div').forEach(function (el) { el.style.translate = ''; });
       if (m && (Math.abs(m[4]) > 0.5 || Math.abs(m[5]) > 0.5 || Math.abs(m[0] - 1) > 1e-3 || Math.abs(m[1]) > 1e-3)) xformSel(m);
       schedule(); return;
     }
@@ -1604,22 +1674,33 @@ body.lesson{background:#F7F7F8}
     if (tiny) {                                             // касание по объекту — выделить его; по пустому месту — «Вставить»
       var w = toWorld(e), hitIt = model().items.filter(ownable).filter(function (o) { return B.hit(ctx, o, w[0], w[1], 8 / view.z); }).pop();
       if (hitIt) return setSel([keyOf(hitIt)]);
+      var hc = role === 'tutor' && cardAt(e); if (hc && !model().locks[hc]) return setSel([], [hc]);
       if (clip || loadClip()) pasteMenu(e, w);
       return schedule();
     }
     var flat = [].concat.apply([], poly);
     keys = items.filter(function (o) { var s = B.samples(ctx, o), inside = s.filter(function (p) { return B.inPoly(p[0], p[1], flat); }).length; return s.length && inside / s.length >= 0.6; }).map(keyOf);
-    if (keys.length) setSel(keys); else schedule();
+    var cards = role !== 'tutor' ? [] : model().cards.filter(function (c) {           // задания и картинки: обведены больше чем наполовину
+      if (model().locks[c.id]) return false;
+      var b = cardBoxW(c), pts = [[b[0], b[1]], [b[2], b[1]], [b[2], b[3]], [b[0], b[3]], [(b[0] + b[2]) / 2, (b[1] + b[3]) / 2]];
+      return pts.filter(function (p) { return B.inPoly(p[0], p[1], flat); }).length >= 3;
+    }).map(function (c) { return c.id; });
+    if (keys.length || cards.length) setSel(keys, cards); else schedule();
   }
   function xformSel(m) {
-    var id = rid(); m = m.map(function (v, i) { return i < 4 ? Math.round(v * 1e4) / 1e4 : Math.round(v * 10) / 10; });
-    send({ t: 'xf', id: id, s: sel.keys.slice(0, 400), m: m }); did({ show: [id] });
+    m = m.map(function (v, i) { return i < 4 ? Math.round(v * 1e4) / 1e4 : Math.round(v * 10) / 10; });
+    var show = [];
+    if (sel.keys.length) { var id = rid(); send({ t: 'xf', id: id, s: sel.keys.slice(0, 400), m: m }); show.push(id); }
+    var straight = Math.abs(m[1]) < 1e-3 && Math.abs(m[2]) < 1e-3 && m[0] > 0 && m[3] > 0;
+    if (straight) selCards().forEach(function (c) { var p = B.ap(m, c.x, c.y); show.push(sendMv(c, { x: p[0], y: p[1], w: c.w * m[0] })); });
+    if (show.length) did({ show: show });
   }
   function selBar() {
     var old = document.getElementById('selbar'); if (old) old.remove();
     var b = document.createElement('div'); b.className = 'selbar'; b.id = 'selbar'; b.setAttribute('role', 'toolbar'); b.setAttribute('aria-label', 'Выделенное'); b.style.visibility = 'hidden';
-    var list = selItems(), one = list.length === 1 && ['nt', 'mx', 'gr'].indexOf(list[0].t) >= 0;
-    b.innerHTML = list.length && list.every(isLocked) ? '<button data-a="unlock">Открепить</button>' :
+    var list = selItems(), one = list.length === 1 && ['nt', 'mx', 'gr'].indexOf(list[0].t) >= 0, pasteB = (clip || loadClip()) ? '<button data-a="paste">Вставить</button>' : '';
+    b.innerHTML = !list.length ? '<button data-a="copy">Копировать</button>' + pasteB + '<button data-a="dup">Дублировать</button><button data-a="del" class="red">Удалить</button>' :
+      list.every(isLocked) ? '<button data-a="unlock">Открепить</button>' :
       (one ? '<button data-a="edit">Изменить</button>' : '') + '<button data-a="style">Цвет и линия</button><button data-a="copy">Копировать</button><button data-a="cut">Вырезать</button><button data-a="dup">Дублировать</button>' +
       '<button data-a="fh">Отразить ↔</button><button data-a="fv">Отразить ↕</button><button data-a="rot">Повернуть 90°</button>' +
       (role === 'tutor' ? '<button data-a="lock">Закрепить</button><button data-a="up">Вперёд</button><button data-a="down">Назад</button>' : '') + '<button data-a="del" class="red">Удалить</button>';
@@ -1627,8 +1708,9 @@ body.lesson{background:#F7F7F8}
     b.querySelectorAll('[data-a]').forEach(function (x) {
       x.onclick = function () {
         var g = selGeom(); if (!g) return;
-        ({ style: function () { openPop('selstyle'); }, copy: function () { copySel(); toast('Скопировано: вставьте в любом месте этой или другой доски'); }, cut: function () { copySel(); deleteSel(); },
-          dup: function () { copySel(); pasteClip(g.cx + 40 / view.z * 2, g.cy + 40 / view.z * 2); }, fh: function () { xformSel(B.about(g.cx, g.cy, B.scale(-1, 1))); },
+        ({ style: function () { openPop('selstyle'); }, copy: function () { copySel(); selBar(); toast('Скопировано: «Вставить» — рядом, Ctrl+V или касание по пустому месту'); }, cut: function () { copySel(); deleteSel(); },
+          paste: function () { pasteClip(g.cx + 60 / view.z, g.cy + 60 / view.z); },
+          dup: function () { copySel(); pasteClip(g.cx + 60 / view.z, g.cy + 60 / view.z); }, fh: function () { xformSel(B.about(g.cx, g.cy, B.scale(-1, 1))); },
           fv: function () { xformSel(B.about(g.cx, g.cy, B.scale(1, -1))); }, rot: function () { xformSel(B.about(g.cx, g.cy, B.rotate(Math.PI / 2))); }, del: deleteSel,
           edit: function () { var o = selItems()[0]; clearSel(); if (o.t === 'nt') noteEdit(o); else if (o.t === 'mx') mathEdit(o); else graphEdit(o); },
           lock: function () { sel.keys.forEach(function (k) { send({ t: 'lk', id: rid(), s: k, v: 1 }); }); clearSel(); toast('Закреплено: не сдвинется и не сотрётся. Открепить — касанием «Выделением».'); },
@@ -1639,8 +1721,9 @@ body.lesson{background:#F7F7F8}
     stage.appendChild(b);
   }
   function copySel() {
-    var list = selItems(), box = unionBox(list); if (!list.length) return;
-    clip = { ops: list.map(B.bake).filter(Boolean), box: box };
+    var list = selItems(), cs = selCards(), g = selGeom(); if (!list.length && !cs.length) return;
+    var cards = cs.map(function (c) { var o = {}; ['t', 'x', 'y', 'w', 'w0', 'head', 'text', 'fig', 'figs', 'f', 'ar', 'cr', 'r', 'fx', 'fy'].forEach(function (k) { if (c[k] != null) o[k] = c[k]; }); return o; });
+    clip = { ops: list.map(B.bake).filter(Boolean), cards: cards, box: g ? g.b : unionBox(list) };
     try { localStorage.setItem('anik_board_clip', JSON.stringify(clip)); } catch (e) {}
   }
   function loadClip() { try { clip = JSON.parse(localStorage.getItem('anik_board_clip')); } catch (e) { clip = null; } return clip; }
@@ -1652,7 +1735,15 @@ body.lesson{background:#F7F7F8}
       if (!allowed(t)) { skipped++; return; }
       var n = B.bake(Object.assign({}, o, { m: B.translate(dx, dy) })); if (n) keys.push(sendObj(n));
     });
-    if (keys.length) { did({ show: keys }); if (allowed('sel')) { tool !== 'sel' && setTool('sel'); setSel(keys); } }
+    var cids = [], extra = [];
+    (clip.cards || []).forEach(function (c) {                   // задания и картинки ставит только репетитор
+      if (role !== 'tutor') { skipped++; return; }
+      var id = rid(), o = Object.assign({}, c, { id: id, x: Math.round(c.x + dx), y: Math.round(c.y + dy) }); delete o.w0;
+      if (o.t === 'tk' && c.w0 && Math.abs(c.w - c.w0) > 1) { o.w = Math.round(c.w0); send(o); extra.push(sendMv(Object.assign({}, o, { w0: c.w0 }), { w: c.w })); }   // увеличенное задание — тем же масштабом
+      else { o.w = Math.round(o.w); send(o); if (o.t === 'im' && (o.r || o.cr || o.fx || o.fy)) extra.push(sendMv(o, {})); }   // поворот и обрезка картинки — отдельным шагом
+      cids.push(id);
+    });
+    if (keys.length || cids.length) { did({ show: keys.concat(cids, extra) }); if (allowed('sel')) { tool !== 'sel' && setTool('sel'); setSel(keys, cids); } }
     if (skipped) toast('Часть не вставилась: фигуры и текст можно, когда репетитор разрешит «рисует»');
   }
   function pasteMenu(e, w) {
@@ -1664,7 +1755,7 @@ body.lesson{background:#F7F7F8}
     stage.appendChild(b); setTimeout(function () { if (b.isConnected && !sel) b.remove(); }, 4000);
   }
   function deleteSel() {
-    var keys = selItems().map(keyOf); if (!keys.length) return;
+    var keys = selItems().map(keyOf).concat(selCards().map(function (c) { return c.id; })); if (!keys.length) return;
     keys.forEach(function (k) { send({ t: 'undo', id: rid(), s: k }); }); did({ hide: keys }); clearSel();
   }
   /* сменить цвет, толщину, линию, заливку выделенного: новые копии вместо старых (так это можно отменить одним шагом) */
@@ -1698,7 +1789,7 @@ body.lesson{background:#F7F7F8}
   function cardDims(c) {
     var h;
     if (c.t === 'im') { var cr = c.cr || [0, 0, 1, 1]; h = c.w / (c.ar * (cr[2] - cr[0]) / (cr[3] - cr[1])); }
-    else { var el = document.querySelector('#cards > [data-id="' + c.id + '"]'); h = el ? el.offsetHeight : 300; }
+    else { var el = document.querySelector('#cards > [data-id="' + c.id + '"]'); h = (el ? el.offsetHeight : 300) * (c.w0 ? c.w / c.w0 : 1); }   // задание увеличено целиком
     return (c.r || 0) % 180 ? [h, c.w] : [c.w, h];
   }
   function cardBoxW(c) { var d = cardDims(c); return [c.x, c.y, c.x + d[0], c.y + d[1]]; }
@@ -1967,7 +2058,7 @@ body.lesson{background:#F7F7F8}
     var o = { t: 'mv', id: rid(), s: c.id, x: Math.round(c.x), y: Math.round(c.y), w: Math.round(c.w) };
     ['r', 'fx', 'fy', 'cr'].forEach(function (k) { var v = k in ch ? ch[k] : c[k]; if (v) o[k] = v; });
     ['x', 'y', 'w'].forEach(function (k) { if (k in ch) o[k] = Math.round(ch[k]); });
-    send(o);
+    send(o); return o.id;
   }
   function cardBar(card, e) {
     var old = document.getElementById('selbar'); if (old) old.remove();
@@ -2358,7 +2449,7 @@ body.lesson{background:#F7F7F8}
     if (mod && (k === 'c' || k === 'с') && sel) { e.preventDefault(); copySel(); toast('Скопировано'); return; }
     if (mod && (k === 'x' || k === 'ч') && sel) { e.preventDefault(); copySel(); deleteSel(); return; }
     if (mod && (k === 'd' || k === 'в') && sel) { e.preventDefault(); var g = selGeom(); copySel(); if (g) pasteClip(g.cx + 80 / view.z, g.cy + 80 / view.z); return; }
-    if (mod && (k === 'v' || k === 'м') && clip) { e.preventDefault(); var r = stage.getBoundingClientRect(); pasteClip(view.x + r.width / 2 / view.z, view.y + r.height / 2 / view.z); return; }
+    if (mod && (k === 'v' || k === 'м')) return;            // вставку разбирает событие paste: там видно, есть ли в буфере картинка
     if ((e.key === 'Delete' || e.key === 'Backspace') && sel) { e.preventDefault(); deleteSel(); return; }
     if (e.key === 'Escape' && sel) { var pp = document.getElementById('pop'); if (pp && !pp.hidden) return; clearSel(); return; }   // сначала закрывается панель, потом выделение
     if (e.key === 'Escape' && document.body.classList.contains('focus')) { setFocus(false); return; }
@@ -2380,11 +2471,22 @@ body.lesson{background:#F7F7F8}
       if (rv) { var it = reviewItem(rv); if (it) placeReview(it, toWorld(e)); return; }
       var w = toWorld(e); addFiles([].slice.call(e.dataTransfer.files || []), w);
     });
-    document.addEventListener('paste', function (e) {
-      if (document.activeElement && /TEXTAREA|INPUT/.test(document.activeElement.tagName)) return;
-      var files = [].slice.call((e.clipboardData && e.clipboardData.items) || []).filter(function (it) { return it.kind === 'file' && /^image\//.test(it.type); }).map(function (it) { return it.getAsFile(); });
-      if (files.length) { e.preventDefault(); addFiles(files); }
-    });
+  }
+  /* Ctrl+V: скриншот или картинка из буфера системы — на доску (репетитор); иначе — скопированное на доске, рядом со сдвигом */
+  document.addEventListener('paste', function (e) {
+    if (!stage || readOnly || ended) return;
+    if (document.activeElement && /TEXTAREA|INPUT|SELECT/.test(document.activeElement.tagName)) return;
+    var files = [].slice.call((e.clipboardData && e.clipboardData.items) || []).filter(function (it) { return it.kind === 'file' && /^image\//.test(it.type); }).map(function (it) { return it.getAsFile(); });
+    if (files.length) {
+      e.preventDefault();
+      if (role === 'tutor') addFiles(files); else toast('Картинки на доску добавляет репетитор');
+      return;
+    }
+    if (clip || loadClip()) { e.preventDefault(); pasteHere(); }
+  });
+  function pasteHere() {                                   // рядом с выделенным (со сдвигом) или в середину экрана
+    var g = sel && selGeom(), r = stage.getBoundingClientRect();
+    if (g) pasteClip(g.cx + 60 / view.z, g.cy + 60 / view.z); else pasteClip(view.x + r.width / 2 / view.z, view.y + r.height / 2 / view.z);
   }
   function toBlob(c, type, q) { return new Promise(function (ok) { c.toBlob(ok, type, q); }); }
   /* ужать холст в WebP (если браузер не умеет — JPEG) около 0,8; не влезло в 1,5 МБ — ещё раз пожиже */
@@ -2393,8 +2495,19 @@ body.lesson{background:#F7F7F8}
     return enc(IMG_Q).then(function (b) { return b.size <= FILE_LIMIT ? b : enc(0.6); }).then(function (b) { return b.size <= FILE_LIMIT ? b : enc(0.4); });
   }
   function fitCanvas(w, h) { var k = Math.min(1, IMG_MAX / Math.max(w, h)), c = document.createElement('canvas'); c.width = Math.max(1, Math.round(w * k)); c.height = Math.max(1, Math.round(h * k)); return c; }
+  function isHeic(f) { return /^image\/hei[cf]/i.test(f.type || '') || /\.hei[cf]$/i.test(f.name || ''); }
+  function decodeImage(file) {                        // createImageBitmap, а если не умеет (HEIC в Safari) — через <img>
+    return createImageBitmap(file).catch(function () {
+      return new Promise(function (ok, bad) {
+        var u = URL.createObjectURL(file), im = new Image();
+        im.onload = function () { URL.revokeObjectURL(u); ok(im); };
+        im.onerror = function () { URL.revokeObjectURL(u); bad(new Error(isHeic(file) ? 'heic' : 'decode')); };
+        im.src = u;
+      });
+    });
+  }
   function prepImage(file) {                          // любая картинка: длинная сторона ≤ 1600 px, WebP/JPEG ~0,8
-    return createImageBitmap(file).then(function (bmp) {
+    return decodeImage(file).then(function (bmp) {
       var c = fitCanvas(bmp.width, bmp.height), g = c.getContext('2d');
       g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(bmp, 0, 0, c.width, c.height);
       return squeeze(c).then(function (b) { return { blob: b, ar: bmp.width / bmp.height }; });
@@ -2429,8 +2542,8 @@ body.lesson{background:#F7F7F8}
       .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error({ too_large: 'картинка больше 1,5 МБ даже после сжатия', room_full: 'на доске уже много материалов', quota: 'закончилось ваше место для материалов (300 МБ)', bad_type: 'нужен PNG, JPG или PDF', disk_full: 'на сервере мало места, загрузка временно выключена', slow_down: 'слишком часто — подождите минуту' }[j.error] || j.error || 'ошибка'); return j; }); });
   }
   function addFiles(files, at) {
-    files = files.filter(function (f) { return f && (/^image\/(png|jpeg|webp|gif)$/.test(f.type) || f.type === 'application/pdf' || /\.pdf$/i.test(f.name || '')); });
-    if (!files.length) return toast('Подходят картинки PNG, JPG и файлы PDF');
+    files = files.filter(function (f) { return f && (/^image\/(png|jpeg|webp|gif)$/.test(f.type) || isHeic(f) || f.type === 'application/pdf' || /\.pdf$/i.test(f.name || '')); });
+    if (!files.length) return toast('Подходят картинки PNG, JPG, HEIC и файлы PDF');
     var r = stage.getBoundingClientRect(), x = at ? at[0] : view.x + (40 + railW()) / view.z, y = at ? at[1] : view.y + 40 / view.z;
     var w0 = Math.min(1400, Math.max(400, (r.width / view.z) * 0.7)), chain = Promise.resolve(), placed = 0;
     if (!at) document.querySelectorAll('#cards > div').forEach(function (el) {      // не поверх того, что уже лежит
@@ -2458,7 +2571,7 @@ body.lesson{background:#F7F7F8}
       });
     });
     chain.then(function () { busy(); if (placed) { toast('На доске: ' + placed + ' ' + (placed === 1 ? 'материал' : 'материала(ов)') + '. Рукой можно двигать и менять размер.'); setTool('hand'); } })
-      .catch(function (e) { busy(); toast('Не получилось: ' + e.message); });
+      .catch(function (e) { busy(); toast(e.message === 'heic' ? 'Снимок iPhone в формате HEIC этот браузер не открывает: пришлите JPEG или PNG (на iPhone: «Настройки → Камера → Форматы → Наиболее совместимый») или скриншот' : e.message === 'decode' ? 'Файл не открылся как картинка' : 'Не получилось: ' + e.message); });
   }
 
   // ───────── связь с сервером ─────────
@@ -2588,10 +2701,13 @@ body.lesson{background:#F7F7F8}
         } catch (e) {}
         return;
       }
-      g.fillStyle = '#F3EEE2'; g.fillRect(o.x, o.y, o.w, h); g.strokeStyle = '#111'; g.lineWidth = 3; g.strokeRect(o.x, o.y, o.w, h);
-      g.font = '800 24px "Inter Tight", sans-serif'; g.fillStyle = '#F6CE2E'; g.fillRect(o.x + 28, o.y + 22, g.measureText(o.head.toUpperCase()).width + 24, 36);
-      g.fillStyle = '#111'; g.textBaseline = 'top'; g.fillText(o.head.toUpperCase(), o.x + 40, o.y + 28);
-      g.font = '34px "Golos Text", sans-serif'; var yy = wrapText(g, o.text.replace(/\$/g, ''), o.x + 28, o.y + 76, o.w - 56, 49);
+      var ks = o.w0 ? o.w / o.w0 : 1, W0 = o.w0 || o.w;          // задание увеличено целиком: рисуем в исходном размере и масштабируем
+      g.save(); g.translate(o.x, o.y); g.scale(ks, ks);
+      g.fillStyle = '#F3EEE2'; g.fillRect(0, 0, W0, h); g.strokeStyle = '#111'; g.lineWidth = 3; g.strokeRect(0, 0, W0, h);
+      g.font = '800 24px "Inter Tight", sans-serif'; g.fillStyle = '#F6CE2E'; g.fillRect(28, 22, g.measureText(o.head.toUpperCase()).width + 24, 36);
+      g.fillStyle = '#111'; g.textBaseline = 'top'; g.fillText(o.head.toUpperCase(), 40, 28);
+      g.font = '34px "Golos Text", sans-serif'; wrapText(g, readableTex(o.text), 28, 76, W0 - 56, 49);
+      g.restore();
       var img = el && el.querySelector('img'); if (img && img.complete) { var r = img.getBoundingClientRect(), er = el.getBoundingClientRect(); try { g.drawImage(img, o.x + (r.left - er.left) / view.z, o.y + (r.top - er.top) / view.z, r.width / view.z, r.height / view.z); } catch (e) {} }
     });
     var vz = B.viewZ; B.viewZ = 1; drawAll(g, model().items); B.viewZ = vz;
@@ -2679,7 +2795,7 @@ body.lesson{background:#F7F7F8}
         if (bf.fig) list = list.filter(function (it) { return it.fig; });
         var bl = document.getElementById('bl'), part = list.slice(0, bf.off + 15);
         bl.innerHTML = '<p class="muted" style="margin-top:6px">Задач: ' + list.length + '</p>' + part.map(function (it, i) {
-          return '<div class="mini"><div class="tx">' + esc(it.text) + '</div>' + (it.fig ? '<img src="' + esc(it.fig) + '" alt="" loading="lazy">' : '') +
+          return '<div class="mini"><div class="tx">' + esc(it.text) + '</div>' + (it.fig ? '<img src="' + esc(figSrc(it.fig)) + '" alt="" loading="lazy">' : '') +
             '<div class="row" style="justify-content:space-between;margin-top:6px"><span class="muted">ответ: ' + esc(it.ans) + '</span><span class="row" style="gap:6px"><button class="b sm sec" data-full="' + i + '">Целиком</button><button class="b sm" data-k="' + i + '">На доску</button></span></div></div>'; }).join('') +
           (part.length < list.length ? '<button class="b sec" id="bmore" style="margin-top:8px;width:100%">Ещё задачи</button>' : '');
         A.math(bl);
@@ -2716,7 +2832,7 @@ body.lesson{background:#F7F7F8}
     var it = t;
     if (!at) document.querySelectorAll('#cards > div').forEach(function (el) { if (el.offsetLeft < x + w && el.offsetLeft + el.offsetWidth > x && el.offsetTop < y + 200 && el.offsetTop + el.offsetHeight > y - 40) y = Math.max(y, el.offsetTop + el.offsetHeight + 40); });
     if (y + 200 > view.y + r.height / view.z) { view.y = y - 40 / view.z; schedule(); }
-    var fig = /^(figs|trainer\/figs)\/[A-Za-z0-9_.-]+$/.test(it.fig) ? it.fig : '';
+    var fig = FIG_OK.test(it.fig || '') ? it.fig : '';            // и рисунок банка, и картинка своего задания
     var id = rid(), op = { t: 'tk', id: id, x: x, y: y, w: w, head: String(t.head).slice(0, 120), text: it.text.slice(0, 3900), fig: fig };
     if (t.ask) op.ask = t.ask;
     did({ show: [id] }); lastCard = id;
@@ -2748,7 +2864,7 @@ body.lesson{background:#F7F7F8}
   }
   function rvCard(it, key, cls, sub) {
     return '<article class="rvc ' + cls + (it.placed ? ' on' : '') + '" draggable="true" data-rv="' + key + '"><div class="hd">' + esc(it.head) + '</div><div class="muted">' + esc(sub) + '</div>' +
-      (it.question ? '<div class="rvq">' + esc(it.question) + '</div>' : '') + '<div class="tx">' + esc(it.text) + '</div>' + (it.fig ? '<img src="' + esc(it.fig) + '" alt="" loading="lazy">' : '') +
+      (it.question ? '<div class="rvq">' + esc(it.question) + '</div>' : '') + '<div class="tx">' + esc(it.text) + '</div>' + (it.fig ? '<img src="' + esc(figSrc(it.fig)) + '" alt="" loading="lazy">' : '') +
       '<div class="row"><button class="b sm sec" data-full="' + key + '">Целиком</button><button class="b sm" data-put="' + key + '">' + (it.placed ? 'Ещё раз' : 'На доску') + '</button><button class="b sm blue" data-call="' + key + '">К доске</button>' +
       (it.id && !it.item ? '<button class="b sm sec" data-ok="' + it.id + '">Разобрали</button>' : '') + '</div></article>';
   }
