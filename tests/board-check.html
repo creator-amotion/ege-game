@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Проверка доски</title>
+<style>
+  body { font: 15px/1.45 system-ui, sans-serif; margin: 16px; color: #1b1b1b; background: #fff; }
+  .ok { color: #1d7a3a; } .bad { color: #b3261e; font-weight: 600; }
+  li { margin: 2px 0; }
+</style>
+<script src="../anik-board.js"></script>
+</head>
+<body>
+<h1 id="sum">Проверка доски…</h1>
+<p>Распознавание ровной линии при удержании пера и место для нового задания (anik-board.js). Открыть в браузере: итог в заголовке и в <code>document.title</code> (OK или FAIL).</p>
+<ul id="out"></ul>
+<script>
+(function () {
+  var B = window.AnikBoard, out = document.getElementById('out'), fails = 0, total = 0;
+  function check(name, ok, info) {
+    total++; if (!ok) fails++;
+    var li = document.createElement('li'); li.className = ok ? 'ok' : 'bad';
+    li.textContent = (ok ? 'да  ' : 'НЕТ ') + name + (info ? ' — ' + info : ''); out.appendChild(li);
+  }
+  var seed = 7; function rnd() { seed = (seed * 16807) % 2147483647; return seed / 2147483647 - 0.5; }
+  function mk(n, f) { var p = []; for (var i = 0; i <= n; i++) { var q = f(i / n); p.push(q[0], q[1]); } return p; }
+  function hold(x, y, n) { return mk(n, function () { return [x + rnd() * 4, y + rnd() * 4]; }); }   // перо держат на месте: дрожь в пару точек
+
+  // ── 1. Линии выпрямляются, буквы и цифры — нет. Единицы доски = пиксели экрана (масштаб 100%), minLine 48 — как на доске ──
+  var O = { minLine: 48 };
+  var lines = {
+    'ровная горизонталь': mk(40, function (t) { return [100 + 300 * t, 200]; }),
+    'дрожащая линия': mk(60, function (t) { return [100 + 300 * t, 200 + 6 * Math.sin(t * 9) + rnd() * 3]; }),
+    'линия с удержанием пера в конце': mk(50, function (t) { return [100 + 250 * t, 200 + rnd() * 2]; }).concat(hold(350, 200, 40)),
+    'наклонная с удержанием': mk(50, function (t) { return [100 + 200 * t, 100 + 150 * t + rnd() * 3]; }).concat(hold(300, 250, 30)),
+    'с крючком в начале': mk(6, function (t) { return [100 - 8 * t, 200 + 10 * t]; }).concat(mk(60, function (t) { return [92 + 300 * t, 210 + rnd() * 3]; })),
+    'вертикаль снизу вверх': mk(50, function (t) { return [300 + rnd() * 3, 500 - 260 * t]; }).concat(hold(300, 240, 20))
+  };
+  Object.keys(lines).forEach(function (k) { var r = B.recognize(lines[k], O); check('выпрямляется: ' + k, !!r && r.k === 'line', r ? r.k + ' ' + r.a.map(Math.round).join(',') : 'нет фигуры'); });
+  var lv = B.recognize(lines['ровная горизонталь'].map(function (v, i) { return i % 2 ? v + (i / 2) * 0.12 : v; }), O);   // наклон около 1°
+  check('почти горизонталь становится горизонталью', !!lv && Math.abs(lv.a[1] - lv.a[3]) < 0.5, lv && lv.a.map(Math.round).join(','));
+  var ar = B.recognize(mk(40, function (t) { return [100 + 300 * t, 200 + rnd() * 2]; }).concat(mk(10, function (t) { return [400 - 40 * t, 200 - 30 * t]; })).concat(hold(360, 170, 20)), O);
+  check('стрелка: древко и «галочка» назад', !!ar && ar.k === 'arrow', ar ? ar.k : 'нет фигуры');
+
+  var letters = {
+    'цифра 1': mk(20, function (t) { return [100 + 2 * t, 100 + 30 * t]; }).concat(hold(102, 130, 20)),
+    'буква l': mk(20, function (t) { return [100, 100 + 40 * t]; }).concat(hold(100, 140, 20)),
+    'буква L': mk(15, function (t) { return [100, 100 + 28 * t]; }).concat(mk(10, function (t) { return [100 + 14 * t, 128]; })),
+    'тире': mk(10, function (t) { return [100 + 30 * t, 100]; }).concat(hold(130, 100, 20)),
+    'цифра 7': mk(10, function (t) { return [100 + 24 * t, 100]; }).concat(mk(14, function (t) { return [124 - 14 * t, 100 + 34 * t]; })),
+    'буква о': mk(40, function (t) { return [110 + 10 * Math.cos(t * 6.5), 110 + 12 * Math.sin(t * 6.5)]; }),
+    'дуга': mk(60, function (t) { return [100 + 300 * t, 200 + 60 * Math.sin(t * Math.PI)]; }),
+    'зигзаг': mk(60, function (t) { return [100 + 300 * t, 200 + ((t * 6 | 0) % 2 ? 30 : 0)]; }),
+    'волна': mk(80, function (t) { return [100 + 300 * t, 200 + 25 * Math.sin(t * 12)]; })
+  };
+  Object.keys(letters).forEach(function (k) { var r = B.recognize(letters[k], O); var bad = r && (r.k === 'line' || r.k === 'arrow'); check('не выпрямляется: ' + k, !bad, r ? r.k : 'штрих как есть'); });
+  var big1 = mk(20, function (t) { return [100 + 2 * t, 100 + 30 * t]; }).concat(hold(102, 130, 20)), z = 0.4;   // та же «1» при масштабе 40%: на экране 30 px
+  check('«1» при масштабе 40% не выпрямляется', !B.recognize(big1.map(function (v) { return v / z; }), { minLine: 48 / z }));
+  var circ = mk(60, function (t) { return [300 + 80 * Math.cos(t * 6.3), 300 + 80 * Math.sin(t * 6.3)]; });
+  var rc = B.recognize(circ, O); check('окружность по-прежнему окружность', !!rc && rc.k === 'circle', rc && rc.k);
+  var rect = [].concat(mk(10, function (t) { return [100 + 200 * t, 100]; }), mk(10, function (t) { return [300, 100 + 120 * t]; }), mk(10, function (t) { return [300 - 200 * t, 220]; }), mk(10, function (t) { return [100, 220 - 118 * t]; }));
+  var rr = B.recognize(rect, O); check('прямоугольник по-прежнему прямоугольник', !!rr && rr.k === 'rect', rr && rr.k);
+
+  // ── 2. Место для задания: три подряд на доске с рисунком — ни на рисунок, ни друг на друга ──
+  function cross(a, b) { return a[0] < b[2] && a[2] > b[0] && a[1] < b[3] && a[3] > b[1]; }
+  function run(name, area, drawing, cw, ch, n) {
+    var boxes = drawing.slice(), placed = [], below = 0;
+    for (var i = 0; i < n; i++) {
+      var p = B.freeSpot(boxes, area, cw, ch, 20), b = [p.x, p.y, p.x + cw, p.y + ch];
+      if (p.below) below++;
+      placed.push(b); boxes.push(b);
+    }
+    var hitDraw = placed.some(function (b) { return drawing.some(function (d) { return cross(b, d); }); });
+    var hitEach = placed.some(function (b, i) { return placed.some(function (c, j) { return j > i && cross(b, c); }); });
+    var stacked = placed.every(function (b, i) { return !i || b[1] >= placed[i - 1][1] || b[3] <= placed[i - 1][1]; });
+    check(name + ': не на рисунке', !hitDraw);
+    check(name + ': задания не друг на друге', !hitEach, placed.map(function (b) { return b.map(Math.round).join(','); }).join(' | '));
+    check(name + ': одно под другим (не внахлёст)', stacked);
+    return { placed: placed, below: below };
+  }
+  var area = [0, 0, 1000, 700];
+  var r1 = run('рисунок в середине', area, [[380, 260, 620, 440]], 600, 180, 3);
+  check('рисунок в середине: первое — в видимой части', !r1.below || r1.placed[0][1] < 700 && r1.below < 3);
+  var r2 = run('доска исписана целиком', area, [[0, 0, 1000, 700]], 600, 180, 3);
+  check('исписана целиком: под всем, что есть', r2.placed.every(function (b) { return b[1] >= 700; }) && r2.below === 3);
+  run('штрихи по краям и задание', area, [[0, 0, 300, 120], [700, 560, 1000, 700], [200, 300, 800, 420]], 600, 200, 3);
+  var r4 = run('задание выше экрана', area, [[380, 260, 620, 440]], 600, 900, 2);
+  check('высокое задание не на рисунке', !r4.placed.some(function (b) { return cross(b, [380, 260, 620, 440]); }));
+  var e = B.freeSpot([], area, 600, 180, 20); check('пустая доска: середина видимой части', Math.abs(e.x - 200) < 1 && Math.abs(e.y - 260) < 1 && !e.below);
+
+  var sum = document.getElementById('sum');
+  sum.textContent = fails ? 'Не прошло: ' + fails + ' из ' + total : 'Всё прошло: ' + total;
+  sum.className = fails ? 'bad' : 'ok';
+  document.title = (fails ? 'FAIL ' : 'OK ') + (total - fails) + '/' + total;
+})();
+</script>
+</body>
+</html>

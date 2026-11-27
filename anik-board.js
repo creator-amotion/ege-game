@@ -210,18 +210,41 @@
   function plen(pts) { var L = 0; for (var i = 1; i < pts.length; i++) L += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); return L; }
   /* Удержание пера в конце штриха → идеальная фигура (как в Notability). flat — [x0, y0, x1, y1, …].
      Возвращает {k, a, q?} для операции sh или null, если фигуры не видно. */
-  B.recognize = function (flat) {
+  /* дрожь пера на месте в начале и в конце (перо держат, чтобы получить фигуру) не считается штрихом */
+  function trimEnds(pts, tol) {
+    var a = 0, b = pts.length - 1;
+    while (a < b - 1 && Math.hypot(pts[a + 1][0] - pts[0][0], pts[a + 1][1] - pts[0][1]) < tol) a++;
+    var e = pts[b]; while (b > a + 1 && Math.hypot(pts[b - 1][0] - e[0], pts[b - 1][1] - e[1]) < tol) b--;
+    var out = pts.slice(a, b); out[0] = pts[0]; out.push(e);
+    return out.length >= 2 ? out : pts;
+  }
+  /* почти горизонталь или вертикаль (до 3°) — ровно горизонталь или вертикаль */
+  function levelLine(a) {
+    var dx = a[2] - a[0], dy = a[3] - a[1], ang = Math.atan2(dy, dx), d = Math.hypot(dx, dy), q = Math.round(ang / (Math.PI / 2)) * (Math.PI / 2);
+    if (Math.abs(ang - q) < 3 * Math.PI / 180) { var mx = (a[0] + a[2]) / 2, my = (a[1] + a[3]) / 2, ux = Math.cos(q) * d / 2, uy = Math.sin(q) * d / 2; return [mx - ux, my - uy, mx + ux, my + uy]; }
+    return a;
+  }
+  B.levelLine = levelLine;
+  /* opts.minLine — самая короткая линия (в единицах доски): короче — это штрих буквы или цифры, его не выпрямляем */
+  B.recognize = function (flat, opts) {
     var pts = []; for (var i = 0; i < flat.length; i += 2) pts.push([flat[i], flat[i + 1]]);
     if (pts.length < 3) return null;
-    var L = plen(pts), x1 = Infinity, y1 = Infinity, x2 = -Infinity, y2 = -Infinity;
+    var x1 = Infinity, y1 = Infinity, x2 = -Infinity, y2 = -Infinity;
     pts.forEach(function (p) { x1 = Math.min(x1, p[0]); x2 = Math.max(x2, p[0]); y1 = Math.min(y1, p[1]); y2 = Math.max(y2, p[1]); });
     var D = Math.hypot(x2 - x1, y2 - y1); if (D < 12) return null;
-    var s = pts[0], e = pts[pts.length - 1], closed = Math.hypot(e[0] - s[0], e[1] - s[1]) < Math.max(0.18 * L, 14);
+    pts = trimEnds(pts, Math.max(3, Math.min(12, 0.04 * D)));
+    var L = plen(pts), s = pts[0], e = pts[pts.length - 1], closed = Math.hypot(e[0] - s[0], e[1] - s[1]) < Math.max(0.18 * L, 14);
     if (!closed) {
-      var straight = Math.hypot(e[0] - s[0], e[1] - s[1]);
-      if (straight > 0.9 * L) return { k: 'line', a: [s[0], s[1], e[0], e[1]] };
-      var c3 = B.rdp(pts, 0.08 * D);                         // стрелка: длинное древко и короткая «галочка» на конце
-      if (c3.length >= 4 && Math.hypot(c3[1][0] - c3[0][0], c3[1][1] - c3[0][1]) > 0.55 * L) return { k: 'arrow', a: [c3[0][0], c3[0][1], c3[1][0], c3[1][1]] };
+      var straight = Math.hypot(e[0] - s[0], e[1] - s[1]), minLine = opts && opts.minLine || 0;
+      if (straight < minLine) return null;
+      var dev = 0; pts.forEach(function (p) { dev = Math.max(dev, distSeg(p[0], p[1], s[0], s[1], e[0], e[1])); });
+      if (straight > 0.8 * L && dev < Math.max(4, 0.08 * straight)) return { k: 'line', a: levelLine([s[0], s[1], e[0], e[1]]) };   // дуга не выпрямляется
+      var c3 = B.rdp(pts, 0.08 * D);                         // стрелка: длинное древко и короткая «галочка» назад на конце
+      if (c3.length >= 3) {
+        var sh = Math.hypot(c3[1][0] - c3[0][0], c3[1][1] - c3[0][1]), hk = Math.hypot(c3[2][0] - c3[1][0], c3[2][1] - c3[1][1]);
+        var ux = (c3[1][0] - c3[0][0]) / (sh || 1), uy = (c3[1][1] - c3[0][1]) / (sh || 1), back = -((c3[2][0] - c3[1][0]) * ux + (c3[2][1] - c3[1][1]) * uy) / (hk || 1);
+        if (sh > 0.55 * L && sh >= minLine && hk < 0.45 * sh && back > 0.35) return { k: 'arrow', a: levelLine([c3[0][0], c3[0][1], c3[1][0], c3[1][1]]) };
+      }
       return null;
     }
     var cx = 0, cy = 0; pts.forEach(function (p) { cx += p[0]; cy += p[1]; }); cx /= pts.length; cy /= pts.length;
@@ -250,6 +273,26 @@
     sh.a = sh.a.map(r); if (sh.pp) sh.pp = sh.pp.map(r);
     if (sh.k === 'circle') { sh.a[2] = sh.a[0] + Math.max(step, Math.abs(sh.a[2] - sh.a[0])); sh.a[3] = sh.a[1]; }
     return sh;
+  };
+
+  // ───────── свободное место для нового задания ─────────
+  /* boxes — то, что уже на доске ([x1, y1, x2, y2] в единицах доски), area — видимая часть доски, cw × ch — размер задания, gap — зазор.
+     Сначала середина видимой части, потом ближайшие к ней места (сетка 13 × 13); если места нет — под всем, что есть (below: true).
+     Задание выше видимой части ставится верхом к её верху, если там свободно. */
+  B.freeSpot = function (boxes, area, cw, ch, gap) {
+    var free = function (x, y) { return !boxes.some(function (b) { return x < b[2] + gap && x + cw > b[0] - gap && y < b[3] + gap && y + ch > b[1] - gap; }); };
+    var ax1 = area[0], ay1 = area[1], ax2 = area[2], ay2 = area[3], cx = (ax1 + ax2 - cw) / 2, cy = (ay1 + ay2 - ch) / 2;
+    if (ch <= ay2 - ay1 && cw <= ax2 - ax1) {
+      var n = 12, cand = [[cx, cy]];
+      for (var i = 0; i <= n; i++) for (var j = 0; j <= n; j++) cand.push([ax1 + (ax2 - ax1 - cw) * i / n, ay1 + (ay2 - ay1 - ch) * j / n]);
+      cand.sort(function (a, b) { return Math.hypot(a[0] - cx, a[1] - cy) - Math.hypot(b[0] - cx, b[1] - cy); });
+      for (var k = 0; k < cand.length; k++) if (free(cand[k][0], cand[k][1])) return { x: cand[k][0], y: cand[k][1], below: false };
+    } else {
+      var top = ay1 + gap / 5;
+      if (free(cx, top)) return { x: cx, y: top, below: false };
+    }
+    if (!boxes.length) return { x: cx, y: cy, below: false };
+    return { x: cx, y: Math.max.apply(null, boxes.map(function (b) { return b[3]; })) + 3 * gap, below: true };
   };
 
   // ───────── частичный ластик: разрезать штрих ─────────

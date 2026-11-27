@@ -20,7 +20,7 @@
 <script src="anik-call.js?v=2"></script>
 <script src="tutor-api.js?v=8"></script>
 <script src="anik-notes-store.js?v=1"></script>
-<script src="anik-board.js?v=2"></script>
+<script src="anik-board.js?v=3"></script>
 <style>
 html,body{height:100%}
 body.lesson{display:flex;flex-direction:column;height:100vh;height:100dvh;overflow:hidden}
@@ -908,6 +908,7 @@ body.lesson{background:#F7F7F8}
   }
   function home() { view.z = stage.clientWidth < 600 ? 0.4 : fitZ(); view.x = -(12 + railW()) / view.z; view.y = -12 / view.z; schedule(); }
   function zoomAt(f, sx, sy) {
+    glideT++;
     var r = stage.getBoundingClientRect(); sx = sx == null ? r.width / 2 : sx; sy = sy == null ? r.height / 2 : sy;
     var wx = view.x + sx / view.z, wy = view.y + sy / view.z;
     view.z = Math.max(Z_MIN, Math.min(Z_MAX, view.z * f));
@@ -1322,6 +1323,7 @@ body.lesson{background:#F7F7F8}
     var pts = {}, act = null, pinch = null, gest = null;
     function count(type) { return Object.keys(pts).filter(function (k) { return !type || pts[k].type === type; }).length; }
     canvas.addEventListener('pointerdown', function (e) {
+      glideT++;                                            // своё движение доски важнее плавного переезда к заданию
       if (e.pointerType === 'mouse' && e.button > 0 && e.button !== 1) return;
       if (e.pointerType === 'pen') { lastPen = Date.now(); if (!pref('penSeen', false)) { setPref('penSeen', true); if (pref('finger', null) == null) toast('Стилус найден: пишет он, а палец двигает доску. Поменять — в «настройках рисования».'); } }
       if (e.pointerType === 'touch' && (act && act.pen || penActive() && count('pen'))) return;    // ладонь, пока пишет стилус
@@ -1516,7 +1518,7 @@ body.lesson{background:#F7F7F8}
       if (full.length < 6) return;
       if (a.tool === 'hl') { a.snap = { hl: true, p: [full[0], full[1], full[full.length - 2], full[full.length - 1]] }; preview = { t: 'ln', tool: 'hl', c: a.c, w: a.w, p: a.snap.p }; }
       else {
-        var r = B.recognize(full); if (!r) return;
+        var r = B.recognize(full, { minLine: 48 / view.z }); if (!r) return;   // линия короче 48 px на экране — штрих буквы, не выпрямляем
         if (pref('snap', false)) B.snapPts(r, 50);
         a.snap = r; preview = { t: 'sh', k: r.k, a: r.a, pp: r.pp, c: a.c, w: a.w, d: a.d || undefined };
         if (fillOn && closedShape(r.k)) preview.f = a.c;
@@ -1972,9 +1974,10 @@ body.lesson{background:#F7F7F8}
   function cardDims(c) {
     var h;
     if (c.t === 'im') { var cr = c.cr || [0, 0, 1, 1]; h = c.w / (c.ar * (cr[2] - cr[0]) / (cr[3] - cr[1])); }
-    else { var el = document.querySelector('#cards > [data-id="' + c.id + '"]'); h = (el ? el.offsetHeight : 300) * (c.w0 ? c.w / c.w0 : 1); }   // задание увеличено целиком
+    else { var el = document.querySelector('#cards > [data-id="' + c.id + '"]'); h = (el ? el.offsetHeight : tkH[c.id] || 300) * (c.w0 ? c.w / c.w0 : 1); }   // задание увеличено целиком; только что поставленное ещё не на странице — по замеру
     return (c.r || 0) % 180 ? [h, c.w] : [c.w, h];
   }
+  var tkH = {};
   function cardBoxW(c) { var d = cardDims(c); return [c.x, c.y, c.x + d[0], c.y + d[1]]; }
   function keyBox(k, tmp) {                                   // рамка объекта или карточки по ключу (для связей)
     var m = model(), it = m.byKey[k];
@@ -3025,23 +3028,39 @@ body.lesson{background:#F7F7F8}
     var probe = document.createElement('div'); probe.innerHTML = cardHtml(Object.assign({}, op, { fig: '', figs: null, w: w0, w0: w0, x: -99999, y: -99999 }));
     probe = probe.firstChild; probe.style.visibility = 'hidden'; document.getElementById('cards').appendChild(probe); A.math(probe);
     var h0 = probe.offsetHeight + list.reduce(function (a, f) { return a + figH(f, w0 - 56); }, 0); probe.remove();
-    var hs = h0 * ks * z, x, y;                                  // размер на экране
+    var x, y, glide = null;
     if (at) { x = at[0]; y = at[1]; }
-    else {
-      var sx = v.x1 + (v.x2 - v.x1 - w * z) / 2, sy = hs < v.y2 - v.y1 ? v.y1 + (v.y2 - v.y1 - hs) / 2 : v.y1 + 4;
-      x = view.x + sx / z; y = view.y + sy / z;
-      var cover = function () {                                 // новое задание не ложится ровно на такое же: центры не совпадают — лесенкой вправо-вниз
-        var cx = x + w / 2, cy = y + h0 * ks / 2;
-        return model().cards.some(function (c) { var cb = cardBoxW(c); return Math.abs((cb[0] + cb[2]) / 2 - cx) * z < 40 && Math.abs((cb[1] + cb[3]) / 2 - cy) * z < 40; });
-      };
-      for (var n = 0; n < 3 && cover(); n++) { x += 48 / z; y += 48 / z; }   // не дальше трёх шагов: задание остаётся на виду
-    }
-    op.x = Math.round(x); op.y = Math.round(y); op.w = w0;
+    else { var p = freeSpot(v, w, h0 * ks); x = p[0]; y = p[1]; glide = p[2]; }
+    op.x = Math.round(x); op.y = Math.round(y); op.w = w0; tkH[op.id] = h0;
     send(op); lastCard = op.id;
     var show = [op.id];
     if (Math.abs(w - w0) > 1) show.push(sendMv(Object.assign({}, op, { w0: w0 }), { w: w }));
     did({ show: show });
+    if (glide) glideTo(glide[0], glide[1]);
     return op.id;
+  }
+  /* Свободное место для задания размером cw × ch (единицы доски): штрихи, фигуры, картинки и другие задания не закрываются.
+     Сначала видимая часть доски — середина, потом ближайшие к ней места; нет места — под всем, что есть на доске, и вид плавно едет туда.
+     Возвращает [x, y, вид-куда-ехать или null]. */
+  function freeSpot(v, cw, ch) {
+    var z = view.z, m = model(), boxes = [];
+    m.items.forEach(function (o) { if (o.t === 'cm') return; var b = B.box(ctx, o); if (b) boxes.push(b); });   // значок комментария — точка, его не обходим
+    m.cards.forEach(function (c) { boxes.push(cardBoxW(c)); });
+    var area = [view.x + v.x1 / z, view.y + v.y1 / z, view.x + v.x2 / z, view.y + v.y2 / z], p = B.freeSpot(boxes, area, cw, ch, 20 / z);
+    if (!p.below) return [p.x, p.y, null];
+    var vh = area[3] - area[1], ty = ch < vh ? p.y - (vh - ch) / 2 : p.y - 12 / z;   // вид: задание посередине видимой части (длинное — верхом к верху)
+    return [p.x, p.y, [view.x, ty - v.y1 / z]];
+  }
+  var glideT = 0;
+  function glideTo(x, y) {                                    // плавно сдвинуть вид (масштаб прежний)
+    var x0 = view.x, y0 = view.y, t0 = performance.now(), my = ++glideT;
+    (function step() {
+      if (my !== glideT) return;
+      var k = Math.min(1, (performance.now() - t0) / 420), e = 1 - Math.pow(1 - k, 3);
+      view.x = x0 + (x - x0) * e; view.y = y0 + (y - y0) * e; schedule();
+      if (k < 1) requestAnimationFrame(step); else glideT++;
+    })();
+    setTimeout(function () { if (my === glideT) { glideT++; view.x = x; view.y = y; schedule(); } }, 600);   // вкладка в фоне — кадров нет, вид всё равно на месте
   }
 
   // ───────── «К разбору»: что отметил ученик и его домашка ─────────
@@ -3233,7 +3252,7 @@ body.lesson{background:#F7F7F8}
     else if (m.type === 'bye') { if (pc || incoming) toast('Звонок завершён'); hangup(false); }
   }
   window.addEventListener('pagehide', function () { if (pc) rtc({ type: 'bye' }); });   // не beforeunload: он мешает вернуться к доске из кэша вкладок
-  window.__lesson = { wake: function () { hiddenAt = Date.now() - 5000; wake(); }, pollGen: function () { return pollGen; }, state: function () { var m = model(); return { role: role, perm: perm, ended: ended, ops: ops.length, seq: seq, items: m.items.length, pts: m.items.reduce(function (n, o) { return n + (o.p ? o.p.length : 0); }, 0), cards: m.cards.length, view: view, frameMs: frameMs, mode: lastMode, replay: rp ? { t: Math.round((rp.T - rp.t0) * 10) / 10, playing: rp.playing, segs: rp.segs.map(function (g) { return { dur: g.dur, ok: !!g.el && !g.failed, paused: g.el ? g.el.paused : null, at: g.el ? Math.round(g.el.currentTime * 10) / 10 : null }; }) } : null, tools: [].map.call(document.querySelectorAll('[data-tool]'), function (b) { return b.dataset.tool; }) }; } };
+  window.__lesson = { objs: function () { var m = model(); return { items: m.items.map(function (o) { return { t: o.t, k: o.k, a: o.a, n: o.p ? o.p.length / 2 : 0, box: B.box(ctx, o) }; }), cards: m.cards.map(function (c) { return { id: c.id, box: cardBoxW(c), est: tkH[c.id] || 0, el: (document.querySelector("#cards > [data-id=\"" + c.id + "\"]") || {}).offsetHeight || 0 }; }) }; }, wake: function () { hiddenAt = Date.now() - 5000; wake(); }, pollGen: function () { return pollGen; }, state: function () { var m = model(); return { role: role, perm: perm, ended: ended, ops: ops.length, seq: seq, items: m.items.length, pts: m.items.reduce(function (n, o) { return n + (o.p ? o.p.length : 0); }, 0), cards: m.cards.length, view: view, frameMs: frameMs, mode: lastMode, replay: rp ? { t: Math.round((rp.T - rp.t0) * 10) / 10, playing: rp.playing, segs: rp.segs.map(function (g) { return { dur: g.dur, ok: !!g.el && !g.failed, paused: g.el ? g.el.paused : null, at: g.el ? Math.round(g.el.currentTime * 10) / 10 : null }; }) } : null, tools: [].map.call(document.querySelectorAll('[data-tool]'), function (b) { return b.dataset.tool; }) }; } };
 
   start();
 })();
