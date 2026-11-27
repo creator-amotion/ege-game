@@ -31,7 +31,7 @@ body.lesson{position:fixed;left:0;right:0;top:var(--app-top,0px);height:100vh;he
 body.lesson .drawer,body.lesson .lmenu,body.lesson .pop,body.lesson .cmbox,body.lesson .fbox,body.lesson .over .card,body.lesson .tv-body{overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-y}
 body.lesson .lmenu,body.lesson .pop{max-height:calc(100% - 8px)}
 body.lesson .cmbox,body.lesson .fbox{max-height:calc(100% - 16px)}
-/* текст заданий можно выделить и скопировать (во «Целиком», в банке, в «К разбору»); запрет — только для доски и панелей */
+/* текст заданий можно выделить и скопировать (в тексте задания из меню карточки, в банке, в «К разбору»); запрет — только для доски и панелей */
 body.lesson .tv-body,body.lesson .tv-body *,body.lesson .drawer .tx,body.lesson .drawer .tx *,body.lesson .drawer .rvq{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default;cursor:text}
 .tv-copy{flex:0 0 auto;min-height:44px;padding:0 14px;border:0;border-radius:10px;background:var(--ui-ink,#111);color:#fff;font:600 14px 'Golos Text',sans-serif;cursor:pointer;white-space:nowrap}
 .tv-hd .acts{display:flex;gap:6px;align-items:center;flex-shrink:0}
@@ -47,8 +47,6 @@ body.lesson .over .card{max-height:calc(var(--app-h,100dvh) - 32px)}
 .tv-tx{white-space:pre-wrap;font-size:17px;line-height:1.5;overflow-wrap:anywhere}
 .tv-tx .katex-display{overflow-x:auto;overflow-y:hidden}
 .tv-body img{display:block;max-width:100%;height:auto;margin-top:12px;background:#fff}
-#chips{position:absolute;inset:0;pointer-events:none;z-index:5;overflow:hidden}
-#chips .chip{position:absolute;pointer-events:auto;transform:translateX(-100%);min-height:36px;padding:0 12px;border:0;border-radius:18px;background:var(--ui-ink,#111);color:#fff;font:600 13px 'Golos Text',sans-serif;box-shadow:0 2px 8px rgba(17,17,17,.25);cursor:pointer;white-space:nowrap;touch-action:manipulation}
 /* долгое нажатие не выделяет текст и не открывает «Копировать / Вставить»; поля ввода — как обычно */
 body.lesson,body.lesson *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 body.lesson img,body.lesson canvas,body.lesson svg{-webkit-user-drag:none;user-drag:none}
@@ -96,19 +94,34 @@ body.lesson{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 .stage.drop{outline:4px dashed var(--blue);outline-offset:-8px}
 .stage canvas{position:absolute;left:0;top:0;touch-action:none}
 .layer{position:absolute;left:0;top:0;transform-origin:0 0;pointer-events:none}
+.tcard,.timg{contain:layout style}
 .tcard{position:absolute;background:var(--paper);border:3px solid var(--ink);padding:22px 28px 26px;font-size:34px;line-height:1.45;white-space:pre-wrap;overflow-wrap:anywhere}
 .tcard .hd{display:block;font-family:var(--display);font-size:24px;font-weight:800;letter-spacing:1px;text-transform:uppercase;margin:0 0 10px;background:var(--yellow);padding:4px 12px;width:max-content;max-width:100%}
 .tcard img{display:block;max-width:100%;max-height:900px;margin-top:14px;background:#fff}
 .tcard .katex{font-size:1.05em}
 .timg{position:absolute;background:#fff;box-shadow:0 0 0 2px var(--line)}
 .timg img{display:block;width:100%;height:100%;object-fit:contain;user-select:none}
-.hdl{position:absolute;right:-3px;bottom:-3px;width:calc(var(--hdl,32px) / var(--z,1) / var(--ks,1));height:calc(var(--hdl,32px) / var(--z,1) / var(--ks,1));background:var(--ink);display:none}
-.del{position:absolute;right:-3px;top:-3px;width:calc(36px / var(--z,1) / var(--ks,1));height:calc(36px / var(--z,1) / var(--ks,1));background:var(--red);color:#111;font:800 calc(24px / var(--z,1) / var(--ks,1))/calc(36px / var(--z,1) / var(--ks,1)) var(--display);text-align:center;display:none}
-.hand .tutor .hdl,.hand .tutor .del{display:block}
-.hand .tutor{cursor:move;box-shadow:8px 8px 0 var(--blue)}
+/* ручки карточки — 44 px на экране при любом масштабе доски и карточки (--u — один пиксель экрана), снаружи углов:
+   «×» над правым верхним, «размер» под правым нижним — между ними всегда вся высота карточки */
+#cards>div{--u:calc(1px / var(--z,1) / var(--ks,1))}
+.hdl,.del{position:absolute;right:calc(-2 * var(--u));width:calc(44 * var(--u));height:calc(44 * var(--u));display:none;box-sizing:border-box}
+.hdl{bottom:calc(-52 * var(--u));background:var(--ink)}
+.hdl::after{content:'';position:absolute;inset:calc(12 * var(--u));border-right:calc(3 * var(--u)) solid #fff;border-bottom:calc(3 * var(--u)) solid #fff}
+.del{top:calc(-52 * var(--u));background:var(--red);color:#111;font:800 calc(26 * var(--u))/calc(44 * var(--u)) var(--display);text-align:center}
+.hand .tutor.on .hdl,.hand .tutor.on .del{display:block}
+.hand .tutor{cursor:move}
+.hand .tutor.on{box-shadow:8px 8px 0 var(--blue)}
 .ring{position:absolute;border:2px dashed var(--red);border-radius:50%;pointer-events:none;display:none;background:rgba(229,51,42,.08)}
 .drawer{width:340px;border-left:2px solid var(--ink);background:var(--paper);overflow:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-y;min-height:0;max-height:100%;padding:10px;flex-shrink:0}
 @media (max-width:820px){.drawer{position:absolute;right:0;top:0;bottom:0;width:min(92vw,360px);z-index:10;box-shadow:-6px 0 0 rgba(17,17,17,.15)}}
+/* iPad (Safari): высота вложенных flex-блоков для него «не определена», и панель вырастала по содержимому ниже экрана —
+   конец списка и «Ещё задачи» были недостижимы. Панель привязана к краям области урока, доска сдвигается на её ширину. */
+@media (min-width:821px){.drawer{position:absolute;right:0;top:0;bottom:0;max-height:none;z-index:10}.lmain.dw{padding-right:340px}}
+.drawer{padding-bottom:calc(28px + var(--safe-b))}
+.drawer .tx.more:not(.open){-webkit-mask-image:linear-gradient(#000 70%,transparent);mask-image:linear-gradient(#000 70%,transparent);cursor:pointer}
+.drawer .tx.open{max-height:none}
+.drawer .mini img+img,.drawer .rvc img+img{margin-top:2px}
+.drawer #bmore{min-height:44px}
 .drawer h3{font-family:var(--display);font-size:18px;font-weight:800;display:flex;justify-content:space-between;align-items:center}
 .drawer .x{border:2px solid var(--ink);background:#fff;width:36px;height:36px;font-weight:800;cursor:pointer}
 .mini{background:#fff;padding:10px;margin-top:8px;font-size:14px}
@@ -308,9 +321,9 @@ body.lesson{background:#F7F7F8}
 /* меню «⋯» на компьютере — выпадает из шапки справа */
 .tcard{background:#fff;border:1px solid var(--ui-line);border-radius:18px;box-shadow:0 6px 24px rgba(20,20,40,.08)}
 .tcard .hd{background:#FFF4C2;color:#7A5B00;border-radius:10px;letter-spacing:.5px}
-.timg{border-radius:12px;overflow:hidden;box-shadow:0 0 0 1px var(--ui-line),0 6px 24px rgba(20,20,40,.08)}
-.hand .tutor{box-shadow:0 0 0 3px var(--ui-on-ink),0 6px 24px rgba(20,20,40,.12)}
-.hdl{border-radius:10px;background:var(--ui-on-ink)}.del{border-radius:12px;background:#FDE8E7;color:#B42318}
+.timg{border-radius:12px;box-shadow:0 0 0 1px var(--ui-line),0 6px 24px rgba(20,20,40,.08)}
+.hand .tutor.on{box-shadow:0 0 0 calc(3 * var(--u)) var(--ui-on-ink),0 6px 24px rgba(20,20,40,.12)}
+.hdl{border-radius:calc(10 * var(--u));background:var(--ui-on-ink)}.del{border-radius:calc(12 * var(--u));background:#FDE8E7;color:#B42318;box-shadow:0 0 0 var(--u) #F3B8B4}
 .toast{border-radius:10px;box-shadow:var(--ui-sh)}
 @media (min-width:601px){body.lesson .toast{bottom:76px}}
 .drawer .inp,.drawer select{border:1px solid var(--ui-line);border-radius:9px;background:#fff}
@@ -329,7 +342,6 @@ body.lesson{background:#F7F7F8}
   .dock.zoom button{min-width:40px;height:40px;padding:0 8px}
   .dock.zoom .zoomv{min-width:48px}
   .hint{bottom:calc(60px + var(--safe-b));max-width:calc(100% - 20px)}
-  #layer{--hdl:44px}                                   /* палец: ручка размера — 44 px */
 }
 </style>
 </head>
@@ -403,6 +415,9 @@ body.lesson{background:#F7F7F8}
   function fileUrl(f) { return localUrls[f] || A.API + '/api/file/' + f; }
   function figSrc(f) { return f && f.indexOf('/api/') === 0 ? A.API + f : f || ''; }
   var FIG_OK = /^((figs|trainer\/figs)\/[A-Za-z0-9_.-]+|\/api\/file\/f[0-9a-f]{32})$/;
+  /* все рисунки задания: основной fig и варианты ответа картинками figs (ОГЭ №13 — четыре числовые прямые) */
+  function figList(o) { var l = (o && Array.isArray(o.figs) ? o.figs : []).filter(function (f) { return FIG_OK.test(f); }); if (o && o.fig && l.indexOf(o.fig) < 0) l = [o.fig].concat(l); return l.slice(0, 7); }
+  function figsHtml(list, attr) { return (list || []).map(function (f) { return '<img src="' + esc(figSrc(f)) + '" alt="Рисунок к задаче" ' + (attr || '') + '>'; }).join(''); }
   var IMG_MAX = 1600, IMG_Q = 0.8, FILE_LIMIT = 1500000;  // материалы ужимаются на устройстве репетитора
   var PHONE = window.matchMedia ? window.matchMedia('(max-width:600px), (max-height:500px) and (max-width:1000px) and (orientation:landscape)') : null, SHAPES = ['line', 'arrow', 'rect', 'circle', 'ell', 'tri', 'rhomb', 'star', 'ngon'];
   function compact() { return !!(PHONE && PHONE.matches); }
@@ -775,8 +790,8 @@ body.lesson{background:#F7F7F8}
   function fingerDraws() { var f = pref('finger', null); return f == null ? !pref('penSeen', false) : f; }
   function build() {
     app.innerHTML = (role === 'student' ? '<div class="permbar" id="permbar" role="status"></div>' : '') +
-      '<div class="lmain"><div class="tools" id="tools" role="toolbar" aria-label="Инструменты доски"></div><div class="pop" id="pop" hidden></div><div class="lmenu" id="lmenu" hidden aria-label="Меню урока"></div><div class="stage" id="stage"><div class="layer" id="layer"><div id="cards"></div><div id="mxl"></div></div><canvas id="base" aria-hidden="true"></canvas><canvas id="board" aria-label="Общая доска"></canvas><div id="chips"></div><div class="ring" id="ring"></div><div id="docks"></div>' +
-      '<div class="hint" id="hint">' + (compact() ? 'Доска бесконечная. Пальцем рисуем, двумя пальцами — двигаем и масштабируем. Масштаб — внизу справа, PNG и PDF' + (role === 'tutor' ? ', задачи и материалы' : '') + ' — в «Меню». Длинное задание — кнопкой «Целиком».'
+      '<div class="lmain"><div class="tools" id="tools" role="toolbar" aria-label="Инструменты доски"></div><div class="pop" id="pop" hidden></div><div class="lmenu" id="lmenu" hidden aria-label="Меню урока"></div><div class="stage" id="stage"><div class="layer" id="layer"><div id="cards"></div><div id="mxl"></div></div><canvas id="base" aria-hidden="true"></canvas><canvas id="board" aria-label="Общая доска"></canvas><div class="ring" id="ring"></div><div id="docks"></div>' +
+      '<div class="hint" id="hint">' + (compact() ? 'Доска бесконечная. Пальцем рисуем, двумя пальцами — двигаем и масштабируем. Масштаб — внизу справа, PNG и PDF' + (role === 'tutor' ? ', задачи и материалы' : '') + ' — в «Меню». Длинное задание — «Текст задания» в меню карточки.'
         : 'Рисуйте сразу. Колесо — прокрутка, Ctrl + колесо — масштаб.' + (role === 'tutor' ? ' Картинку или PDF можно перетащить на доску или вставить Ctrl+V.' : '')) + '</div><span class="sr" aria-live="polite" id="live"></span></div>' +
       '<aside class="drawer" id="drawer" hidden></aside></div>';
     stage = document.getElementById('stage'); layer = document.getElementById('layer'); ringEl = document.getElementById('ring');
@@ -827,7 +842,7 @@ body.lesson{background:#F7F7F8}
     var b = e.target.closest && e.target.closest('#lmenu .mi');
     if (b && b.id !== 'zin' && b.id !== 'zout' && b.id !== 'zv') closeMenu();
   });
-  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { closeMenu(); closePop(); } });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { closeMenu(); closePop(); if (stage && cardOn) setCardOn(''); } });
   if (PHONE) {
     var onPhone = function () { if (!stage) return; closeMenu(); renderTools(); permUi(); callUi(); resize(); };
     if (PHONE.addEventListener) PHONE.addEventListener('change', onPhone); else if (PHONE.addListener) PHONE.addListener(onPhone);
@@ -838,6 +853,7 @@ body.lesson{background:#F7F7F8}
   function setTool(t) {
     if (t !== 'er') prevTool = t;
     if (t !== 'sel' && sel) clearSel();
+    if (t !== 'hand') setCardOn(''); hideCardBar(); if (frag) clearFrag();          // смена инструмента убирает выбор и меню карточки
     tool = t; press('[data-tool]', app.querySelector('#tools [data-tool=' + t + ']'));
     var sb = document.getElementById('shapes');
     if (sb) { var isSh = SHAPES.indexOf(t) >= 0; sb.setAttribute('aria-pressed', String(isSh)); if (isSh) { sb.innerHTML = svg(t) + (compact() ? '<small>фигуры</small>' : ''); setPref('shape', t); } }
@@ -879,6 +895,7 @@ body.lesson{background:#F7F7F8}
 
   // ───────── вид: бесконечная доска ─────────
   function resize() {
+    var dw = document.getElementById('drawer'); if (dw) dw.parentNode.classList.toggle('dw', !dw.hidden);   // открытая панель — доска уже на её ширину
     var r = stage.getBoundingClientRect(); dpr = window.devicePixelRatio || 1;
     [canvas, base].forEach(function (c) { if (!c) return; c.width = Math.round(r.width * dpr); c.height = Math.round(r.height * dpr); c.style.width = r.width + 'px'; c.style.height = r.height + 'px'; });
     bv = null; schedule();
@@ -920,8 +937,8 @@ body.lesson{background:#F7F7F8}
     if (go.card) setTimeout(function () { flashCard(go.card); }, 120);
   }
   function flashCard(id) {
-    calledCard = id; cardsKey = ''; schedule();              // рамка переживает перерисовку карточек
-    setTimeout(function () { if (calledCard === id) { calledCard = ''; cardsKey = ''; schedule(); } }, 6000);
+    calledCard = id; cardsKey = ''; cardsM = null; schedule();              // рамка переживает перерисовку карточек
+    setTimeout(function () { if (calledCard === id) { calledCard = ''; cardsKey = ''; cardsM = null; schedule(); } }, 6000);
   }
   function toWorld(e) { var r = canvas.getBoundingClientRect(); return [view.x + (e.clientX - r.left) / view.z, view.y + (e.clientY - r.top) / view.z]; }
   function wheel() {
@@ -1049,7 +1066,7 @@ body.lesson{background:#F7F7F8}
   function schedule() { if (!dirty) { dirty = true; requestAnimationFrame(function () { dirty = false; redraw(); }); } }
 
   // ───────── рисование ─────────
-  var cardsKey = '';
+  var cardsKey = '', cardsM = null, layerT = '', layerZ = 0;
   /* фон (точки, клетка) в прямоугольнике доски; задачи и картинки он не закрывает */
   function grid(c, kind, x0, y0, x1, y1) {
     var z = view.z;
@@ -1138,9 +1155,10 @@ body.lesson{background:#F7F7F8}
     if (!ctx) return;
     var t0 = performance.now(), z = view.z, k = z * dpr;
     view.x = Math.round(view.x * k) / k; view.y = Math.round(view.y * k) / k;       // сдвиг — целыми пикселями экрана: картинку можно переносить без размытия
-    layer.style.transform = 'translate(' + (-view.x * z) + 'px,' + (-view.y * z) + 'px) scale(' + z + ')';
-    layer.style.setProperty('--z', z);
-    var zv = document.getElementById('zv'); if (zv) zv.textContent = Math.round(z / fitZ() * 100) + '%';
+    var lt = 'translate(' + (-view.x * z) + 'px,' + (-view.y * z) + 'px) scale(' + z + ')';
+    if (lt !== layerT) { layerT = lt; layer.style.transform = lt; }      // слой заданий трогаем, только когда вид сдвинулся: при письме карточки не пересчитываются
+    if (z !== layerZ) { layerZ = z; layer.style.setProperty('--z', z); }
+    var zv = document.getElementById('zv'), zt = Math.round(z / fitZ() * 100) + '%'; if (zv && zv.textContent !== zt) zv.textContent = zt;
     pagesUi();
     var m = model(); B.viewZ = z;
     var tmp = selDrag && selDrag.m, mode = 'none';
@@ -1156,15 +1174,24 @@ body.lesson{background:#F7F7F8}
     if (preview) drawItem(ctx, preview);
     drawSel(); drawLasso(); drawLaser(); drawGuides(); updateTimer(); sendView();
     frameMs = performance.now() - t0; lastMode = mode;
-    var key = JSON.stringify([m.cards.map(function (c) { return [c.id, c.x, c.y, c.w, c.r, c.fx, c.fy, c.cr]; }), m.locks]);
-    if (key !== cardsKey) { cardsKey = key; drawCards(m.cards); }
-    chipsUi(m);
+    if (m !== cardsM) {                                         // журнал не менялся — и карточки те же
+      cardsM = m;
+      var key = JSON.stringify([m.cards.map(function (c) { return [c.id, c.x, c.y, c.w, c.r, c.fx, c.fy, c.cr]; }), m.locks]);
+      if (key !== cardsKey) { cardsKey = key; drawCards(m.cards); }
+    }
+  }
+  /* длинное задание в панели читается на месте: касание по тексту раскрывает его целиком (долгое нажатие — выделить и скопировать) */
+  function openLong(box) {
+    box.querySelectorAll('.mini .tx, .rvc .tx').forEach(function (t) {
+      if (t.scrollHeight > t.clientHeight + 4) t.classList.add('more');
+      t.addEventListener('click', function () { var s = window.getSelection && window.getSelection(); if (s && String(s).length) return; t.classList.toggle('open'); });
+    });
   }
   function openTask(head, text, fig) {
     closeTask();
     var o = document.createElement('div'); o.className = 'tview'; o.id = 'tview'; o.setAttribute('role', 'dialog'); o.setAttribute('aria-modal', 'true'); o.setAttribute('aria-label', head || 'Задание');
     o.innerHTML = '<div class="tv-card"><div class="tv-hd"><b>' + esc(head || 'Задание') + '</b><span class="acts"><button class="tv-copy">Скопировать текст</button><button class="tv-x" aria-label="Закрыть">×</button></span></div>' +
-      '<div class="tv-body"><div class="tv-tx">' + esc(text || '') + '</div>' + (fig ? '<img src="' + esc(figSrc(fig)) + '" alt="Рисунок к заданию">' : '') + '</div></div>';
+      '<div class="tv-body"><div class="tv-tx">' + esc(text || '') + '</div>' + figsHtml(Array.isArray(fig) ? fig : fig ? [fig] : []) + '</div></div>';
     document.body.appendChild(o); A.math(o);
     o.addEventListener('click', function (e) { if (e.target === o || e.target.closest('.tv-x')) closeTask(); });
     o.querySelector('.tv-copy').onclick = function () {
@@ -1215,31 +1242,8 @@ body.lesson{background:#F7F7F8}
   });
   function closeTask() { var o = document.getElementById('tview'); if (o) o.remove(); }
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && document.getElementById('tview')) { e.stopPropagation(); closeTask(); } }, true);
-  /* на каждом задании на доске — кнопка «Целиком» в углу видимой части: длинное задание можно прочитать, не двигая доску */
-  var chipsKey = '';
-  function chipsUi(m) {
-    var box = document.getElementById('chips'); if (!box || readOnly && !m.cards.length) return;
-    var W2 = stage.clientWidth, H2 = stage.clientHeight, z = view.z, key = [view.x, view.y, z, W2, H2, cardsKey, role].join('|');
-    if (key === chipsKey) return; chipsKey = key;
-    var h = '', dl = document.querySelector('.dock.lesson'), sr = stage.getBoundingClientRect(), dr = dl ? dl.getBoundingClientRect() : null;
-    var avoid = dr && dr.width ? [dr.left - sr.left - 8, dr.bottom - sr.top + 6] : null;     // панель урока справа сверху — кнопка не под ней
-    m.cards.forEach(function (c) {
-      if (c.t !== 'tk') return;
-      var b = cardBoxW(c), x1 = (b[0] - view.x) * z, y1 = (b[1] - view.y) * z, x2 = (b[2] - view.x) * z, y2 = (b[3] - view.y) * z;
-      if (x2 < 40 || y2 < 30 || x1 > W2 - 40 || y1 > H2 - 30) return;
-      var right = Math.min(x2 - (role === 'tutor' ? 46 : 6), W2 - 8 - railW())          // у репетитора справа в углу — крестик карточки (36 px), top = Math.min(Math.max(y1 + 6, 6 + (compact() ? 0 : 0)), y2 - 42);
-      if (avoid && top < avoid[1] && right > avoid[0]) right = avoid[0];
-      if (right - x1 < 100) return;
-      h += '<button class="chip" data-tv="' + esc(c.id) + '" style="left:' + Math.round(right) + 'px;top:' + Math.round(top) + 'px" aria-label="Задание целиком: ' + esc(c.head) + '">Целиком</button>';
-    });
-    box.innerHTML = h;
-    box.querySelectorAll('[data-tv]').forEach(function (bt) {
-      bt.addEventListener('pointerdown', function (e) { e.stopPropagation(); });
-      bt.onclick = function () { var c = model().cards.filter(function (x) { return x.id === bt.dataset.tv; })[0]; if (c) openTask(c.head, c.text, c.fig); };
-    });
-  }
   function cardHtml(c) {
-    var cls = (role === 'tutor' ? ' tutor' : '') + (c.id === calledCard ? ' called' : '') + (model().locks[c.id] ? ' locked' : ''), tail = '<span class="lockb" aria-hidden="true">закреплено</span><i class="hdl" aria-hidden="true"></i><b class="del" aria-hidden="true">×</b></div>';
+    var cls = (role === 'tutor' ? ' tutor' : '') + (c.id === calledCard ? ' called' : '') + (model().locks[c.id] ? ' locked' : '') + (c.id === cardOn ? ' on' : ''), tail = '<span class="lockb" aria-hidden="true">закреплено</span><i class="hdl" aria-hidden="true"></i><b class="del" aria-hidden="true">×</b></div>';
     if (c.t === 'im') {                                     // обрезка cr — доли исходной картинки; поворот кратен 90°, рамка карточки — уже повёрнутая
       var cr = c.cr || [0, 0, 1, 1], vw = cr[2] - cr[0], vh = cr[3] - cr[1], d = cardDims(c), w = c.w, h = c.w / (c.ar * vw / vh);
       var tf = 'rotate(' + (c.r || 0) + 'deg) scale(' + (c.fx ? -1 : 1) + ',' + (c.fy ? -1 : 1) + ')';
@@ -1248,7 +1252,7 @@ body.lesson{background:#F7F7F8}
     }
     var ks = c.w0 ? c.w / c.w0 : 1;
     return '<div class="tcard' + cls + '" data-id="' + esc(c.id) + '" style="left:' + c.x + 'px;top:' + c.y + 'px;width:' + (c.w0 || c.w) + 'px;transform:scale(' + ks + ');transform-origin:0 0;--ks:' + ks + '"><span class="hd">' + esc(c.head) + '</span>' +
-      esc(c.text) + (c.fig ? '<img src="' + esc(figSrc(c.fig)) + '" alt="Рисунок к задаче" crossorigin="anonymous" draggable="false">' : '') + tail;
+      esc(c.text) + figsHtml(figList(c), 'crossorigin="anonymous" draggable="false"') + tail;
   }
   function drawCards(cards) {
     var box = document.getElementById('cards');
@@ -1321,6 +1325,13 @@ body.lesson{background:#F7F7F8}
       if (e.pointerType === 'mouse' && e.button > 0 && e.button !== 1) return;
       if (e.pointerType === 'pen') { lastPen = Date.now(); if (!pref('penSeen', false)) { setPref('penSeen', true); if (pref('finger', null) == null) toast('Стилус найден: пишет он, а палец двигает доску. Поменять — в «настройках рисования».'); } }
       if (e.pointerType === 'touch' && (act && act.pen || penActive() && count('pen'))) return;    // ладонь, пока пишет стилус
+      if (e.pointerType === 'pen' && count('touch')) {        // перо сильнее ладони: ладонь легла раньше — она не мешает писать («пишет раз через раз»)
+        if (act && act.kind === 'draw') cancelStroke(act);
+        else if (act && (act.kind === 'move' || act.kind === 'size') && act.moved) { act.card.x = act.x0; act.card.y = act.y0; act.card.w = act.w0; cardsKey = ''; cardsM = null; }
+        Object.keys(pts).forEach(function (k) { if (pts[k].type === 'touch') { try { canvas.releasePointerCapture(+k); } catch (er) {} delete pts[k]; } });
+        act = null; pinch = null; gest = null; preview = null;
+      }
+      hideCardBar();                                          // панель карточки закрывается касанием мимо неё
       try { canvas.setPointerCapture(e.pointerId); } catch (er) {}
       pts[e.pointerId] = { x: e.clientX, y: e.clientY, type: e.pointerType, x0: e.clientX, y0: e.clientY };
       if (e.pointerType === 'touch') {
@@ -1342,9 +1353,12 @@ body.lesson{background:#F7F7F8}
       if (gh) { act = { kind: 'guide', g: gh.g, mode: gh.mode, w0: w, x0: gh.g.x, y0: gh.g.y, a0: gh.g.a, p0: Math.atan2(w[1] - gh.g.y, w[0] - gh.g.x) }; return; }
       if (cropMode && role === 'tutor') { var cc = model().cards.filter(function (x) { return x.id === cropMode.id; })[0]; if (cc) { act = { kind: 'crop', card: cc, a: [w[0], w[1], w[0], w[1]] }; return; } cropMode = null; }
       if (t === 'hand') {
+        var pan = { kind: 'pan', sx: e.clientX, sy: e.clientY, vx: view.x, vy: view.y };
+        if (tool !== 'hand') { act = pan; if (role === 'student') followPause = Date.now() + 8000; return; }   // палец или средняя кнопка при пере: только сдвиг доски — задания не открываются и не двигаются
         var tt = tapTarget(w);
         if (tt) { act = { kind: 'tapobj', tt: tt, sx: e.clientX, sy: e.clientY, vx: view.x, vy: view.y }; return; }
-        act = (role === 'tutor' && cardHit(e)) || { kind: 'pan', sx: e.clientX, sy: e.clientY, vx: view.x, vy: view.y };
+        act = (role === 'tutor' && cardHit(e)) || pan;
+        if (act === pan && cardOn) setCardOn('');           // касание пустого места снимает выбор карточки
         if (act.kind === 'del') { send({ t: 'undo', id: rid(), s: act.id }); did({ hide: [act.id] }); act = null; }
         if (role === 'student') followPause = Date.now() + 8000;
         return;
@@ -1432,7 +1446,7 @@ body.lesson{background:#F7F7F8}
       else if (a.kind === 'tap') { if (Math.hypot(e.clientX - a.sx, e.clientY - a.sy) < 10) insTap(a.k, a.w); }
       else if (a.kind === 'box') finishBox(a);
       else if (a.kind === 'crop') { cropMode = null; cropEnd(a.card, a); }
-      else if (a.kind === 'cardtap') cardBar(a.card, e);
+      else if (a.kind === 'cardtap') { setCardOn(a.card.id); cardBar(a.card, e); }
       else if (a.kind === 'cn') {
         var to = objAt(toWorld(e));
         if (to && to !== a.from) { var co = { t: 'cn', id: rid(), a: a.from, b: to, k: pref('cnk', 's'), c: color, w: Math.min(60, width) }; if (pref('cne', 1)) co.e2 = 1; if (pref('cne', 1) === 2) co.e1 = 1; if (dashSt) co.d = dashSt; send(co); did({ show: [co.id] }); }
@@ -1442,6 +1456,7 @@ body.lesson{background:#F7F7F8}
         var o = shapeOp(a);
         if (Math.hypot(a.a[2] - a.a[0], a.a[3] - a.a[1]) > 4) { o.id = rid(); send(o); did({ show: [o.id] }); }
       } else if (a.kind === 'move' || a.kind === 'size') {
+        setCardOn(a.card.id);
         if (a.moved) did({ show: [sendMv(a.card, {})] }); else if (a.kind === 'move') cardBar(a.card, e);
       }
       preview = null; schedule();
@@ -1530,20 +1545,28 @@ body.lesson{background:#F7F7F8}
   }
 
   // задачи и материалы: «Рука» двигает за любое место, угол — размер, красный крестик — убрать (только репетитор)
+  /* ручки «×» и «размер» есть только у выбранной карточки и стоят снаружи её углов: при любом масштабе они 44 px и не сливаются */
+  var cardOn = '';
+  function setCardOn(id) {
+    if (cardOn === id) return; cardOn = id;
+    document.querySelectorAll('#cards > div').forEach(function (el) { el.classList.toggle('on', el.dataset.id === id); });
+    if (!id) hideCardBar();
+  }
+  function inRect(e, el, pad) { if (!el) return false; var r = el.getBoundingClientRect(); return r.width > 0 && e.clientX >= r.left - pad && e.clientX <= r.right + pad && e.clientY >= r.top - pad && e.clientY <= r.bottom + pad; }
   function cardHit(e) {
-    var els = document.querySelectorAll('#cards > div');
+    var els = document.querySelectorAll('#cards > div'), m = model(), pad = e.pointerType === 'mouse' ? 0 : 4;
+    var on = cardOn && document.querySelector('#cards > [data-id="' + cardOn + '"]'), oc = on && m.cards.filter(function (c) { return c.id === cardOn; })[0];
+    if (oc && !m.locks[oc.id]) {
+      if (inRect(e, on.querySelector('.del'), pad)) return { kind: 'del', id: oc.id };
+      if (inRect(e, on.querySelector('.hdl'), pad)) { lastCard = oc.id; return { kind: 'size', card: oc, el: on, sx: e.clientX, sy: e.clientY, x0: oc.x, y0: oc.y, w0: oc.w, h0: cardDims(oc)[1] }; }
+    }
     for (var i = els.length - 1; i >= 0; i--) {
-      var r = els[i].getBoundingClientRect();
-      if (e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom) {
-        var card = model().cards.filter(function (c) { return c.id === els[i].dataset.id; })[0];
-        if (!card) return null;
-        if (model().locks[card.id]) return { kind: 'cardtap', card: card, sx: e.clientX, sy: e.clientY, vx: view.x, vy: view.y };   // закреплённую тянуть — двигается доска
-        var hit = e.pointerType === 'mouse' ? 32 : 44;           // палец и перо — зона 44 px
-        if (e.clientX > r.right - hit && e.clientY < r.top + hit) return { kind: 'del', id: card.id };
-        var corner = e.clientX > r.right - hit && e.clientY > r.bottom - hit;
-        lastCard = card.id;
-        return { kind: corner ? 'size' : 'move', card: card, el: els[i], sx: e.clientX, sy: e.clientY, x0: card.x, y0: card.y, w0: card.w, h0: cardDims(card)[1] };
-      }
+      if (!inRect(e, els[i], 0)) continue;
+      var card = m.cards.filter(function (c) { return c.id === els[i].dataset.id; })[0];
+      if (!card) return null;
+      if (m.locks[card.id]) return { kind: 'cardtap', card: card, sx: e.clientX, sy: e.clientY, vx: view.x, vy: view.y };   // закреплённую тянуть — двигается доска
+      lastCard = card.id;
+      return { kind: 'move', card: card, el: els[i], sx: e.clientX, sy: e.clientY, x0: card.x, y0: card.y, w0: card.w, h0: cardDims(card)[1] };
     }
     return null;
   }
@@ -1554,11 +1577,16 @@ body.lesson{background:#F7F7F8}
     if (a.kind === 'move') { a.card.x = a.x0 + dx; a.card.y = a.y0 + dy; }
     else {                                                   // угол: пропорционально — по диагонали, а не только вширь
       var k = Math.max((a.w0 + dx) / a.w0, (a.h0 + dy) / Math.max(1, a.h0)), base = a.card.w0 || a.w0;
-      var lo = a.card.t === 'im' ? 60 : Math.max(300, base * 0.35), hi = a.card.t === 'im' ? 8000 : Math.min(6000, base * 3);
+      var lo = a.card.t === 'im' ? 60 : Math.max(300, base * 0.35), hi = TK_MAX;          // предел — как у сервера (8000)
       a.card.w = Math.max(lo, Math.min(hi, a.w0 * k));
     }
-    if (a.kind === 'size') { var tmp = document.createElement('div'); tmp.innerHTML = cardHtml(a.card); var ne = tmp.firstChild; a.el.replaceWith(ne); a.el = ne; A.math(ne); return; }
-    a.el.style.left = a.card.x + 'px'; a.el.style.top = a.card.y + 'px'; a.el.style.width = a.card.w + 'px';
+    if (a.kind === 'size') {                                 // размер — только масштаб уже свёрстанной карточки, без новой вёрстки и формул
+      var ks = a.card.w0 ? a.card.w / a.card.w0 : 1;
+      if (a.card.t === 'tk') { a.el.style.transform = 'scale(' + ks + ')'; a.el.style.setProperty('--ks', ks); }
+      else { var tmp = document.createElement('div'); tmp.innerHTML = cardHtml(a.card); var ne = tmp.firstChild; a.el.replaceWith(ne); a.el = ne; }
+      return;
+    }
+    a.el.style.left = a.card.x + 'px'; a.el.style.top = a.card.y + 'px';
   }
 
   // ───────── ластик: целиком или частично ─────────
@@ -1628,11 +1656,13 @@ body.lesson{background:#F7F7F8}
     else if (bar) bar.style.visibility = 'hidden';
   }
   function drawLasso() {
-    if (!lasso || lasso.length < 2) return;
+    var poly = lasso && lasso.length > 1 ? lasso : frag ? frag.poly : null;      // обведённый фрагмент держится, пока открыта его панель
+    if (!poly) return;
     var c = ctx, z = view.z; c.save(); c.strokeStyle = '#2E55C9'; c.lineWidth = 2 / z; c.setLineDash([6 / z, 5 / z]); c.fillStyle = 'rgba(46,85,201,.06)';
-    c.beginPath(); lasso.forEach(function (p, i) { if (i) c.lineTo(p[0], p[1]); else c.moveTo(p[0], p[1]); }); c.closePath(); c.fill(); c.stroke(); c.restore();
+    c.beginPath(); poly.forEach(function (p, i) { if (i) c.lineTo(p[0], p[1]); else c.moveTo(p[0], p[1]); }); c.closePath(); c.fill(); c.stroke(); c.restore();
   }
   function selStart(e, w) {
+    if (frag) clearFrag();
     if (sel && !selCards().length && selItems().every(isLocked)) clearSel();
     if (sel) {
       var g = selGeom(), near = function (p) { return Math.hypot((p[0] - w[0]) * view.z, (p[1] - w[1]) * view.z) < 22; };
@@ -1685,30 +1715,183 @@ body.lesson{background:#F7F7F8}
       var b = cardBoxW(c), pts = [[b[0], b[1]], [b[2], b[1]], [b[2], b[3]], [b[0], b[3]], [(b[0] + b[2]) / 2, (b[1] + b[3]) / 2]];
       return pts.filter(function (p) { return B.inPoly(p[0], p[1], flat); }).length >= 3;
     }).map(function (c) { return c.id; });
-    if (keys.length || cards.length) setSel(keys, cards); else schedule();
+    if (keys.length || cards.length) { setSel(keys, cards); if (sel) sel.poly = poly; }
+    else if (fragHits(polyBox(poly))) setFrag(poly);           // целиком ничего не обведено, но задета часть задания или рисунка — вырезка
+    else schedule();
   }
+  /* ── вырезка: лассо по любой части доски — рисунку, символу или формуле задания, куску картинки. Копируется картинкой
+     (в буфер устройства — PNG, и текст задания, если задето задание); на доску вставляется как картинка ── */
+  var frag = null, shot = null;
+  function polyBox(poly) { var xs = poly.map(function (q) { return q[0]; }), ys = poly.map(function (q) { return q[1]; }); return [Math.min.apply(null, xs), Math.min.apply(null, ys), Math.max.apply(null, xs), Math.max.apply(null, ys)]; }
+  function cross(a, b) { return !(a[2] < b[0] || a[0] > b[2] || a[3] < b[1] || a[1] > b[3]); }
+  function fragHits(b) { var m = model(); return m.cards.some(function (c) { return cross(cardBoxW(c), b); }) || m.items.some(function (o) { var x = bbOf(o); return x && cross(x, b); }); }
+  function setFrag(poly) { clearSel(); frag = { poly: poly, b: polyBox(poly) }; fragBar(); schedule(); }
+  function clearFrag() { frag = null; var b = document.getElementById('selbar'); if (b && b.dataset.frag) b.remove(); schedule(); }
+  function fragBar() {
+    var old = document.getElementById('selbar'); if (old) old.remove();
+    var b = document.createElement('div'), r = stage.getBoundingClientRect(), p = scr(frag.b[0], frag.b[3]); b.className = 'selbar'; b.id = 'selbar'; b.dataset.frag = '1';
+    b.setAttribute('role', 'toolbar'); b.setAttribute('aria-label', 'Фрагмент');
+    b.innerHTML = '<button data-f="copy">Копировать картинкой</button>' + (role === 'tutor' ? '<button data-f="paste">Вставить на доску</button>' : '') + '<button data-f="x">Отмена</button>';
+    b.addEventListener('pointerdown', function (ev) { ev.stopPropagation(); });
+    stage.appendChild(b);
+    b.style.left = Math.max(8, Math.min(r.width - b.offsetWidth - 8, p[0])) + 'px'; b.style.top = Math.max(8, Math.min(r.height - b.offsetHeight - 8, p[1] + 10)) + 'px';
+    b.querySelectorAll('[data-f]').forEach(function (x) {
+      x.onclick = function () {
+        if (x.dataset.f === 'copy') { copyShot(frag.b, frag.poly); clearFrag(); }
+        else if (x.dataset.f === 'paste') { copyShot(frag.b, frag.poly, true); pasteShot(); clearFrag(); }
+        else clearFrag();
+      };
+    });
+  }
+  function paintCards(g, rect, only) {                       // задания и картинки — на холст (PNG, PDF; картинки — и на вырезку)
+    var els = {}; document.querySelectorAll('#cards > div').forEach(function (el) { els[el.dataset.id] = el; });
+    model().cards.forEach(function (o) {
+      if ((rect && !cross(cardBoxW(o), rect)) || (only && o.id !== only)) return;
+      var el = els[o.id], h = el ? el.offsetHeight : 300;
+      if (o.t === 'im') {
+        var im = el && el.querySelector('img');
+        try {
+          if (im && im.complete) {
+            var cr = o.cr || [0, 0, 1, 1], d = cardDims(o), h0 = (o.r || 0) % 180 ? d[0] : d[1];
+            g.save(); g.translate(o.x + d[0] / 2, o.y + d[1] / 2); g.rotate((o.r || 0) * Math.PI / 180); g.scale(o.fx ? -1 : 1, o.fy ? -1 : 1);
+            g.drawImage(im, cr[0] * im.naturalWidth, cr[1] * im.naturalHeight, (cr[2] - cr[0]) * im.naturalWidth, (cr[3] - cr[1]) * im.naturalHeight, -o.w / 2, -h0 / 2, o.w, h0); g.restore();
+          }
+        } catch (e) {}
+        return;
+      }
+      var ks = o.w0 ? o.w / o.w0 : 1, W0 = o.w0 || o.w;          // задание увеличено целиком: рисуем в исходном размере и масштабируем
+      g.save(); g.translate(o.x, o.y); g.scale(ks, ks);
+      g.fillStyle = '#FFFFFF'; g.fillRect(0, 0, W0, h); g.strokeStyle = '#E7E7EC'; g.lineWidth = 2; g.strokeRect(0, 0, W0, h);
+      g.font = '800 24px "Inter Tight", sans-serif'; g.fillStyle = '#FFF4C2'; g.fillRect(28, 22, g.measureText(o.head.toUpperCase()).width + 24, 36);
+      g.fillStyle = '#7A5B00'; g.textBaseline = 'top'; g.fillText(o.head.toUpperCase(), 40, 28);
+      g.fillStyle = '#111'; g.font = '34px "Golos Text", sans-serif'; wrapText(g, readableTex(o.text), 28, 76, W0 - 56, 49);
+      g.restore();
+      if (el) {
+        var er = el.getBoundingClientRect();
+        el.querySelectorAll('img').forEach(function (img) {           // все рисунки задания, и варианты ответа картинками тоже
+          if (!img.complete) return;
+          var r = img.getBoundingClientRect(); try { g.drawImage(img, o.x + (r.left - er.left) / view.z, o.y + (r.top - er.top) / view.z, r.width / view.z, r.height / view.z); } catch (e) {}
+        });
+      }
+    });
+  }
+  /* задание на вырезке — так же, как на экране: каждое слово и знак формулы ставятся туда, где их показывает страница,
+     тем же шрифтом; дробные черты — полосками, корни и стрелки KaTeX (SVG) — картинками. Координаты доски: o.x + экран / z */
+  function paintCardDom(g, el, o, wait) {
+    var er = el.getBoundingClientRect(), z = view.z, X = function (sx) { return o.x + (sx - er.left) / z; }, Y = function (sy) { return o.y + (sy - er.top) / z; };
+    var cs = getComputedStyle(el), rr = parseFloat(cs.borderTopLeftRadius) || 0, ks = o.w0 ? o.w / o.w0 : 1;
+    g.save();
+    g.fillStyle = cs.backgroundColor || '#fff'; g.strokeStyle = cs.borderTopColor || '#E7E7EC'; g.lineWidth = (parseFloat(cs.borderTopWidth) || 1) * ks;
+    g.beginPath(); if (g.roundRect) g.roundRect(o.x, o.y, er.width / z, er.height / z, rr * ks); else g.rect(o.x, o.y, er.width / z, er.height / z); g.fill(); g.stroke();
+    var hd = el.querySelector('.hd'); if (hd) { var hr = hd.getBoundingClientRect(), hs = getComputedStyle(hd); g.fillStyle = hs.backgroundColor; g.fillRect(X(hr.left), Y(hr.top), hr.width / z, hr.height / z); }
+    el.querySelectorAll('img').forEach(function (img) { if (!img.complete) return; var r = img.getBoundingClientRect(); try { g.drawImage(img, X(r.left), Y(r.top), r.width / z, r.height / z); } catch (e) {} });
+    el.querySelectorAll('.katex-html *').forEach(function (x) {                     // дробные черты и подчёркивания формул
+      var st = getComputedStyle(x), bw = parseFloat(st.borderBottomWidth) || 0; if (!bw || st.borderBottomStyle === 'none') return;
+      var r = x.getBoundingClientRect(); g.fillStyle = st.borderBottomColor; g.fillRect(X(r.left), Y(r.bottom) - bw * ks, r.width / z, Math.max(bw * ks, 1 / z));
+    });
+    el.querySelectorAll('.katex-html svg').forEach(function (sv) {                  // корни, стрелки — SVG как картинка (холст не «пачкается»)
+      var r = sv.getBoundingClientRect(); if (!r.width || !r.height) return;
+      var cl = sv.cloneNode(true); cl.setAttribute('xmlns', 'http://www.w3.org/2000/svg'); cl.setAttribute('width', r.width); cl.setAttribute('height', r.height);
+      cl.setAttribute('fill', getComputedStyle(sv).color || '#111'); cl.querySelectorAll('path').forEach(function (pth) { if (!pth.getAttribute('fill')) pth.setAttribute('fill', getComputedStyle(sv).color || '#111'); });
+      var im = new Image(), box = [X(r.left), Y(r.top), r.width / z, r.height / z];
+      wait.push(new Promise(function (ok) {
+        im.onload = function () {                              // через отдельный холст: если браузер считает SVG «чужим», вырезка не пострадает, просто без этого знака
+          try { var t = document.createElement('canvas'); t.width = Math.ceil(r.width * 3); t.height = Math.ceil(r.height * 3); var tg = t.getContext('2d'); tg.drawImage(im, 0, 0, t.width, t.height); tg.getImageData(0, 0, 1, 1); g.drawImage(t, box[0], box[1], box[2], box[3]); } catch (e) {}
+          ok();
+        };
+        im.onerror = function () { ok(); };
+      }));
+      im.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(new XMLSerializer().serializeToString(cl));
+    });
+    var tw = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, null), n, rg = document.createRange();
+    g.textBaseline = 'middle';
+    while ((n = tw.nextNode())) {
+      var pe = n.parentNode; if (!pe || pe.closest('.katex-mathml,.hdl,.del,.lockb')) continue;
+      var t = n.nodeValue; if (!t || !t.trim()) continue;
+      var ps = getComputedStyle(pe); if (ps.visibility === 'hidden' || ps.display === 'none') continue;
+      g.fillStyle = ps.color; g.font = ps.fontStyle + ' ' + ps.fontWeight + ' ' + (parseFloat(ps.fontSize) * ks) + 'px ' + ps.fontFamily;
+      var re = /\S+/g, m;
+      while ((m = re.exec(t))) {                               // по словам: перенос строк — как у страницы
+        rg.setStart(n, m.index); rg.setEnd(n, m.index + m[0].length);
+        var rs = rg.getClientRects(); if (!rs.length) continue;
+        if (rs.length === 1) { var q = rs[0]; g.fillText(m[0], X(q.left), Y(q.top + q.height / 2), q.width / z + 2); continue; }
+        for (var i = 0; i < m[0].length; i++) {                // слово разорвано переносом — по буквам
+          rg.setStart(n, m.index + i); rg.setEnd(n, m.index + i + 1); var q2 = rg.getBoundingClientRect(); if (q2.width) g.fillText(m[0][i], X(q2.left), Y(q2.top + q2.height / 2));
+        }
+      }
+    }
+    g.restore();
+  }
+  function shotCanvas(b, poly) {
+    var bw = b[2] - b[0], bh = b[3] - b[1]; if (bw * view.z < 4 || bh * view.z < 4) return null;
+    var k = Math.min(1600 / Math.max(bw, bh), Math.max(1, view.z * dpr)), W2 = Math.max(1, Math.ceil(bw * k)), H2 = Math.max(1, Math.ceil(bh * k));
+    var mk = function () { var x = document.createElement('canvas'); x.width = W2; x.height = H2; var gx = x.getContext('2d'); gx.setTransform(k, 0, 0, k, -b[0] * k, -b[1] * k); return [x, gx]; };
+    var out = mk(), cl = mk(), il = mk(), wait = [];
+    var m = model(), els = {}; document.querySelectorAll('#cards > div').forEach(function (el) { els[el.dataset.id] = el; });
+    m.cards.forEach(function (o) {                              // задания и картинки — по порядку, как лежат
+      if (!cross(cardBoxW(o), b)) return;
+      if (o.t === 'tk' && els[o.id]) paintCardDom(cl[1], els[o.id], o, wait);
+      else paintCards(cl[1], b, o.id);
+    });
+    var vz = B.viewZ; B.viewZ = 1; drawAll(il[1], m.items, null, b); B.viewZ = vz;
+    var g = out[1];
+    if (poly && poly.length > 2) { g.beginPath(); poly.forEach(function (p, i) { if (i) g.lineTo(p[0], p[1]); else g.moveTo(p[0], p[1]); }); g.closePath(); g.clip(); }
+    g.fillStyle = '#fff'; g.fillRect(b[0], b[1], bw, bh);
+    var ready = Promise.all(wait).then(function () { g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.drawImage(cl[0], 0, 0); g.drawImage(il[0], 0, 0); g.restore(); return out[0]; });
+    return { ready: ready };
+  }
+  /* в буфер устройства: картинка и (если задето задание) его текст; Safari требует отдать буфер сразу в касании — Blob обещанием */
+  function copyShot(b, poly, quiet) {
+    var sc = shotCanvas(b, poly); if (!sc) return toast('Обведите побольше');
+    var text = model().cards.filter(function (o) { return o.t === 'tk' && cross(cardBoxW(o), b); }).map(function (o) { return o.head + '\n' + readableTex(o.text); }).join('\n\n');
+    var blobP = sc.ready.then(function (c) { return new Promise(function (ok) { try { c.toBlob(function (x) { ok(x); }, 'image/png'); } catch (e) { ok(null); } }); });
+    shot = { blob: blobP, w: b[2] - b[0], ar: (b[2] - b[0]) / (b[3] - b[1]), x: b[0], y: b[1], t: Date.now() };
+    blobP.then(function (x) { if (x && shot && shot.blob === blobP) shot.size = x.size; });
+    if (quiet) return;
+    var done = function (what) { toast(what); };
+    if (navigator.clipboard && navigator.clipboard.write && window.ClipboardItem) {
+      var data = { 'image/png': blobP.then(function (x) { if (!x) throw new Error('png'); return x; }) };
+      if (text) data['text/plain'] = new Blob([text], { type: 'text/plain' });
+      var it; try { it = new ClipboardItem(data); } catch (e) { it = null; }
+      if (it) return navigator.clipboard.write([it]).then(function () { done(text ? 'Скопировано картинкой и текстом задания' : 'Скопировано картинкой'); }, function () {
+        return (text ? copyText(text) : Promise.reject()).then(function () { done('Скопирован текст задания; картинку — «Вставить на доску»'); }, function () { done('Буфер устройства недоступен: вставить на доску можно кнопкой «Вставить на доску»'); });
+      });
+    }
+    (text ? copyText(text) : Promise.reject()).then(function () { done('Скопирован текст задания; картинку — «Вставить на доску»'); }, function () { done('Буфер устройства недоступен: вставить на доску можно кнопкой «Вставить на доску»'); });
+  }
+  function pasteShot(at) {                                    // вырезка — на доску картинкой (материалы ставит репетитор)
+    if (!shot) return;
+    if (role !== 'tutor') return toast('Картинки на доску добавляет репетитор');
+    var s0 = shot, x = at ? at[0] : s0.x + 40 / view.z, y = at ? at[1] : s0.y + 40 / view.z;
+    busy('Вставляю вырезку…');
+    s0.blob.then(function (blob) { if (!blob) throw new Error('пустая картинка'); return blob.size > FILE_LIMIT ? squeezeBlob(blob) : blob; }).then(upload).then(function (j) {
+      busy(); var id = rid(); send({ t: 'im', id: id, x: Math.round(x), y: Math.round(y), w: Math.max(40, Math.round(s0.w)), f: j.id, ar: Math.round(s0.ar * 1e4) / 1e4 }); did({ show: [id] });
+    }).catch(function (e) { busy(); toast('Не вставилось: ' + e.message); });
+  }
+  function squeezeBlob(blob) { return decodeImage(blob).then(function (bmp) { var c = fitCanvas(bmp.width, bmp.height), g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(bmp, 0, 0, c.width, c.height); return squeeze(c); }); }
   function xformSel(m) {
     m = m.map(function (v, i) { return i < 4 ? Math.round(v * 1e4) / 1e4 : Math.round(v * 10) / 10; });
     var show = [];
     if (sel.keys.length) { var id = rid(); send({ t: 'xf', id: id, s: sel.keys.slice(0, 400), m: m }); show.push(id); }
     var straight = Math.abs(m[1]) < 1e-3 && Math.abs(m[2]) < 1e-3 && m[0] > 0 && m[3] > 0;
-    if (straight) selCards().forEach(function (c) { var p = B.ap(m, c.x, c.y); show.push(sendMv(c, { x: p[0], y: p[1], w: c.w * m[0] })); });
+    if (straight) selCards().forEach(function (c) { var p = B.ap(m, c.x, c.y); show.push(sendMv(c, { x: p[0], y: p[1], w: Math.max(c.t === 'im' ? 40 : 300, Math.min(TK_MAX, c.w * m[0])) })); });
     if (show.length) did({ show: show });
   }
   function selBar() {
     var old = document.getElementById('selbar'); if (old) old.remove();
     var b = document.createElement('div'); b.className = 'selbar'; b.id = 'selbar'; b.setAttribute('role', 'toolbar'); b.setAttribute('aria-label', 'Выделенное'); b.style.visibility = 'hidden';
     var list = selItems(), one = list.length === 1 && ['nt', 'mx', 'gr'].indexOf(list[0].t) >= 0, pasteB = (clip || loadClip()) ? '<button data-a="paste">Вставить</button>' : '';
-    b.innerHTML = !list.length ? '<button data-a="copy">Копировать</button>' + pasteB + '<button data-a="dup">Дублировать</button><button data-a="del" class="red">Удалить</button>' :
+    var shotB = '<button data-a="shot">Копировать картинкой</button>';
+    b.innerHTML = !list.length ? '<button data-a="copy">Копировать</button>' + shotB + pasteB + '<button data-a="dup">Дублировать</button><button data-a="del" class="red">Удалить</button>' :
       list.every(isLocked) ? '<button data-a="unlock">Открепить</button>' :
-      (one ? '<button data-a="edit">Изменить</button>' : '') + '<button data-a="style">Цвет и линия</button><button data-a="copy">Копировать</button><button data-a="cut">Вырезать</button><button data-a="dup">Дублировать</button>' +
+      (one ? '<button data-a="edit">Изменить</button>' : '') + '<button data-a="style">Цвет и линия</button><button data-a="copy">Копировать</button>' + shotB + '<button data-a="cut">Вырезать</button><button data-a="dup">Дублировать</button>' +
       '<button data-a="fh">Отразить ↔</button><button data-a="fv">Отразить ↕</button><button data-a="rot">Повернуть 90°</button>' +
       (role === 'tutor' ? '<button data-a="lock">Закрепить</button><button data-a="up">Вперёд</button><button data-a="down">Назад</button>' : '') + '<button data-a="del" class="red">Удалить</button>';
     b.addEventListener('pointerdown', function (e) { e.stopPropagation(); });
     b.querySelectorAll('[data-a]').forEach(function (x) {
       x.onclick = function () {
         var g = selGeom(); if (!g) return;
-        ({ style: function () { openPop('selstyle'); }, copy: function () { copySel(); selBar(); toast('Скопировано: «Вставить» — рядом, Ctrl+V или касание по пустому месту'); }, cut: function () { copySel(); deleteSel(); },
+        ({ shot: function () { copyShot(g.b); }, style: function () { openPop('selstyle'); }, copy: function () { copySel(); selBar(); toast('Скопировано: «Вставить» — рядом, Ctrl+V или касание по пустому месту'); }, cut: function () { copySel(); deleteSel(); },
           paste: function () { pasteClip(g.cx + 60 / view.z, g.cy + 60 / view.z); },
           dup: function () { copySel(); pasteClip(g.cx + 60 / view.z, g.cy + 60 / view.z); }, fh: function () { xformSel(B.about(g.cx, g.cy, B.scale(-1, 1))); },
           fv: function () { xformSel(B.about(g.cx, g.cy, B.scale(1, -1))); }, rot: function () { xformSel(B.about(g.cx, g.cy, B.rotate(Math.PI / 2))); }, del: deleteSel,
@@ -2060,23 +2243,30 @@ body.lesson{background:#F7F7F8}
     ['x', 'y', 'w'].forEach(function (k) { if (k in ch) o[k] = Math.round(ch[k]); });
     send(o); return o.id;
   }
+  /* меню карточки: только у выбранной карточки в режиме руки; закрывается касанием мимо, сменой инструмента и Esc */
+  function hideCardBar() { var b = document.getElementById('selbar'); if (b && b.dataset.card) b.remove(); }
   function cardBar(card, e) {
     var old = document.getElementById('selbar'); if (old) old.remove();
-    var locked = !!model().locks[card.id], b = document.createElement('div'), r = stage.getBoundingClientRect(); b.className = 'selbar'; b.id = 'selbar';
-    var bt = locked ? [['lk0', 'Открепить']] : (card.t === 'im' ? [['rot', 'Повернуть 90°'], ['fx', 'Отразить ↔'], ['fy', 'Отразить ↕'], ['crop', 'Обрезать']].concat(card.cr ? [['uncrop', 'Без обрезки']] : []) : [])
-      .concat([['lk1', 'Закрепить'], ['up', 'Вперёд'], ['down', 'Назад']]);
-    b.innerHTML = bt.map(function (x) { return '<button data-c="' + x[0] + '">' + x[1] + '</button>'; }).join('');
+    var locked = !!model().locks[card.id], b = document.createElement('div'), r = stage.getBoundingClientRect(); b.className = 'selbar'; b.id = 'selbar'; b.dataset.card = card.id;
+    var bt = (card.t === 'tk' ? [['txt', 'Текст задания']] : []).concat(locked ? [['lk0', 'Открепить']] : (card.t === 'im' ? [['rot', 'Повернуть 90°'], ['fx', 'Отразить ↔'], ['fy', 'Отразить ↕'], ['crop', 'Обрезать']].concat(card.cr ? [['uncrop', 'Без обрезки']] : []) : [])
+      .concat([['lk1', 'Закрепить'], ['up', 'Вперёд'], ['down', 'Назад'], ['del', 'Удалить']]));
+    b.innerHTML = bt.map(function (x) { return '<button data-c="' + x[0] + '"' + (x[0] === 'del' ? ' class="red"' : '') + '>' + x[1] + '</button>'; }).join('');
     b.addEventListener('pointerdown', function (ev) { ev.stopPropagation(); });
     stage.appendChild(b);
-    b.style.left = Math.max(8, Math.min(r.width - b.offsetWidth - 8, e.clientX - r.left)) + 'px'; b.style.top = Math.max(8, Math.min(r.height - b.offsetHeight - 8, e.clientY - r.top + 12)) + 'px';
+    var ce = document.querySelector('#cards > [data-id="' + card.id + '"]'), cr = ce && ce.getBoundingClientRect(), bh = b.offsetHeight, bx = e.clientX - r.left, by;
+    if (cr && cr.bottom - r.top + 60 + bh < r.height - 8) { by = cr.bottom - r.top + 60; bx = cr.left - r.left; }        // под карточкой (ниже ручки размера), а не поверх задания
+    else if (cr && cr.top - r.top - 60 - bh > 8) { by = cr.top - r.top - 60 - bh; bx = cr.left - r.left; }               // или над ней
+    else by = e.clientY - r.top + 12;
+    b.style.left = Math.max(8, Math.min(r.width - b.offsetWidth - 8, bx)) + 'px'; b.style.top = Math.max(8, Math.min(r.height - bh - 8, by)) + 'px';
     b.querySelectorAll('[data-c]').forEach(function (x) {
       x.onclick = function () {
         b.remove();
-        ({ rot: function () { sendMv(card, { r: ((card.r || 0) + 90) % 360 }); }, fx: function () { sendMv(card, { fx: card.fx ? 0 : 1 }); }, fy: function () { sendMv(card, { fy: card.fy ? 0 : 1 }); },
+        ({ txt: function () { openTask(card.head, card.text, figList(card)); }, rot: function () { sendMv(card, { r: ((card.r || 0) + 90) % 360 }); }, fx: function () { sendMv(card, { fx: card.fx ? 0 : 1 }); }, fy: function () { sendMv(card, { fy: card.fy ? 0 : 1 }); },
           crop: function () { if (card.r) return toast('Обрезать можно без поворота: сначала поверните картинку обратно'); cropMode = { id: card.id }; toast('Обведите рамкой часть картинки, которую оставить'); },
           uncrop: function () { var cr = card.cr, vw = cr[2] - cr[0], vh = cr[3] - cr[1], h = cardDims(card)[1], W = card.w / vw; sendMv(card, { cr: null, x: card.x - cr[0] * W, y: card.y - cr[1] * h / vh, w: W }); },
           lk0: function () { send({ t: 'lk', id: rid(), s: card.id, v: 0 }); }, lk1: function () { send({ t: 'lk', id: rid(), s: card.id, v: 1 }); toast('Закреплено: не сдвинется и не удалится. Открепить — касанием рукой.'); },
-          up: function () { send({ t: 'zo', id: rid(), s: card.id, v: 1 }); }, down: function () { send({ t: 'zo', id: rid(), s: card.id, v: -1 }); } })[x.dataset.c]();
+          up: function () { send({ t: 'zo', id: rid(), s: card.id, v: 1 }); }, down: function () { send({ t: 'zo', id: rid(), s: card.id, v: -1 }); },
+          del: function () { send({ t: 'undo', id: rid(), s: card.id }); did({ hide: [card.id] }); setCardOn(''); } })[x.dataset.c]();
       };
     });
   }
@@ -2446,6 +2636,8 @@ body.lesson{background:#F7F7F8}
     var mod = e.ctrlKey || e.metaKey, k = (e.key || '').toLowerCase();
     if (mod && (k === 'z' || k === 'я')) { e.preventDefault(); if (e.shiftKey) redo(); else undo(); return; }
     if (mod && (k === 'y' || k === 'н')) { e.preventDefault(); redo(); return; }
+    if (mod && (k === 'c' || k === 'с') && frag) { e.preventDefault(); copyShot(frag.b, frag.poly); clearFrag(); return; }
+    if (e.key === 'Escape' && frag) { clearFrag(); return; }
     if (mod && (k === 'c' || k === 'с') && sel) { e.preventDefault(); copySel(); toast('Скопировано'); return; }
     if (mod && (k === 'x' || k === 'ч') && sel) { e.preventDefault(); copySel(); deleteSel(); return; }
     if (mod && (k === 'd' || k === 'в') && sel) { e.preventDefault(); var g = selGeom(); copySel(); if (g) pasteClip(g.cx + 80 / view.z, g.cy + 80 / view.z); return; }
@@ -2479,7 +2671,9 @@ body.lesson{background:#F7F7F8}
     var files = [].slice.call((e.clipboardData && e.clipboardData.items) || []).filter(function (it) { return it.kind === 'file' && /^image\//.test(it.type); }).map(function (it) { return it.getAsFile(); });
     if (files.length) {
       e.preventDefault();
-      if (role === 'tutor') addFiles(files); else toast('Картинки на доску добавляет репетитор');
+      if (role !== 'tutor') toast('Картинки на доску добавляет репетитор');
+      else if (shot && shot.size && files.length === 1 && files[0].size === shot.size) pasteShot();   // своя вырезка — на её место со сдвигом и в её размере
+      else addFiles(files);
       return;
     }
     if (clip || loadClip()) { e.preventDefault(); pasteHere(); }
@@ -2687,29 +2881,7 @@ body.lesson{background:#F7F7F8}
     var g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height);
     g.setTransform(k, 0, 0, k, (pad - b[0]) * k, (pad - b[1]) * k);
     drawBg(g, model().bg, b[0] - pad, b[1] - pad, b[2] + pad, b[3] + pad, 1, true);
-    var els = {}; document.querySelectorAll('#cards > div').forEach(function (el) { els[el.dataset.id] = el; });
-    model().cards.forEach(function (o) {
-      var el = els[o.id], h = el ? el.offsetHeight : 300;
-      if (o.t === 'im') {
-        var im = el && el.querySelector('img');
-        try {
-          if (im && im.complete) {
-            var cr = o.cr || [0, 0, 1, 1], d = cardDims(o), h0 = (o.r || 0) % 180 ? d[0] : d[1];
-            g.save(); g.translate(o.x + d[0] / 2, o.y + d[1] / 2); g.rotate((o.r || 0) * Math.PI / 180); g.scale(o.fx ? -1 : 1, o.fy ? -1 : 1);
-            g.drawImage(im, cr[0] * im.naturalWidth, cr[1] * im.naturalHeight, (cr[2] - cr[0]) * im.naturalWidth, (cr[3] - cr[1]) * im.naturalHeight, -o.w / 2, -h0 / 2, o.w, h0); g.restore();
-          }
-        } catch (e) {}
-        return;
-      }
-      var ks = o.w0 ? o.w / o.w0 : 1, W0 = o.w0 || o.w;          // задание увеличено целиком: рисуем в исходном размере и масштабируем
-      g.save(); g.translate(o.x, o.y); g.scale(ks, ks);
-      g.fillStyle = '#F3EEE2'; g.fillRect(0, 0, W0, h); g.strokeStyle = '#111'; g.lineWidth = 3; g.strokeRect(0, 0, W0, h);
-      g.font = '800 24px "Inter Tight", sans-serif'; g.fillStyle = '#F6CE2E'; g.fillRect(28, 22, g.measureText(o.head.toUpperCase()).width + 24, 36);
-      g.fillStyle = '#111'; g.textBaseline = 'top'; g.fillText(o.head.toUpperCase(), 40, 28);
-      g.font = '34px "Golos Text", sans-serif'; wrapText(g, readableTex(o.text), 28, 76, W0 - 56, 49);
-      g.restore();
-      var img = el && el.querySelector('img'); if (img && img.complete) { var r = img.getBoundingClientRect(), er = el.getBoundingClientRect(); try { g.drawImage(img, o.x + (r.left - er.left) / view.z, o.y + (r.top - er.top) / view.z, r.width / view.z, r.height / view.z); } catch (e) {} }
-    });
+    paintCards(g, null);
     var vz = B.viewZ; B.viewZ = 1; drawAll(g, model().items); B.viewZ = vz;
     return c;
   }
@@ -2764,7 +2936,7 @@ body.lesson{background:#F7F7F8}
       '<select class="inp" id="bn" aria-label="Номер задания"><option value="0">№</option>' + nums.map(function (n) { return '<option' + (n === bf.n ? ' selected' : '') + '>' + n + '</option>'; }).join('') + '</select></div>' +
       '<div id="btop"></div><input class="inp" id="bq" placeholder="Поиск: слово, формула, $ — с формулами" aria-label="Поиск задачи по тексту" style="width:100%;margin-top:6px" value="' + esc(bf.q) + '">' +
       '<label class="chk" style="margin-top:4px"><input type="checkbox" id="bfig"' + (bf.fig ? ' checked' : '') + '> только с рисунком</label>' +
-      '<p class="muted" style="margin-top:6px">Задача встанет туда, куда вы смотрите, крупно, с формулами и рисунком. Рукой её можно двигать и тянуть за угол.</p><div id="bl"></div>';
+      '<p class="muted" style="margin-top:6px">Задача встанет в середину видимой части доски, читаемым размером при любом масштабе. Длинный текст в списке раскрывается касанием.</p><div id="bl"></div>';
     on('dx', function () { d.hidden = true; resize(); });
     document.getElementById('bb').onchange = function (e) { bf.bank = e.target.value; bf.n = 0; bf.g = bf.k = ''; try { localStorage.setItem('anik_bank_last', bf.bank); } catch (x) {} bankUi(d); };
     document.getElementById('bn').onchange = function (e) { bf.n = +e.target.value; bf.off = 0; bf.g = bf.k = ''; bankUi(d); };
@@ -2785,7 +2957,8 @@ body.lesson{background:#F7F7F8}
         var list = (Array.isArray(j) ? j : j.tasks || []).map(function (t) {
           var text = t.t || t.text || '', opts = t.options || [];
           if (opts.length) text += '\n\n' + opts.map(function (o, i) { return (i + 1) + ') ' + o; }).join('\n');
-          return { id: t.id, text: text, ans: (Array.isArray(t.a) ? t.a[0] : t.a) || t.answer || '', fig: (t.f || [])[0] || '', g: t.g || t.tp || '', k: b[0] === 'ege-math' ? t.k || '' : '' };   // k у других банков — вид ответа, не тип
+          var figs = (t.f || []).filter(function (f) { return FIG_OK.test(f); }).slice(0, 6);    // варианты ответа картинками (ОГЭ №13) — все, а не первая
+          return { id: t.id, text: text, ans: (Array.isArray(t.a) ? t.a[0] : t.a) || t.answer || '', fig: figs[0] || '', figs: figs, g: t.g || t.tp || '', k: b[0] === 'ege-math' ? t.k || '' : '' };   // k у других банков — вид ответа, не тип
         });
         topicFilter(list, nm, b);
         if (bf.g) list = list.filter(function (it) { return it.g === bf.g; });
@@ -2795,13 +2968,13 @@ body.lesson{background:#F7F7F8}
         if (bf.fig) list = list.filter(function (it) { return it.fig; });
         var bl = document.getElementById('bl'), part = list.slice(0, bf.off + 15);
         bl.innerHTML = '<p class="muted" style="margin-top:6px">Задач: ' + list.length + '</p>' + part.map(function (it, i) {
-          return '<div class="mini"><div class="tx">' + esc(it.text) + '</div>' + (it.fig ? '<img src="' + esc(figSrc(it.fig)) + '" alt="" loading="lazy">' : '') +
-            '<div class="row" style="justify-content:space-between;margin-top:6px"><span class="muted">ответ: ' + esc(it.ans) + '</span><span class="row" style="gap:6px"><button class="b sm sec" data-full="' + i + '">Целиком</button><button class="b sm" data-k="' + i + '">На доску</button></span></div></div>'; }).join('') +
+          return '<div class="mini"><div class="tx">' + esc(it.text) + '</div>' + figsHtml(it.figs, 'loading="lazy"') +
+            '<div class="row" style="justify-content:space-between;margin-top:6px"><span class="muted">ответ: ' + esc(it.ans) + '</span><button class="b sm" data-k="' + i + '">На доску</button></div></div>'; }).join('') +
           (part.length < list.length ? '<button class="b sec" id="bmore" style="margin-top:8px;width:100%">Ещё задачи</button>' : '');
         A.math(bl);
         on('bmore', function () { bf.off += 15; bankList(b); });
         bl.querySelectorAll('[data-k]').forEach(function (btn) { btn.onclick = function () { place(part[+btn.dataset.k], b); }; });
-        bl.querySelectorAll('[data-full]').forEach(function (btn) { btn.onclick = function () { var it = part[+btn.dataset.full]; openTask(b[1] + ' · №' + bf.n, it.text, it.fig); }; });
+        openLong(bl);
       }).catch(function () { document.getElementById('bl').innerHTML = '<p class="muted" style="margin-top:8px">Не получилось загрузить задачи этого номера.</p>'; });
   }
   function topicFilter(list, nm, b) {                  // тема задачи в номере (профиль — g, остальные — tp из bank_topics); у профиля внутри темы ещё тип
@@ -2825,20 +2998,50 @@ body.lesson{background:#F7F7F8}
   }
   function place(it, b) {
     var t = bf.g && (b[0] === 'ege-math' ? mathNames && mathNames.g[bf.g] : bf.g);
-    placeTask({ head: b[1] + ' · №' + bf.n + (t ? ' · ' + t : ''), text: it.text, fig: it.fig }); toast('Задача на доске');
+    placeTask({ head: b[1] + ' · №' + bf.n + (t ? ' · ' + t : ''), text: it.text, fig: it.fig, figs: it.figs }); toast('Задача на доске');
   }
+  /* задание встаёт в середину видимой части доски и читаемым при любом масштабе: шириной ~60% видимого (на телефоне — почти во всю),
+     текст на экране около 18 px. Вёрстка — в ширину w0, увеличение — масштабом карточки (как ручкой размера). */
+  function visibleArea() {
+    var r = stage.getBoundingClientRect(), x1 = compact() ? 8 : 12 + railW(), x2 = r.width - (compact() ? 8 : 16), y1 = 12, y2 = r.height - (compact() ? 60 : 64);
+    var d = document.getElementById('drawer');
+    if (d && !d.hidden) { var dr = d.getBoundingClientRect(); if (dr.left < r.right - 10 && dr.left > r.left) x2 = Math.min(x2, dr.left - r.left - 12); }   // панель поверх доски (телефон, iPad стоя)
+    return { x1: x1, y1: y1, x2: Math.max(x1 + 120, x2), y2: Math.max(y1 + 120, y2) };
+  }
+  function figH(f, w) {                                     // высота рисунка в карточке; картинки банка обычно уже в кэше (видны в панели)
+    var im = new Image(); im.src = figSrc(f);
+    return im.complete && im.naturalWidth ? Math.min(900, Math.min(w, im.naturalWidth) * im.naturalHeight / im.naturalWidth) + 14 : w * 0.3;
+  }
+  var TK_MAX = 8000;
   function placeTask(t, at) {
-    var r = stage.getBoundingClientRect(), y = Math.round(at ? at[1] : view.y + 30 / view.z), x = Math.round(at ? at[0] : view.x + (20 + railW()) / view.z), w = Math.round(Math.min(1400, Math.max(600, (r.width - railW() - 200) / view.z - 60)));
-    var it = t;
-    if (!at) document.querySelectorAll('#cards > div').forEach(function (el) { if (el.offsetLeft < x + w && el.offsetLeft + el.offsetWidth > x && el.offsetTop < y + 200 && el.offsetTop + el.offsetHeight > y - 40) y = Math.max(y, el.offsetTop + el.offsetHeight + 40); });
-    if (y + 200 > view.y + r.height / view.z) { view.y = y - 40 / view.z; schedule(); }
-    var fig = FIG_OK.test(it.fig || '') ? it.fig : '';            // и рисунок банка, и картинка своего задания
-    var id = rid(), op = { t: 'tk', id: id, x: x, y: y, w: w, head: String(t.head).slice(0, 120), text: it.text.slice(0, 3900), fig: fig };
+    var list = figList(t), op = { t: 'tk', id: rid(), x: 0, y: 0, w: 0, head: String(t.head).slice(0, 120), text: String(t.text || '').slice(0, 3900), fig: '' };
+    var bank = list.filter(function (f) { return /^(figs|trainer\/figs)\//.test(f); });
+    if (list.length > 1 && bank.length === list.length) op.figs = list.slice(0, 6); else op.fig = list[0] || '';   // варианты-картинки — все
     if (t.ask) op.ask = t.ask;
-    did({ show: [id] }); lastCard = id;
-    send(op);
-    if (r.width < 820) { document.getElementById('drawer').hidden = true; resize(); }
-    return id;
+    var d = document.getElementById('drawer'), sr = stage.getBoundingClientRect();
+    if (d && !d.hidden && (compact() || d.getBoundingClientRect().left < sr.right - 10)) { d.hidden = true; resize(); }   // панель поверх доски закрыла бы задание
+    var v = visibleArea(), z = view.z, S = (v.x2 - v.x1) * (compact() ? 0.96 : 0.6);
+    var w0 = Math.round(Math.max(600, Math.min(1400, S * 34 / 18))), ks = Math.max(0.35, Math.min(TK_MAX / w0, S / z / w0)), w = Math.round(w0 * ks);   // на 19% задание крупное, а не «где-то в углу»
+    var probe = document.createElement('div'); probe.innerHTML = cardHtml(Object.assign({}, op, { fig: '', figs: null, w: w0, w0: w0, x: -99999, y: -99999 }));
+    probe = probe.firstChild; probe.style.visibility = 'hidden'; document.getElementById('cards').appendChild(probe); A.math(probe);
+    var h0 = probe.offsetHeight + list.reduce(function (a, f) { return a + figH(f, w0 - 56); }, 0); probe.remove();
+    var hs = h0 * ks * z, x, y;                                  // размер на экране
+    if (at) { x = at[0]; y = at[1]; }
+    else {
+      var sx = v.x1 + (v.x2 - v.x1 - w * z) / 2, sy = hs < v.y2 - v.y1 ? v.y1 + (v.y2 - v.y1 - hs) / 2 : v.y1 + 4;
+      x = view.x + sx / z; y = view.y + sy / z;
+      var cover = function () {                                 // новое задание не ложится ровно на такое же: центры не совпадают — лесенкой вправо-вниз
+        var cx = x + w / 2, cy = y + h0 * ks / 2;
+        return model().cards.some(function (c) { var cb = cardBoxW(c); return Math.abs((cb[0] + cb[2]) / 2 - cx) * z < 40 && Math.abs((cb[1] + cb[3]) / 2 - cy) * z < 40; });
+      };
+      for (var n = 0; n < 3 && cover(); n++) { x += 48 / z; y += 48 / z; }   // не дальше трёх шагов: задание остаётся на виду
+    }
+    op.x = Math.round(x); op.y = Math.round(y); op.w = w0;
+    send(op); lastCard = op.id;
+    var show = [op.id];
+    if (Math.abs(w - w0) > 1) show.push(sendMv(Object.assign({}, op, { w0: w0 }), { w: w }));
+    did({ show: show });
+    return op.id;
   }
 
   // ───────── «К разбору»: что отметил ученик и его домашка ─────────
@@ -2852,7 +3055,7 @@ body.lesson{background:#F7F7F8}
   }
   function reviewItem(key) { var p = key.split(':'), list = reviewData ? (p[0] === 'a' ? reviewData.asks : reviewData.homework) : []; return list[+p[1]] || null; }
   function placeReview(it, at) {
-    var id = placeTask({ head: it.head, text: it.text, fig: it.fig, ask: it.id && !it.item ? it.id : 0 }, at);
+    var id = placeTask({ head: it.head, text: it.text, fig: it.fig, figs: it.figs, ask: it.id && !it.item ? it.id : 0 }, at);
     it.placed = id; toast('Задача на доске'); var d = document.getElementById('drawer');
     if (d && !d.hidden && d.dataset.what === 'review') drawReview(d);
     return id;
@@ -2864,8 +3067,8 @@ body.lesson{background:#F7F7F8}
   }
   function rvCard(it, key, cls, sub) {
     return '<article class="rvc ' + cls + (it.placed ? ' on' : '') + '" draggable="true" data-rv="' + key + '"><div class="hd">' + esc(it.head) + '</div><div class="muted">' + esc(sub) + '</div>' +
-      (it.question ? '<div class="rvq">' + esc(it.question) + '</div>' : '') + '<div class="tx">' + esc(it.text) + '</div>' + (it.fig ? '<img src="' + esc(figSrc(it.fig)) + '" alt="" loading="lazy">' : '') +
-      '<div class="row"><button class="b sm sec" data-full="' + key + '">Целиком</button><button class="b sm" data-put="' + key + '">' + (it.placed ? 'Ещё раз' : 'На доску') + '</button><button class="b sm blue" data-call="' + key + '">К доске</button>' +
+      (it.question ? '<div class="rvq">' + esc(it.question) + '</div>' : '') + '<div class="tx">' + esc(it.text) + '</div>' + figsHtml(figList(it), 'loading="lazy"') +
+      '<div class="row"><button class="b sm" data-put="' + key + '">' + (it.placed ? 'Ещё раз' : 'На доску') + '</button><button class="b sm blue" data-call="' + key + '">К доске</button>' +
       (it.id && !it.item ? '<button class="b sm sec" data-ok="' + it.id + '">Разобрали</button>' : '') + '</div></article>';
   }
   function drawReview(d) {
@@ -2878,7 +3081,7 @@ body.lesson{background:#F7F7F8}
     on('dx', function () { d.hidden = true; resize(); });
     d.querySelectorAll('[data-rv]').forEach(function (c) { c.ondragstart = function (e) { e.dataTransfer.setData('application/x-anik-review', c.dataset.rv); e.dataTransfer.effectAllowed = 'copy'; }; });
     d.querySelectorAll('[data-put]').forEach(function (b) { b.onclick = function () { placeReview(reviewItem(b.dataset.put)); }; });
-    d.querySelectorAll('[data-full]').forEach(function (b) { b.onclick = function () { var it = reviewItem(b.dataset.full); if (it) openTask(it.head, (it.question ? 'Вопрос ученика: ' + it.question + '\n\n' : '') + it.text, it.fig); }; });
+    openLong(d);
     d.querySelectorAll('[data-call]').forEach(function (b) { b.onclick = function () { var it = reviewItem(b.dataset.call); callStudent(it.placed && cardById(it.placed) ? it.placed : placeReview(it)); }; });
     d.querySelectorAll('[data-ok]').forEach(function (b) {
       b.onclick = function () {

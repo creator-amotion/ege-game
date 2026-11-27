@@ -111,7 +111,7 @@
   // ───────── «Просит разобрать» ─────────
   function askCard(a, withName) {
     return '<article class="askc"><div class="row" style="justify-content:space-between"><b>' + (withName ? esc(a.student) + ' · ' : '') + esc(a.head) + '</b><span class="tag">' + esc(a.source_label) + '</span></div>' +
-      (a.question ? '<p class="askq">' + esc(a.question) + '</p>' : '') + '<div class="askt">' + esc(a.text) + '</div>' + (a.fig ? '<img src="' + esc(figUrl(a.fig)) + '" alt="Рисунок к задаче" loading="lazy">' : '') +
+      (a.question ? '<p class="askq">' + esc(a.question) + '</p>' : '') + '<div class="askt">' + esc(a.text) + '</div>' + figsImg(a, 'Рисунок к задаче') +
       '<div class="muted">' + (a.answer ? 'ответ ученика: ' + esc(a.answer) + ' · ' : '') + esc(a.when) + '</div>' +
       '<div class="row" style="margin-top:6px"><button class="b sm" data-done="' + a.id + '">Разобрали</button>' + (withName ? '<button class="b sm sec" data-open="' + a.sid + '">К ученику</button>' : '') + '</div></article>';
   }
@@ -285,7 +285,7 @@
         var s = i.status === 'todo' ? '…' : i.status === 'skipped' ? '—' : manual ? '?' : i.ok ? 'да' : 'нет';
         return '<div class="hwi"><span class="st" style="color:' + (i.ok ? 'var(--blue)' : i.status === 'done' && !manual ? 'var(--red)' : 'var(--muted)') + '">' + s + '</span>' +
           '<details class="hwd"><summary><b>' + esc(i.topic) + '</b> <span class="more">целиком</span><br><span class="short">' + esc(i.text.slice(0, 180)) + '</span></summary>' +
-          '<div class="full">' + esc(i.full || i.text) + '</div>' + (i.fig ? '<img src="' + esc(figUrl(i.fig)) + '" alt="Рисунок к задаче" loading="lazy">' : '') + '</details>' +
+          '<div class="full">' + esc(i.full || i.text) + '</div>' + figsImg(i, 'Рисунок к задаче') + '</details>' +
           '<span class="muted">ответ: ' + esc(i.answer || '—') + '<br>' + (manual ? '<b>проверьте ответ:</b> <button class="b sm" data-mark="' + i.id + '" data-v="1">Верно</button> <button class="b sm sec" data-mark="' + i.id + '" data-v="0">Неверно</button>'
             : 'верно: ' + esc(i.correct || (i.status === 'todo' ? 'проверяете вы' : '—'))) + '</span></div>'; }).join('') + '</details>';
   }
@@ -356,6 +356,9 @@
   // ───────── свои задания в ДЗ ─────────
   var customDraft = { topic: '', text: '', answer: '', fig: '' }, customSeq = 0;
   function figUrl(f) { return f ? (f.indexOf('/api/') === 0 ? A.API : '') + f : ''; }
+  /* все рисунки задания: варианты ответа картинками (ОГЭ №13 — четыре числовые прямые) приходят в figs */
+  function figsOf(o) { var l = o && o.figs && o.figs.length ? o.figs.slice() : []; if (o && o.fig && l.indexOf(o.fig) < 0) l.unshift(o.fig); return l; }
+  function figsImg(o, alt) { return figsOf(o).map(function (f) { return '<img src="' + esc(figUrl(f)) + '" alt="' + alt + '" loading="lazy">'; }).join(''); }
   function isHeic(f) { return /^image\/hei[cf]/i.test(f.type || '') || /\.hei[cf]$/i.test(f.name || ''); }
   function decodeImage(file) {                              // createImageBitmap, а если не умеет (HEIC в Safari) — через <img>
     return createImageBitmap(file).catch(function () {
@@ -453,7 +456,7 @@
       return '<article class="task' + (inBasket(it) ? ' picked' : '') + '"><div class="row" style="justify-content:space-between"><span><b>№' + it.n + '</b> ' +
         (it.topic ? '<span class="tag">' + esc(it.topic) + '</span> ' : '') + '<span class="tag ' + (it.level === 'hard' ? 'red' : it.level === 'fipi' ? 'yel' : '') + '">' + LVL[it.level] + '</span></span>' +
         '<button class="b sm ' + (inBasket(it) ? 'sec' : '') + '" data-i="' + i + '">' + (inBasket(it) ? 'Убрать' : '+ В вариант') + '</button></div>' +
-        '<div class="tx">' + esc(it.text) + '</div>' + (it.fig ? '<img src="' + esc(figUrl(it.fig)) + '" alt="Рисунок к задаче" loading="lazy">' : '') +
+        '<div class="tx">' + esc(it.text) + '</div>' + figsImg(it, 'Рисунок к задаче') +
         '<div class="ans">Ответ: <b>' + esc(it.answer) + '</b> · ' + esc(it.id) + '</div>' +
         (it.sol && it.sol.length ? '<details class="ans"><summary>Решение по шагам</summary><ol style="margin:4px 0 0 20px">' + it.sol.map(function (st) { return '<li>' + esc(st) + '</li>'; }).join('') + '</ol></details>' : '') + '</article>'; }).join('') || '<div class="empty">Ничего не нашлось — измените фильтры.</div>';
     el.querySelectorAll('[data-i]').forEach(function (b) {

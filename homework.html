@@ -110,7 +110,7 @@ h1{font-family:var(--display);font-size:38px;font-weight:800;letter-spacing:-1.5
       hw.items.forEach(function (it) {
         var cur = it.status === 'todo' && first; if (cur) first = false;
         o += '<article class="task' + (cur && hw.id === focus ? ' cur' : '') + '" id="t' + it.id + '"><div class="h">' + it.seq + '. ' + esc(it.topic) + '</div><div class="tx">' + esc(it.full || it.text) + '</div>' +
-          (it.fig ? '<img class="fig" src="' + esc((it.fig.indexOf('/api/') === 0 ? A.API : '') + it.fig) + '" alt="Рисунок к заданию ' + it.seq + '" loading="lazy">' : '') +
+          (it.figs && it.figs.length ? it.figs : it.fig ? [it.fig] : []).map(function (f) { return '<img class="fig" src="' + esc((f.indexOf('/api/') === 0 ? A.API : '') + f) + '" alt="Рисунок к заданию ' + it.seq + '" loading="lazy">'; }).join('') +   // варианты ответа картинками — все
           (it.status === 'todo' ? '<form data-id="' + it.id + '"><input aria-label="Ответ на задание ' + it.seq + '" placeholder="Ответ" maxlength="200" autocomplete="off"><button class="b">Ответить</button></form><div class="verdict" role="status"></div>'
             : '<div class="verdict ' + (it.status === 'done' && it.ok === null ? '' : it.ok ? 'ok' : 'bad') + '">' + (it.status === 'skipped' ? 'Пропущено' : it.ok === null ? 'Ответ отправлен репетитору, он проверит: ' + esc(it.answer) : (it.ok ? 'Верно' : 'Неверно') + ': ' + esc(it.answer)) + '</div>') + '</article>';
         asks.push(it);
